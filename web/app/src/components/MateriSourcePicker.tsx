@@ -8,6 +8,7 @@ import { listQuranSurahs } from '@/api/quran'
 import { listKitab, type HaditsKitab } from '@/api/hadits'
 import { listDoa } from '@/api/doa'
 import type { LibraryAspect, LibraryKind, SesiLibraryItem } from '@/api/sesi'
+import { TILAWATI_JILID, TILAWATI_LEARNING_START } from '@/lib/tilawati'
 import { Button } from '@/components/Button'
 import { Dialog } from '@/components/Dialog'
 import { Field } from '@/components/Field'
@@ -57,15 +58,6 @@ export type MateriSourceValue = {
     doaId: string
   }
 }
-
-const TILAWATI_JILID = [
-  { id: 1, pages: 46 },
-  { id: 2, pages: 46 },
-  { id: 3, pages: 46 },
-  { id: 4, pages: 46 },
-  { id: 5, pages: 46 },
-  { id: 6, pages: 42 },
-]
 
 const ASPECTS_BY_KIND: Record<LibraryKind, LibraryAspect[]> = {
   kurikulum: [],
@@ -995,7 +987,7 @@ function TilawatiPicker({
           <option value="">{t('materiComp.source.jilidPick')}</option>
           {TILAWATI_JILID.map((j) => (
             <option key={j.id} value={String(j.id)}>
-              {t('materiComp.source.jilidOption', { n: j.id, pages: j.pages })}
+              {t('materiComp.source.jilidOption', { n: j.id, pages: j.learningPages })}
             </option>
           ))}
         </select>
@@ -1004,19 +996,19 @@ function TilawatiPicker({
         <Input
           id="tlw-from"
           type="number"
-          min={1}
+          min={TILAWATI_LEARNING_START}
           max={jilid?.pages ?? 46}
           value={tw.pageFrom}
           disabled={!tw.jilid}
           onChange={(e) => update({ pageFrom: e.target.value })}
-          placeholder="1"
+          placeholder={String(TILAWATI_LEARNING_START)}
         />
       </Field>
       <Field label={t('materiComp.source.pageTo')} htmlFor="tlw-to">
         <Input
           id="tlw-to"
           type="number"
-          min={1}
+          min={TILAWATI_LEARNING_START}
           max={jilid?.pages ?? 46}
           value={tw.pageTo}
           disabled={!tw.jilid}
@@ -1030,7 +1022,10 @@ function TilawatiPicker({
           type="button"
           disabled={!tw.jilid}
           onClick={() =>
-            update({ pageFrom: '1', pageTo: String(jilid?.pages ?? '') })
+            update({
+              pageFrom: String(TILAWATI_LEARNING_START),
+              pageTo: String(jilid?.pages ?? ''),
+            })
           }
           className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100 disabled:opacity-50"
         >
@@ -1043,8 +1038,19 @@ function TilawatiPicker({
 
 function buildTilawatiRef(tw: MateriSourceValue['tilawati']): string | null {
   if (!tw.jilid) return null
-  const a = tw.pageFrom.trim()
-  const b = tw.pageTo.trim()
+  // Clamp page numbers up to TILAWATI_LEARNING_START so the persisted ref
+  // never points at the intro spread (pages 1 and 2 of every jilid). If
+  // both endpoints fall below the learning range we treat the input as
+  // "no page constraint" and reference the whole jilid.
+  const clamp = (raw: string): string => {
+    const trimmed = raw.trim()
+    if (!trimmed) return ''
+    const n = Number(trimmed)
+    if (!Number.isFinite(n) || n <= 0) return ''
+    return String(Math.max(TILAWATI_LEARNING_START, Math.floor(n)))
+  }
+  const a = clamp(tw.pageFrom)
+  const b = clamp(tw.pageTo)
   if (!a && !b) return tw.jilid
   if (a && !b) return `${tw.jilid}:${a}`
   if (!a && b) return `${tw.jilid}:${b}`
