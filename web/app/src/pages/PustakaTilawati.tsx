@@ -4,6 +4,19 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { LibraryShell } from '@/components/LibraryShell'
+import { TILAWATI_JILID } from '@/lib/tilawati'
+
+// Reader-specific descriptions for each jilid. Kept here because they're
+// only used in the reader UI — page counts live in the shared constants
+// module so the picker and achievement counter agree on totals.
+const JILID_DESKRIPSI: Record<number, string> = {
+  1: 'Pengenalan huruf hijaiyah berbaris fathah',
+  2: 'Kasrah, dhammah, harakat panjang',
+  3: 'Sukun, tasydid, mad',
+  4: 'Tanwin & gabungan harakat',
+  5: 'Hukum bacaan tajwid dasar',
+  6: 'Gharib & musykilat surah pendek',
+}
 
 type Jilid = {
   id: number
@@ -12,14 +25,12 @@ type Jilid = {
   deskripsi: string
 }
 
-const JILID_LIST: Jilid[] = [
-  { id: 1, label: 'Jilid 1', jumlahHalaman: 46, deskripsi: 'Pengenalan huruf hijaiyah berbaris fathah' },
-  { id: 2, label: 'Jilid 2', jumlahHalaman: 46, deskripsi: 'Kasrah, dhammah, harakat panjang' },
-  { id: 3, label: 'Jilid 3', jumlahHalaman: 46, deskripsi: 'Sukun, tasydid, mad' },
-  { id: 4, label: 'Jilid 4', jumlahHalaman: 46, deskripsi: 'Tanwin & gabungan harakat' },
-  { id: 5, label: 'Jilid 5', jumlahHalaman: 46, deskripsi: 'Hukum bacaan tajwid dasar' },
-  { id: 6, label: 'Jilid 6', jumlahHalaman: 42, deskripsi: 'Gharib & musykilat surah pendek' },
-]
+const JILID_LIST: Jilid[] = TILAWATI_JILID.map((j) => ({
+  id: j.id,
+  label: `Jilid ${j.id}`,
+  jumlahHalaman: j.pages,
+  deskripsi: JILID_DESKRIPSI[j.id] ?? '',
+}))
 
 function pad2(n: number) {
   return String(n).padStart(2, '0')
