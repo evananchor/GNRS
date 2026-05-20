@@ -6,13 +6,11 @@ import { useTranslation } from 'react-i18next'
 import {
   deleteUser,
   getUser,
-  MEMBERSHIP_STATUSES,
   setUserPassword,
   STUDENT_LEVELS,
   updateUser,
   USER_ROLES,
   type ManagedUser,
-  type MembershipStatus,
   type StudentLevel,
   type UserRole,
   type UserUpdateInput,
@@ -25,7 +23,7 @@ import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { Field } from '@/components/Field'
 import { PageShell } from '@/components/PageShell'
-import { useMembershipLabel, useRoleLabel } from './Users'
+import { useRoleLabel } from './Users'
 
 export function UserDetailPage() {
   const { t } = useTranslation()
@@ -134,9 +132,6 @@ function ProfileSection({
 function ReadOnlyView({ user: u }: { user: ManagedUser }) {
   const { t } = useTranslation()
   const roleLabel = useRoleLabel()
-  const membershipLabel = useMembershipLabel()
-  const showMuridFields = u.role === 'murid' || u.level || u.parentName || u.parentPhone
-  const showGuruFields = u.role === 'guru' || u.desa || u.daerah || u.notes
   return (
     <div className="space-y-4">
       <Card title={t('users.userDetail.cardAkun')}>
@@ -168,46 +163,28 @@ function ReadOnlyView({ user: u }: { user: ManagedUser }) {
         </dl>
       </Card>
 
-      <Card title={t('users.userDetail.cardMembership')}>
+      {/* Unified-user mechanism: every role sees the same field set. The
+          old per-role cards (Murid, Pengajar) and the membership card
+          were collapsed into one "Detail" card here. */}
+      <Card title={t('users.userDetail.cardDetail')}>
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          <Row label={t('users.userDetail.membership.joinedAt')} value={u.joinedAt?.slice(0, 10) ?? '—'} />
-          <Row label={t('users.userDetail.membership.status')} value={membershipLabel(u.membershipStatus)} />
+          <Row label={t('users.userDetail.murid.level')} value={u.level ?? '—'} />
+          <Row label={t('users.userDetail.murid.parentTitle')} value={u.parentTitle ?? '—'} />
+          <Row label={t('users.userDetail.murid.parentName')} value={u.parentName ?? '—'} />
           <Row
-            label={u.role === 'guru' ? t('users.userDetail.membership.leftAtGuru') : t('users.userDetail.membership.leftAt')}
-            value={u.leftAt?.slice(0, 10) ?? '—'}
+            label={t('users.userDetail.murid.parentPhoneRO')}
+            value={
+              u.parentPhone
+                ? `+${({ ID: '62', SG: '65', US: '1', CA: '1' } as any)[u.parentPhoneRegion ?? 'ID'] ?? '62'}${u.parentPhone.replace(/^0+/, '')}`
+                : '—'
+            }
           />
-          <Row label={t('users.userDetail.membership.leaveReason')} value={u.leaveReason ?? '—'} className="sm:col-span-2" />
+          <Row label={t('users.userDetail.murid.parentEmail')} value={u.parentEmail ?? '—'} className="sm:col-span-2" />
+          <Row label={t('users.userDetail.guru.desa')} value={u.desa ?? '—'} />
+          <Row label={t('users.userDetail.guru.daerah')} value={u.daerah ?? '—'} />
+          <Row label={t('users.userDetail.guru.notesRO')} value={u.notes ?? '—'} className="sm:col-span-2" />
         </dl>
       </Card>
-
-      {showMuridFields ? (
-        <Card title={t('users.userDetail.cardMurid')}>
-          <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <Row label={t('users.userDetail.murid.level')} value={u.level ?? '—'} />
-            <Row label={t('users.userDetail.murid.parentTitle')} value={u.parentTitle ?? '—'} />
-            <Row label={t('users.userDetail.murid.parentName')} value={u.parentName ?? '—'} />
-            <Row
-              label={t('users.userDetail.murid.parentPhoneRO')}
-              value={
-                u.parentPhone
-                  ? `+${({ ID: '62', SG: '65', US: '1', CA: '1' } as any)[u.parentPhoneRegion ?? 'ID'] ?? '62'}${u.parentPhone.replace(/^0+/, '')}`
-                  : '—'
-              }
-            />
-            <Row label={t('users.userDetail.murid.parentEmail')} value={u.parentEmail ?? '—'} className="sm:col-span-2" />
-          </dl>
-        </Card>
-      ) : null}
-
-      {showGuruFields ? (
-        <Card title={t('users.userDetail.cardPengajar')}>
-          <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <Row label={t('users.userDetail.guru.desa')} value={u.desa ?? '—'} />
-            <Row label={t('users.userDetail.guru.daerah')} value={u.daerah ?? '—'} />
-            <Row label={t('users.userDetail.guru.notesRO')} value={u.notes ?? '—'} className="sm:col-span-2" />
-          </dl>
-        </Card>
-      ) : null}
     </div>
   )
 }
@@ -233,10 +210,6 @@ type FormState = {
   desa: string
   daerah: string
   notes: string
-  joinedAt: string
-  leftAt: string
-  leaveReason: string
-  membershipStatus: MembershipStatus
 }
 
 function userToFormState(u: ManagedUser): FormState {
@@ -261,10 +234,6 @@ function userToFormState(u: ManagedUser): FormState {
     desa: u.desa ?? '',
     daerah: u.daerah ?? '',
     notes: u.notes ?? '',
-    joinedAt: u.joinedAt?.slice(0, 10) ?? '',
-    leftAt: u.leftAt?.slice(0, 10) ?? '',
-    leaveReason: u.leaveReason ?? '',
-    membershipStatus: u.membershipStatus,
   }
 }
 
@@ -279,8 +248,9 @@ function EditForm({
 }) {
   const { t } = useTranslation()
   const roleLabel = useRoleLabel()
-  const membershipLabel = useMembershipLabel()
   const qc = useQueryClient()
+  const { user: me } = useAuth()
+  const isAdmin = me?.role === 'admin'
   const [f, setF] = useState<FormState>(() => userToFormState(user))
 
   useEffect(() => {
@@ -298,7 +268,7 @@ function EditForm({
 
   const apiError = mutation.error instanceof ApiError ? mutation.error.message : null
   const isMurid = f.role === 'murid'
-  const isGuru = f.role === 'guru'
+  void isMurid // retained for hint logic below
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((p) => ({ ...p, [k]: v }))
 
@@ -311,7 +281,10 @@ function EditForm({
           email: f.email.trim(),
           username: f.username.trim(),
           name: f.name.trim(),
-          role: f.role,
+          // Role is only included when the caller is admin — the backend
+          // would reject it anyway (handler/users.go enforces the same
+          // gate) but skipping it client-side keeps the PATCH minimal.
+          ...(isAdmin ? { role: f.role } : {}),
           active: f.active,
           nickname: f.nickname.trim(),
           dateOfBirth: f.dateOfBirth, // '' clears
@@ -328,10 +301,6 @@ function EditForm({
           desa: f.desa.trim(),
           daerah: f.daerah.trim(),
           notes: f.notes.trim(),
-          joinedAt: f.joinedAt,
-          leftAt: f.leftAt,
-          leaveReason: f.leaveReason.trim(),
-          membershipStatus: f.membershipStatus,
         }
         mutation.mutate(input)
       }}
@@ -344,20 +313,28 @@ function EditForm({
           <Field label={t('users.userDetail.akun.username')} htmlFor="username" hint={t('users.userDetail.akun.usernameHint')}>
             <Input id="username" value={f.username} onChange={(e) => update('username', e.target.value)} />
           </Field>
-          <Field label={t('users.userDetail.akun.role')} htmlFor="role">
-            <select
-              id="role"
-              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-              value={f.role}
-              onChange={(e) => update('role', e.target.value as UserRole)}
-            >
-              {USER_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {roleLabel(r)}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {/* Unified-user mechanism: only admin can change roles. Non-admin
+              callers see the role as a read-only label. */}
+          {isAdmin ? (
+            <Field label={t('users.userDetail.akun.role')} htmlFor="role">
+              <select
+                id="role"
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                value={f.role}
+                onChange={(e) => update('role', e.target.value as UserRole)}
+              >
+                {USER_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {roleLabel(r)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : (
+            <Field label={t('users.userDetail.akun.role')} htmlFor="role">
+              <div className="flex h-10 items-center text-sm text-slate-700">{roleLabel(f.role)}</div>
+            </Field>
+          )}
           <Field label={t('users.userDetail.akun.statusAkun')} htmlFor="active">
             <label className="inline-flex h-10 items-center gap-2">
               <input
@@ -408,36 +385,10 @@ function EditForm({
         </div>
       </Card>
 
-      <Card title={t('users.userDetail.cardMembership')}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('users.userDetail.membership.joinedAt')} htmlFor="joined">
-            <Input id="joined" type="date" value={f.joinedAt} onChange={(e) => update('joinedAt', e.target.value)} />
-          </Field>
-          <Field label={t('users.userDetail.membership.status')} htmlFor="ms">
-            <select
-              id="ms"
-              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-              value={f.membershipStatus}
-              onChange={(e) => update('membershipStatus', e.target.value as MembershipStatus)}
-            >
-              {MEMBERSHIP_STATUSES.map((ms) => (
-                <option key={ms} value={ms}>
-                  {membershipLabel(ms)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={isGuru ? t('users.userDetail.membership.leftAtGuru') : t('users.userDetail.membership.leftAt')} htmlFor="leftAt">
-            <Input id="leftAt" type="date" value={f.leftAt} onChange={(e) => update('leftAt', e.target.value)} />
-          </Field>
-          <Field label={t('users.userDetail.membership.leaveReason')} htmlFor="leaveReason">
-            <Input id="leaveReason" value={f.leaveReason} onChange={(e) => update('leaveReason', e.target.value)} />
-          </Field>
-        </div>
-      </Card>
-
-      {(isMurid || f.level || f.parentName || f.parentPhone || f.parentEmail) && (
-        <Card title={t('users.userDetail.cardMurid')}>
+      {/* Unified-user mechanism: every role sees the same Detail card.
+          The old conditional "Murid"/"Pengajar" cards (and the dropped
+          membership card) were merged into a single section. */}
+      <Card title={t('users.userDetail.cardDetail')}>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t('users.userDetail.murid.level')} htmlFor="level">
               <select
@@ -478,13 +429,6 @@ function EditForm({
             <Field label={t('users.userDetail.murid.parentEmail')} htmlFor="parentEmail">
               <Input id="parentEmail" type="email" value={f.parentEmail} onChange={(e) => update('parentEmail', e.target.value)} />
             </Field>
-          </div>
-        </Card>
-      )}
-
-      {(isGuru || f.desa || f.daerah || f.notes) && (
-        <Card title={t('users.userDetail.cardPengajar')}>
-          <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t('users.userDetail.guru.desa')} htmlFor="desa">
               <Input id="desa" value={f.desa} onChange={(e) => update('desa', e.target.value)} />
             </Field>
@@ -496,7 +440,7 @@ function EditForm({
             </Field>
           </div>
         </Card>
-      )}
+      {/* end of unified Detail card */}
 
       {isSelf && (f.role !== 'admin' || !f.active) ? (
         <p className="text-xs text-amber-700">

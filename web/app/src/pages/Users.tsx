@@ -47,10 +47,6 @@ function useRoleLabel() {
   }
 }
 
-function useMembershipLabel() {
-  const { t } = useTranslation()
-  return (ms: 'active' | 'left' | 'retired'): string => t(`users.membership.${ms}`)
-}
 
 export function UsersPage() {
   const navigate = useNavigate()
@@ -734,4 +730,4 @@ function ActivePill({ active }: { active: boolean }) {
 }
 
 // Re-export the hook for sibling user pages.
-export { useRoleLabel, useMembershipLabel }
+export { useRoleLabel }

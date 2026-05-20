@@ -17,15 +17,6 @@ export const ROLE_LABEL: Record<string, string> = {
 export const STUDENT_LEVELS = ['Caberawit', 'Pra Remaja', 'Remaja', 'Pra Nikah'] as const
 export type StudentLevel = (typeof STUDENT_LEVELS)[number]
 
-export const MEMBERSHIP_STATUSES = ['active', 'left', 'retired'] as const
-export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number]
-
-export const MEMBERSHIP_LABEL: Record<MembershipStatus, string> = {
-  active: 'Aktif',
-  left: 'Keluar',
-  retired: 'Purna',
-}
-
 export type Gender = 'male' | 'female'
 
 export type ManagedUser = {
@@ -53,16 +44,10 @@ export type ManagedUser = {
   parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
   parentEmail?: string
 
-  // Guru
+  // Locality + free-form notes (kept available to all roles).
   desa?: string
   daerah?: string
   notes?: string
-
-  // Membership
-  joinedAt?: string
-  leftAt?: string
-  leaveReason?: string
-  membershipStatus: MembershipStatus
 
   // Photo
   photoUrl?: string
@@ -108,10 +93,6 @@ export type UserCreateInput = {
   desa?: string
   daerah?: string
   notes?: string
-  joinedAt?: string
-  leftAt?: string
-  leaveReason?: string
-  membershipStatus?: MembershipStatus
   // Taaruf-style biodata
   userCode?: string
   tempatLahir?: string
@@ -123,7 +104,7 @@ export type UserCreateInput = {
 }
 
 // All fields optional. Pass an empty string to clear nullable fields where
-// the backend supports it (username, level, dateOfBirth, joinedAt, leftAt).
+// the backend supports it (username, level, dateOfBirth, timezone).
 export type UserUpdateInput = Partial<Omit<UserCreateInput, 'password'>> & {
   active?: boolean
 }

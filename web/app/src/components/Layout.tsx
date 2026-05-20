@@ -6,14 +6,12 @@ import {
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
-  GraduationCap,
   LayoutDashboard,
   LogOut,
   School,
   Settings,
   Trophy,
   User as UserIcon,
-  Users,
 } from 'lucide-react'
 
 import { useQuery } from '@tanstack/react-query'
@@ -103,8 +101,8 @@ export function Layout() {
 
   const items: NavItem[] = [
     { to: '/dashboard', icon: <LayoutDashboard size={16} />, label: t('nav.dashboard') },
-    { to: '/students', icon: <Users size={16} />, label: t('nav.students') },
-    { to: '/teachers', icon: <GraduationCap size={16} />, label: t('nav.teachers') },
+    // Students + Teachers nav entries removed — the unified-user mechanism
+    // routes both through Pengaturan → Pengguna, filtered by role.
     { to: '/kelas', icon: <School size={16} />, label: t('nav.kelas') },
     { to: '/kehadiran', icon: <CalendarCheck size={16} />, label: t('nav.kehadiran') },
     { to: '/bacaan', icon: <BookOpenCheck size={16} />, label: t('nav.bacaan') },

@@ -1,15 +1,9 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/lib/auth'
 import { Layout } from '@/components/Layout'
 import { LoginPage } from '@/pages/Login'
 import { DashboardPage } from '@/pages/Dashboard'
-import { StudentsPage } from '@/pages/Students'
-import { StudentDetailPage } from '@/pages/StudentDetail'
-import { NewStudentPage } from '@/pages/StudentNew'
-import { TeachersPage } from '@/pages/Teachers'
-import { TeacherDetailPage } from '@/pages/TeacherDetail'
-import { NewTeacherPage } from '@/pages/TeacherNew'
 import { KelasLayout } from '@/pages/Kelas'
 import { LiveSesiPage } from '@/pages/LiveSesi'
 import { KelasListSection } from '@/pages/sections/KelasListSection'
@@ -52,12 +46,15 @@ export function App() {
       <Route element={user ? <Layout /> : <Navigate to="/login" replace />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/students" element={<StudentsPage />} />
-        <Route path="/students/new" element={<AdminOnly><NewStudentPage /></AdminOnly>} />
-        <Route path="/students/:id" element={<StudentDetailPage />} />
-        <Route path="/teachers" element={<TeachersPage />} />
-        <Route path="/teachers/new" element={<AdminOnly><NewTeacherPage /></AdminOnly>} />
-        <Route path="/teachers/:id" element={<TeacherDetailPage />} />
+        {/* Unified-user mechanism: Students/Teachers UIs were folded into
+            /pengaturan/pengguna. Old routes redirect to the filtered Users
+            page so bookmarks + in-app links keep working. */}
+        <Route path="/students" element={<Navigate to="/pengaturan/pengguna?role=murid" replace />} />
+        <Route path="/students/new" element={<Navigate to="/pengaturan/pengguna?new=1&role=murid" replace />} />
+        <Route path="/students/:id" element={<RedirectUserById />} />
+        <Route path="/teachers" element={<Navigate to="/pengaturan/pengguna?role=guru" replace />} />
+        <Route path="/teachers/new" element={<Navigate to="/pengaturan/pengguna?new=1&role=guru" replace />} />
+        <Route path="/teachers/:id" element={<RedirectUserById />} />
         <Route path="/kelas" element={<KelasLayout />}>
           <Route index element={<Navigate to="list" replace />} />
           <Route path="list" element={<KelasListSection />} />
@@ -128,4 +125,12 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
 function RedirectUserDetail() {
   const path = window.location.pathname.replace(/^\/users\//, '/pengaturan/pengguna/')
   return <Navigate to={path + window.location.search} replace />
+}
+
+// Redirect /students/:id and /teachers/:id to the unified user-detail URL.
+// Per the unified-user mechanism, the same user record serves both murid
+// and guru, so the :id parameter passes straight through.
+function RedirectUserById() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/pengaturan/pengguna/${id ?? ''}${window.location.search}`} replace />
 }
