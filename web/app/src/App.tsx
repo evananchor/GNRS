@@ -123,8 +123,11 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
 }
 
 function RedirectUserDetail() {
-  const path = window.location.pathname.replace(/^\/users\//, '/pengaturan/pengguna/')
-  return <Navigate to={path + window.location.search} replace />
+  // /users/:id → /pengaturan/pengguna/:id. Use useParams (not a pathname
+  // regex) so deeper paths like /users/foo/bar are not silently rewritten
+  // into nonexistent routes.
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/pengaturan/pengguna/${id ?? ''}${window.location.search}`} replace />
 }
 
 // Redirect /students/:id and /teachers/:id to the unified user-detail URL.
