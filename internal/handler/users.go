@@ -67,7 +67,7 @@ type userCreateBody struct {
 
 type userUpdateBody struct {
 	Email    *string `json:"email,omitempty"    validate:"omitempty,email,max=200"`
-	Username *string `json:"username,omitempty" validate:"omitempty,max=64"`
+	Username *string `json:"username,omitempty" validate:"omitempty,min=3,max=64"`
 	Name     *string `json:"name,omitempty"     validate:"omitempty,max=200"`
 	Role     *string `json:"role,omitempty"     validate:"omitempty,oneof=admin staff pengurus guru ortu murid"`
 	Active   *bool   `json:"active,omitempty"`
@@ -231,7 +231,24 @@ func (h *Users) Update(w http.ResponseWriter, r *http.Request) {
 		v := strings.TrimSpace(*b.Name)
 		b.Name = &v
 	}
-	if err := h.validator.Struct(b); err != nil {
+	// Username: trim; an empty string is a clear-to-NULL request (handled
+	// by the store's addStr()). Skip the min=3 rule in that case so the
+	// documented clear path still works.
+	if b.Username != nil {
+		v := strings.TrimSpace(*b.Username)
+		b.Username = &v
+	}
+	skipUsername := b.Username != nil && *b.Username == ""
+	if skipUsername {
+		saved := b.Username
+		b.Username = nil
+		err := h.validator.Struct(b)
+		b.Username = saved
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
+			return
+		}
+	} else if err := h.validator.Struct(b); err != nil {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
