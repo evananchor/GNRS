@@ -5,7 +5,6 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/fadhilkurnia/ppg-dashboard/internal/model"
 )
@@ -56,18 +55,13 @@ func TestTeachersCRUD(t *testing.T) {
 		t.Errorf("Daerah = %q, want Luwu Timur", got.Daerah)
 	}
 
-	retired := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	in := teacherInput("Alice Renamed", "Luwu Timur", model.TeacherRetired)
-	in.RetiredAt = &retired
 	updated, err := s.Update(ctx, created.ID, in)
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if updated.Name != "Alice Renamed" || updated.Status != model.TeacherRetired {
 		t.Errorf("after update: %+v", updated)
-	}
-	if updated.RetiredAt == nil || !updated.RetiredAt.Equal(retired) {
-		t.Errorf("RetiredAt = %v, want %v", updated.RetiredAt, retired)
 	}
 
 	if err := s.Delete(ctx, created.ID); err != nil {

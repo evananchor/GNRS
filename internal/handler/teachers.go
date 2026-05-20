@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -25,6 +24,10 @@ func NewTeachers(teachers *store.Teachers) *Teachers {
 	return &Teachers{teachers: teachers, validator: validator.New()}
 }
 
+// teacherBody — JSON shape on the wire. `joinedAt` and `retiredAt` are
+// still accepted (and validated) but ignored after migration 041 dropped
+// the underlying columns from `users`. Keeping them in the schema avoids
+// breaking external clients that may still POST these fields.
 type teacherBody struct {
 	Name      string  `json:"name"      validate:"required,max=200"`
 	Nickname  *string `json:"nickname,omitempty"     validate:"omitempty,max=200"`
@@ -57,20 +60,8 @@ func (h *Teachers) parse(r *http.Request) (store.TeacherInput, error) {
 		Status:   model.TeacherStatus(b.Status),
 		Notes:    trimPtr(b.Notes),
 	}
-	if b.JoinedAt != nil && *b.JoinedAt != "" {
-		t, err := time.Parse("2006-01-02", *b.JoinedAt)
-		if err != nil {
-			return store.TeacherInput{}, err
-		}
-		in.JoinedAt = &t
-	}
-	if b.RetiredAt != nil && *b.RetiredAt != "" {
-		t, err := time.Parse("2006-01-02", *b.RetiredAt)
-		if err != nil {
-			return store.TeacherInput{}, err
-		}
-		in.RetiredAt = &t
-	}
+	// JoinedAt / RetiredAt are intentionally dropped — the store no longer
+	// persists them after migration 041.
 	return in, nil
 }
 

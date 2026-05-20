@@ -58,11 +58,7 @@ func TestStudentsCRUD(t *testing.T) {
 	}
 
 	in := sampleInput("Alice Renamed")
-	leftAt := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	reason := "Pulang"
 	in.Status = model.StudentLeft
-	in.LeftAt = &leftAt
-	in.LeaveReason = &reason
 
 	updated, err := s.Update(ctx, created.ID, in)
 	if err != nil {
@@ -70,9 +66,6 @@ func TestStudentsCRUD(t *testing.T) {
 	}
 	if updated.Name != "Alice Renamed" || updated.Status != model.StudentLeft {
 		t.Errorf("after update: %+v", updated)
-	}
-	if updated.LeftAt == nil || !updated.LeftAt.Equal(leftAt) {
-		t.Errorf("LeftAt = %v, want %v", updated.LeftAt, leftAt)
 	}
 
 	if err := s.Delete(ctx, created.ID); err != nil {

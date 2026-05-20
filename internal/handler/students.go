@@ -55,12 +55,11 @@ func (h *Students) parse(r *http.Request) (store.StudentInput, error) {
 	}
 
 	in := store.StudentInput{
-		Name:        strings.TrimSpace(b.Name),
-		Nickname:    trimPtr(b.Nickname),
-		Gender:      b.Gender,
-		Kelompok:    trimPtr(b.Kelompok),
-		LeaveReason: trimPtr(b.LeaveReason),
-		Status:      model.StudentStatus(b.Status),
+		Name:              strings.TrimSpace(b.Name),
+		Nickname:          trimPtr(b.Nickname),
+		Gender:            b.Gender,
+		Kelompok:          trimPtr(b.Kelompok),
+		Status:            model.StudentStatus(b.Status),
 		ParentName:        trimPtr(b.ParentName),
 		ParentTitle:       trimPtr(b.ParentTitle),
 		ParentPhone:       trimPtr(b.ParentPhone),
@@ -76,15 +75,14 @@ func (h *Students) parse(r *http.Request) (store.StudentInput, error) {
 	} else {
 		in.DateOfBirth = t
 	}
-	if t, err := parseOptionalDate(b.JoinedAt); err != nil {
+	// JoinedAt / LeftAt / LeaveReason still validated on the wire for
+	// back-compat with external clients, but no longer persisted — the
+	// underlying columns were dropped in migration 041.
+	if _, err := parseOptionalDate(b.JoinedAt); err != nil {
 		return store.StudentInput{}, err
-	} else {
-		in.JoinedAt = t
 	}
-	if t, err := parseOptionalDate(b.LeftAt); err != nil {
+	if _, err := parseOptionalDate(b.LeftAt); err != nil {
 		return store.StudentInput{}, err
-	} else {
-		in.LeftAt = t
 	}
 	return in, nil
 }

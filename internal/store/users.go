@@ -29,7 +29,6 @@ const userColumns = `id, email, username, password, name, role, active,
 	nickname, date_of_birth, gender, no_hp, alamat, kelompok,
 	level, parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
 	desa, daerah, notes,
-	joined_at, left_at, leave_reason, membership_status,
 	photo_path, timezone,
 	user_code, tempat_lahir, pendidikan, pekerjaan,
 	urutan, hide_dob, tgl_daftar,
@@ -87,12 +86,6 @@ type UserCreateInput struct {
 	Daerah *string
 	Notes  *string
 
-	// Membership
-	JoinedAt         *time.Time
-	LeftAt           *time.Time
-	LeaveReason      *string
-	MembershipStatus model.MembershipStatus
-
 	// Taaruf-style biodata (all optional).
 	UserCode    *string
 	TempatLahir *string
@@ -120,10 +113,6 @@ func (u *Users) createWithHash(ctx context.Context, in UserCreateInput, hash str
 		id = ulid.Make().String()
 	}
 	now := time.Now().UTC()
-	ms := in.MembershipStatus
-	if ms == "" {
-		ms = model.MembershipActive
-	}
 	hideDobInt := 0
 	if in.HideDob {
 		hideDobInt = 1
@@ -134,7 +123,6 @@ func (u *Users) createWithHash(ctx context.Context, in UserCreateInput, hash str
 		   nickname, date_of_birth, gender, no_hp, alamat, kelompok,
 		   level, parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
 		   desa, daerah, notes,
-		   joined_at, left_at, leave_reason, membership_status,
 		   user_code, tempat_lahir, pendidikan, pekerjaan,
 		   urutan, hide_dob, tgl_daftar,
 		   created_at, updated_at
@@ -143,14 +131,12 @@ func (u *Users) createWithHash(ctx context.Context, in UserCreateInput, hash str
 		           ?, ?, ?, ?, ?, ?,
 		           ?, ?, ?,
 		           ?, ?, ?, ?,
-		           ?, ?, ?, ?,
 		           ?, ?, ?,
 		           ?, ?)`,
 		id, in.Email, in.Username, hash, in.Name, string(in.Role),
 		in.Nickname, nullableDate(in.DateOfBirth), in.Gender, in.NoHP, in.Alamat, in.Kelompok,
 		nullableLevel(in.Level), in.ParentName, in.ParentTitle, in.ParentPhone, in.ParentPhoneRegion, in.ParentEmail,
 		in.Desa, in.Daerah, in.Notes,
-		nullableDate(in.JoinedAt), nullableDate(in.LeftAt), in.LeaveReason, string(ms),
 		in.UserCode, in.TempatLahir, in.Pendidikan, in.Pekerjaan,
 		in.Urutan, hideDobInt, nullableDate(in.TglDaftar),
 		now, now,
@@ -184,17 +170,11 @@ type UserUpdateInput struct {
 	ParentPhone       *string
 	ParentPhoneRegion *string
 	ParentEmail       *string
-	Desa             *string
-	Daerah           *string
-	Notes            *string
-	JoinedAt         *time.Time
-	ClearJoinedAt    bool
-	LeftAt           *time.Time
-	ClearLeftAt      bool
-	LeaveReason      *string
-	MembershipStatus *model.MembershipStatus
-	Timezone         *string
-	ClearTimezone    bool
+	Desa          *string
+	Daerah        *string
+	Notes         *string
+	Timezone      *string
+	ClearTimezone bool
 
 	// Taaruf-style biodata.
 	UserCode      *string
@@ -278,23 +258,6 @@ func (u *Users) Update(ctx context.Context, id string, in UserUpdateInput) (*mod
 	addStr("desa", in.Desa)
 	addStr("daerah", in.Daerah)
 	addStr("notes", in.Notes)
-	if in.ClearJoinedAt {
-		sets = append(sets, "joined_at = NULL")
-	} else if in.JoinedAt != nil {
-		sets = append(sets, "joined_at = ?")
-		args = append(args, in.JoinedAt.UTC())
-	}
-	if in.ClearLeftAt {
-		sets = append(sets, "left_at = NULL")
-	} else if in.LeftAt != nil {
-		sets = append(sets, "left_at = ?")
-		args = append(args, in.LeftAt.UTC())
-	}
-	addStr("leave_reason", in.LeaveReason)
-	if in.MembershipStatus != nil {
-		sets = append(sets, "membership_status = ?")
-		args = append(args, string(*in.MembershipStatus))
-	}
 	if in.ClearTimezone {
 		sets = append(sets, "timezone = NULL")
 	} else if in.Timezone != nil {
@@ -500,9 +463,9 @@ func scanUserRow(row *sql.Row) (*model.User, error) {
 
 func readUserRow(s scanner) (*model.User, error) {
 	var u model.User
-	var role, membershipStatus string
+	var role string
 	var active int
-	var dob, joinedAt, leftAt sql.NullTime
+	var dob sql.NullTime
 	var level sql.NullString
 	var hideDob int
 	var tglDaftar sql.NullTime
@@ -511,7 +474,6 @@ func readUserRow(s scanner) (*model.User, error) {
 		&u.Nickname, &dob, &u.Gender, &u.NoHP, &u.Alamat, &u.Kelompok,
 		&level, &u.ParentName, &u.ParentTitle, &u.ParentPhone, &u.ParentPhoneRegion, &u.ParentEmail,
 		&u.Desa, &u.Daerah, &u.Notes,
-		&joinedAt, &leftAt, &u.LeaveReason, &membershipStatus,
 		&u.PhotoPath, &u.Timezone,
 		&u.UserCode, &u.TempatLahir, &u.Pendidikan, &u.Pekerjaan,
 		&u.Urutan, &hideDob, &tglDaftar,
@@ -526,18 +488,9 @@ func readUserRow(s scanner) (*model.User, error) {
 	}
 	u.Role = model.Role(role)
 	u.Active = active == 1
-	u.MembershipStatus = model.MembershipStatus(membershipStatus)
 	if dob.Valid {
 		v := dob.Time
 		u.DateOfBirth = &v
-	}
-	if joinedAt.Valid {
-		v := joinedAt.Time
-		u.JoinedAt = &v
-	}
-	if leftAt.Valid {
-		v := leftAt.Time
-		u.LeftAt = &v
 	}
 	if level.Valid {
 		v := model.StudentLevel(level.String)

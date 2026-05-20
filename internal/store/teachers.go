@@ -16,10 +16,10 @@ import (
 
 // Teachers is a thin facade over the users table for the /api/teachers
 // endpoint group. Pengajar are stored as users with role='guru' since
-// migration 008. The model.Teacher / TeacherInput contract is preserved so
-// the frontend Pengajar pages keep working unchanged. teacher.retired_at
-// maps to user.left_at and teacher.status (active/retired) maps to
-// user.membership_status.
+// migration 008. After migration 041 dropped membership_status, joined_at,
+// left_at, leave_reason, teacher.status (active/retired) is synthesised
+// from user.active (1/0). The handler still accepts joinedAt / retiredAt
+// in the request body for back-compat but the values are no longer stored.
 type Teachers struct {
 	db *sql.DB
 }
@@ -29,16 +29,15 @@ func NewTeachers(db *sql.DB) *Teachers {
 }
 
 type TeacherInput struct {
-	Name      string
-	Nickname  *string
-	Gender    *string
-	Kelompok  string
-	Desa      string
-	Daerah    string
-	JoinedAt  *time.Time
-	RetiredAt *time.Time
-	Status    model.TeacherStatus
-	Notes     *string
+	Name     string
+	Nickname *string
+	Gender   *string
+	Kelompok string
+	Desa     string
+	Daerah   string
+	// Status maps to User.Active — "active" → 1, "retired" → 0.
+	Status model.TeacherStatus
+	Notes  *string
 }
 
 type TeacherListParams struct {
@@ -55,7 +54,7 @@ type TeacherListResult struct {
 }
 
 const selectTeacherCols = `id, name, nickname, gender, kelompok, desa, daerah,
-	joined_at, left_at, membership_status, notes, photo_path, created_at, updated_at`
+	active, notes, photo_path, created_at, updated_at`
 
 func (t *Teachers) Create(ctx context.Context, in TeacherInput) (*model.Teacher, error) {
 	if in.Status == "" {
@@ -69,19 +68,21 @@ func (t *Teachers) Create(ctx context.Context, in TeacherInput) (*model.Teacher,
 		return nil, fmt.Errorf("hash default password: %w", err)
 	}
 
+	active := 1
+	if in.Status == model.TeacherRetired {
+		active = 0
+	}
+
 	_, err = t.db.ExecContext(ctx,
 		`INSERT INTO users (
 		   id, email, password, name, role, active,
 		   nickname, gender, kelompok, desa, daerah, notes,
-		   joined_at, left_at, membership_status,
 		   created_at, updated_at
-		 ) VALUES (?, ?, ?, ?, 'guru', 1,
+		 ) VALUES (?, ?, ?, ?, 'guru', ?,
 		           ?, ?, ?, ?, ?, ?,
-		           ?, ?, ?,
 		           ?, ?)`,
-		id, id+"@stub.gnrs.local", string(hash), in.Name,
+		id, id+"@stub.gnrs.local", string(hash), in.Name, active,
 		in.Nickname, in.Gender, in.Kelompok, in.Desa, in.Daerah, in.Notes,
-		nullableDate(in.JoinedAt), nullableDate(in.RetiredAt), string(in.Status),
 		now, now,
 	)
 	if err != nil {
@@ -100,15 +101,18 @@ func (t *Teachers) Update(ctx context.Context, id string, in TeacherInput) (*mod
 	if in.Status == "" {
 		in.Status = model.TeacherActive
 	}
+	active := 1
+	if in.Status == model.TeacherRetired {
+		active = 0
+	}
 	now := time.Now().UTC()
 	res, err := t.db.ExecContext(ctx,
 		`UPDATE users SET
 		   name = ?, nickname = ?, gender = ?, kelompok = ?, desa = ?, daerah = ?,
-		   joined_at = ?, left_at = ?, membership_status = ?, notes = ?, updated_at = ?
+		   active = ?, notes = ?, updated_at = ?
 		 WHERE id = ? AND role = 'guru'`,
 		in.Name, in.Nickname, in.Gender, in.Kelompok, in.Desa, in.Daerah,
-		nullableDate(in.JoinedAt), nullableDate(in.RetiredAt), string(in.Status),
-		in.Notes, now, id,
+		active, in.Notes, now, id,
 	)
 	if err != nil {
 		return nil, err
@@ -156,8 +160,12 @@ func (t *Teachers) List(ctx context.Context, p TeacherListParams) (*TeacherListR
 		args = append(args, like, like)
 	}
 	if p.Status != "" {
-		clauses = append(clauses, "membership_status = ?")
-		args = append(args, p.Status)
+		clauses = append(clauses, "active = ?")
+		if p.Status == "active" {
+			args = append(args, 1)
+		} else {
+			args = append(args, 0)
+		}
 	}
 	if d := strings.TrimSpace(p.Daerah); d != "" {
 		clauses = append(clauses, "daerah = ?")
@@ -208,12 +216,15 @@ func (t *Teachers) Stats(ctx context.Context) (*TeacherStats, error) {
 		return nil, err
 	}
 	if err := t.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM users WHERE role = 'guru' AND membership_status = 'active'`).Scan(&out.ActiveTotal); err != nil {
+		`SELECT COUNT(*) FROM users WHERE role = 'guru' AND active = 1`).Scan(&out.ActiveTotal); err != nil {
 		return nil, err
 	}
 
+	// Status is binary: active=1 → "active", active=0 → "retired"
+	// (synthesised after migration 041 dropped membership_status).
 	statusRows, err := t.db.QueryContext(ctx,
-		`SELECT membership_status, COUNT(*) FROM users WHERE role = 'guru' GROUP BY membership_status`)
+		`SELECT CASE WHEN active = 1 THEN 'active' ELSE 'retired' END, COUNT(*)
+		   FROM users WHERE role = 'guru' GROUP BY active`)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +248,7 @@ func (t *Teachers) Stats(ctx context.Context) (*TeacherStats, error) {
 
 	genderRows, err := t.db.QueryContext(ctx,
 		`SELECT COALESCE(gender, ''), COUNT(*) FROM users
-		  WHERE role = 'guru' AND membership_status = 'active' GROUP BY gender`)
+		  WHERE role = 'guru' AND active = 1 GROUP BY gender`)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +273,7 @@ func (t *Teachers) Stats(ctx context.Context) (*TeacherStats, error) {
 	daerahRows, err := t.db.QueryContext(ctx,
 		`SELECT COALESCE(daerah, ''), COUNT(*) AS n
 		   FROM users
-		  WHERE role = 'guru' AND membership_status = 'active'
+		  WHERE role = 'guru' AND active = 1
 		  GROUP BY daerah
 		  ORDER BY n DESC, daerah ASC`)
 	if err != nil {
@@ -299,25 +310,21 @@ func scanTeacher(s scanner) (*model.Teacher, error) {
 
 func readTeacher(s scanner) (*model.Teacher, error) {
 	var t model.Teacher
-	var status string
-	var joinedAt, retiredAt sql.NullTime
+	var active int
 	var photoPath *string
 	if err := s.Scan(
 		&t.ID, &t.Name, &t.Nickname, &t.Gender, &t.Kelompok, &t.Desa, &t.Daerah,
-		&joinedAt, &retiredAt, &status, &t.Notes, &photoPath,
+		&active, &t.Notes, &photoPath,
 		&t.CreatedAt, &t.UpdatedAt,
 	); err != nil {
 		return nil, err
 	}
-	t.Status = model.TeacherStatus(status)
+	// Status synthesised from active (migration 041).
+	if active == 1 {
+		t.Status = model.TeacherActive
+	} else {
+		t.Status = model.TeacherRetired
+	}
 	t.PhotoURL = model.PhotoURL(photoPath)
-	if joinedAt.Valid {
-		v := joinedAt.Time
-		t.JoinedAt = &v
-	}
-	if retiredAt.Valid {
-		v := retiredAt.Time
-		t.RetiredAt = &v
-	}
 	return &t, nil
 }
