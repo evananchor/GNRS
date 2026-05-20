@@ -5,15 +5,6 @@ import { apiFetch } from './client'
 export const USER_ROLES = ['admin', 'pengurus', 'guru', 'ortu', 'murid'] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
-export const ROLE_LABEL: Record<string, string> = {
-  admin: 'Administrator',
-  pengurus: 'Pengurus',
-  guru: 'Guru',
-  ortu: 'Orang Tua',
-  murid: 'Murid',
-  staff: 'Staff', // legacy
-}
-
 export const STUDENT_LEVELS = ['Caberawit', 'Pra Remaja', 'Remaja', 'Pra Nikah'] as const
 export type StudentLevel = (typeof STUDENT_LEVELS)[number]
 
