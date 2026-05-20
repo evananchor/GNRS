@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,6 +15,12 @@ import (
 	"github.com/fadhilkurnia/ppg-dashboard/internal/httpx"
 	"github.com/fadhilkurnia/ppg-dashboard/internal/store"
 )
+
+// tilawatiLearningStart is the first page (1-indexed) that counts as
+// learning content. Every jilid opens with two intro pages (cover +
+// table of contents) that must not be referenced by an achievement
+// row. Keep in sync with web/app/src/lib/tilawati.ts.
+const tilawatiLearningStart = 3
 
 type Pencapaian struct {
 	s         *store.PencapaianStore
@@ -178,6 +185,12 @@ func (h *Pencapaian) Upsert(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
+	if b.LibraryKind != nil && *b.LibraryKind == "tilawati" && b.LibraryRef != nil {
+		if err := validateTilawatiRef(*b.LibraryRef); err != nil {
+			httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
+			return
+		}
+	}
 	c, _ := auth.ClaimsFrom(r.Context())
 	row, err := h.s.Upsert(r.Context(), store.PencapaianUpsertInput{
 		MuridUserID:   b.MuridUserID,
@@ -196,6 +209,41 @@ func (h *Pencapaian) Upsert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, row)
+}
+
+// validateTilawatiRef rejects refs that point at the intro spread of a
+// jilid. Accepted forms: "<jilid>", "<jilid>:<page>", "<jilid>:<a>-<b>".
+// Pages 1 and 2 of every jilid are cover/index and must not be linked
+// to an achievement row.
+func validateTilawatiRef(ref string) error {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return nil
+	}
+	parts := strings.SplitN(ref, ":", 2)
+	if len(parts) < 2 || parts[1] == "" {
+		// Whole-jilid ref — no page numbers to police.
+		return nil
+	}
+	rangeStr := parts[1]
+	checkPage := func(s string) error {
+		n, err := strconv.Atoi(strings.TrimSpace(s))
+		if err != nil {
+			return fmt.Errorf("halaman tilawati tidak valid: %q", s)
+		}
+		if n < tilawatiLearningStart {
+			return fmt.Errorf("halaman %d tidak dihitung — halaman pembuka jilid (1-%d) bukan materi belajar",
+				n, tilawatiLearningStart-1)
+		}
+		return nil
+	}
+	if i := strings.Index(rangeStr, "-"); i >= 0 {
+		if err := checkPage(rangeStr[:i]); err != nil {
+			return err
+		}
+		return checkPage(rangeStr[i+1:])
+	}
+	return checkPage(rangeStr)
 }
 
 func (h *Pencapaian) Delete(w http.ResponseWriter, r *http.Request) {
