@@ -79,11 +79,12 @@ func copyStudents(ctx context.Context, db *sql.DB, users *Users, hash string) (i
 	// pinned to a single connection (SetMaxOpenConns=1), so holding `rows`
 	// open while issuing INSERTs would deadlock — the cursor pins the
 	// connection that createWithHash also needs.
-	// Note: the legacy SELECT still includes joined_at/left_at/leave_reason/
-	// status, but after migration 041 these fields no longer exist on the
-	// destination — we drop them on the floor. The unified-user mechanism
-	// represents status as a single `active` boolean, set true here for
-	// every migrated row regardless of the source's membership_status.
+	// Note: the legacy students_legacy_008 table still has joined_at /
+	// left_at / leave_reason / status columns, but we deliberately omit
+	// them from the projection below — after migration 041 they no longer
+	// exist on the destination. The unified-user mechanism represents
+	// status as a single `active` boolean, set true here for every
+	// migrated row regardless of the source's membership_status.
 	rows, err := db.QueryContext(ctx,
 		`SELECT id, name, nickname, date_of_birth, gender, level, kelompok,
 		        parent_name, parent_phone, parent_email
@@ -143,9 +144,10 @@ func copyStudents(ctx context.Context, db *sql.DB, users *Users, hash string) (i
 func copyTeachers(ctx context.Context, db *sql.DB, users *Users, hash string) (int, error) {
 	// Drain first to avoid deadlocking on the single shared connection
 	// (see copyStudents for the same dance).
-	// joined_at/retired_at/status from the legacy table are dropped — see
-	// the comment in copyStudents for the rationale. Active=1 is set
-	// implicitly by createWithHash for every migrated row.
+	// teachers_legacy_008 still has joined_at / retired_at / status, but
+	// they are omitted from the projection below — see the comment in
+	// copyStudents for the rationale. Active=1 is set implicitly by
+	// createWithHash for every migrated row.
 	rows, err := db.QueryContext(ctx,
 		`SELECT id, name, nickname, kelompok, desa, daerah, notes
 		   FROM teachers_legacy_008`)
