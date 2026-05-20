@@ -19,6 +19,11 @@ import { listQuranSurahs } from '@/api/quran'
 import { listStudents } from '@/api/students'
 import { ageInYears } from '@/lib/age'
 import { ApiError } from '@/api/client'
+import {
+  TILAWATI_LEARNING_PAGES_BY_JILID,
+  TILAWATI_LEARNING_START,
+  TILAWATI_TOTAL_LEARNING_PAGES,
+} from '@/lib/tilawati'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/Input'
 import { PageShell, PageHeader } from '@/components/PageShell'
@@ -980,12 +985,7 @@ function parseTilawatiRef(ref: string): { jilid: string; from?: number; to?: num
   return { jilid: j, from: a, to: a }
 }
 
-const TILAWATI_PAGES_BY_JILID: Record<string, number> = {
-  '1': 46, '2': 46, '3': 46, '4': 46, '5': 46, '6': 42,
-}
-
 const QURAN_TOTAL_AYAT = 6236
-const TILAWATI_TOTAL_PAGES = 268 // 46*5 + 42
 const HADITS_HIMPUNAN_PAGES = 2607 // sum of seeded jumlah_halaman across 24 kitab himpunan
 
 function LibraryTrackerGrid({
@@ -1090,7 +1090,12 @@ function LibraryTrackerGrid({
       } else if (p.libraryKind === 'tilawati' && p.libraryRef) {
         const parsed = parseTilawatiRef(p.libraryRef)
         if (!parsed) continue
-        const total = TILAWATI_PAGES_BY_JILID[parsed.jilid] ?? 46
+        // Tilawati intro pages (1..TILAWATI_LEARNING_START-1) are cover and
+        // table-of-contents pages — they do not count toward achievement.
+        // Use the printed page range as the iteration bound but only add
+        // pages that are real learning content. Bounds use the full printed
+        // page count so refs naming page 46 still register.
+        const total = (TILAWATI_LEARNING_PAGES_BY_JILID[parsed.jilid] ?? 44) + TILAWATI_LEARNING_START - 1
         let byAspect = tilawati.get(aspect)
         if (!byAspect) {
           byAspect = new Map()
@@ -1098,9 +1103,11 @@ function LibraryTrackerGrid({
         }
         const cur = byAspect.get(parsed.jilid) ?? { covered: new Set<number>() }
         if (parsed.from && parsed.to) {
-          for (let pg = parsed.from; pg <= parsed.to && pg <= total; pg++) cur.covered.add(pg)
+          const lo = Math.max(parsed.from, TILAWATI_LEARNING_START)
+          const hi = Math.min(parsed.to, total)
+          for (let pg = lo; pg <= hi; pg++) cur.covered.add(pg)
         } else {
-          for (let pg = 1; pg <= total; pg++) cur.covered.add(pg)
+          for (let pg = TILAWATI_LEARNING_START; pg <= total; pg++) cur.covered.add(pg)
         }
         byAspect.set(parsed.jilid, cur)
       } else if (p.libraryKind === 'doa' && p.libraryRef) {
@@ -1200,8 +1207,8 @@ function LibraryTrackerGrid({
         aspect: aspect as MainTile['aspect'],
         label: `${KIND_LABEL_ID.tilawati} · ${ASPECT_LABEL_ID[aspect] ?? aspect}`,
         icon: KIND_ICON.tilawati,
-        done: Math.min(pages, TILAWATI_TOTAL_PAGES),
-        total: TILAWATI_TOTAL_PAGES,
+        done: Math.min(pages, TILAWATI_TOTAL_LEARNING_PAGES),
+        total: TILAWATI_TOTAL_LEARNING_PAGES,
         unit: t('achievement.unitHalaman'),
       })
     }
@@ -1280,7 +1287,7 @@ function LibraryTrackerGrid({
       if (!byAspect) return []
       const out: ItemTile[] = []
       for (const [jilid, b] of byAspect) {
-        const total = TILAWATI_PAGES_BY_JILID[jilid] ?? 46
+        const total = TILAWATI_LEARNING_PAGES_BY_JILID[jilid] ?? 44
         out.push({
           key: `tilawati-${jilid}`,
           label: `${t('pustaka.refLabel.jilid')} ${jilid}`,
