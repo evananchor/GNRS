@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -52,7 +52,7 @@ export function UsersPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const roleLabel = useRoleLabel()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
   const roleParam = params.get('role')
   const role = (USER_ROLES as readonly string[]).includes(roleParam ?? '')
@@ -62,11 +62,23 @@ export function UsersPage() {
   const active =
     activeParam === 'true' ? true : activeParam === 'false' ? false : undefined
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
+  const newFlag = params.get('new') === '1'
 
   const { user: me } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
   const [dialog, setDialog] = useState<DialogMode>(null)
+
+  // /students/new and /teachers/new redirect here with ?new=1 — open the
+  // create dialog and strip the param so refresh / back-nav doesn't reopen.
+  useEffect(() => {
+    if (newFlag) {
+      setDialog({ kind: 'create' })
+      const next = new URLSearchParams(params)
+      next.delete('new')
+      setParams(next, { replace: true })
+    }
+  }, [newFlag, params, setParams])
 
   const { data, isPending } = useQuery({
     queryKey: ['users', { q, role, active, page }],
