@@ -125,8 +125,3 @@ Role is stored on the user row; the seed admin is created with `admin`.
   bind-mount `./data` into the container, chown the host directory
   to UID 1001 first; otherwise use the named volume in the compose
   file.
-
-## Project rules
-
-See [`RULES.md`](./RULES.md) — branch + PR workflow, commit message
-format.

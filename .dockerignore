@@ -3,7 +3,6 @@
 .dockerignore
 README.md
 PODMAN.md
-RULES.md
 Makefile
 
 # Local data and env
