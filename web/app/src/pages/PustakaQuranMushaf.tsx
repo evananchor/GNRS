@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, PencilLine, Save, X } from 'lucide-react'
 
 import {
@@ -47,6 +48,7 @@ function useIsDesktop() {
  * are persisted via /api/quran/manqul-notes.
  */
 export function PustakaQuranMushafPage() {
+  const { t } = useTranslation()
   const { surahId } = useParams()
   const [currentPage, setCurrentPage] = useState(1)
   const [translationIds, setTranslationIds] = useState<string>('33') // Kemenag
@@ -162,7 +164,7 @@ export function PustakaQuranMushafPage() {
   )
 
   return (
-    <LibraryShell backTo="/pustaka" backLabel="Pustaka" bgClassName="bg-[#f0ece0]">
+    <LibraryShell backTo="/pustaka" bgClassName="bg-[#f0ece0]">
       {/* Top floating toolbar — sits below the back-button. */}
       <div className="sticky top-0 z-30 flex justify-center px-2 pt-3">
         <Toolbar
@@ -215,22 +217,23 @@ export function PustakaQuranMushafPage() {
           onClick={prevSpread}
           disabled={currentPage <= 1}
           className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-          title="ArrowRight: halaman sebelumnya"
+          title={t('pustaka.quran.tbPrev')}
         >
-          <ChevronLeft size={14} /> Kembali
+          <ChevronLeft size={14} /> {t('pustaka.quran.tbBack')}
         </button>
         <span className="px-2 text-xs font-medium tabular-nums text-slate-700">
-          Hal {rightPage}
-          {leftPage && leftPage !== rightPage ? `–${leftPage}` : ''} / {TOTAL_PAGES}
+          {leftPage && leftPage !== rightPage
+            ? t('pustaka.quran.tbPageRange', { right: rightPage, left: leftPage, total: TOTAL_PAGES })
+            : t('pustaka.quran.tbPageNum', { right: rightPage, total: TOTAL_PAGES })}
         </span>
         <button
           type="button"
           onClick={nextSpread}
           disabled={currentPage >= TOTAL_PAGES}
           className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-          title="ArrowLeft: halaman berikutnya"
+          title={t('pustaka.quran.tbNext')}
         >
-          Lanjut <ChevronRight size={14} />
+          {t('pustaka.quran.tbForward')} <ChevronRight size={14} />
         </button>
       </div>
 
@@ -275,6 +278,7 @@ function Toolbar({
   onJumpSurah: (s: QuranSurah) => void
   onJumpPage: (n: number) => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="pointer-events-auto flex w-full max-w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-full border border-amber-300 bg-amber-50/95 px-2 py-1.5 shadow-lg backdrop-blur sm:w-auto sm:flex-wrap sm:gap-2 sm:px-3">
       <select
@@ -285,10 +289,10 @@ function Toolbar({
         }}
         className="h-8 min-w-0 max-w-[7rem] shrink truncate rounded-full border border-amber-200 bg-white px-2 text-xs sm:max-w-[180px]"
       >
-        <option value="">— surat —</option>
+        <option value="">{t('pustaka.quran.tbSelectSurat')}</option>
         {surahs.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.id}. {s.nama}
+            {t('pustaka.quran.tbSurahOpt', { id: s.id, nama: s.nama })}
           </option>
         ))}
       </select>
@@ -302,16 +306,16 @@ function Toolbar({
           if (Number.isFinite(n)) onJumpPage(n)
         }}
         className="h-8 w-12 shrink-0 rounded-full border border-amber-200 bg-white px-2 text-center text-xs tabular-nums sm:w-16"
-        title="Loncat ke halaman 1–604"
+        title={t('pustaka.quran.tbJumpPageTitle')}
       />
       <select
         value={translationIds}
         onChange={(e) => setTranslationIds(e.target.value)}
         className="h-8 min-w-0 max-w-[5.5rem] shrink truncate rounded-full border border-amber-200 bg-white px-2 text-xs sm:max-w-[180px]"
       >
-        {translations.map((t) => (
-          <option key={t.id} value={String(t.id)}>
-            {t.label}
+        {translations.map((tr) => (
+          <option key={tr.id} value={String(tr.id)}>
+            {tr.label}
           </option>
         ))}
       </select>
@@ -320,7 +324,7 @@ function Toolbar({
           type="button"
           onClick={() => setFontSize(Math.max(18, fontSize - 2))}
           className="px-1 text-slate-600 hover:text-slate-900"
-          aria-label="Perkecil"
+          aria-label={t('pustaka.quran.tbShrinkAria')}
         >
           A−
         </button>
@@ -329,7 +333,7 @@ function Toolbar({
           type="button"
           onClick={() => setFontSize(Math.min(48, fontSize + 2))}
           className="px-1 text-slate-600 hover:text-slate-900"
-          aria-label="Perbesar"
+          aria-label={t('pustaka.quran.tbGrowAria')}
         >
           A+
         </button>
@@ -343,10 +347,10 @@ function Toolbar({
             ? 'border-violet-400 bg-violet-100 text-violet-800'
             : 'border-amber-200 bg-white text-slate-700 hover:bg-amber-100',
         )}
-        title="Manqul: catatan terjemahan per ayat"
+        title={t('pustaka.quran.tbManqulTitle')}
       >
         <PencilLine size={12} className="shrink-0" />
-        <span className="hidden sm:inline">Manqul {manqulMode ? '· on' : ''}</span>
+        <span className="hidden sm:inline">{manqulMode ? t('pustaka.quran.tbManqulOn') : t('pustaka.quran.tbManqul')}</span>
         <span className="sm:hidden">M{manqulMode ? '✓' : ''}</span>
       </button>
     </div>
@@ -370,6 +374,7 @@ function MushafPage({
   fontSize: number
   onClickAyah: (a: QuranAyah) => void
 }) {
+  const { t } = useTranslation()
   // Fetch words breakdown only when manqul mode is on; the words payload is
   // ~5x bigger than the bare verse, so we lazy-load it.
   const { data, isPending } = useQuery<QuranPageResponse>({
@@ -387,11 +392,11 @@ function MushafPage({
   return (
     <div className="mushaf-page">
       <div className="mb-3 flex items-center justify-between text-xs text-[#8b7355]">
-        <span>Halaman {pageNum}</span>
-        {data?.ayat[0] ? <span>Juz {data.ayat[0].juz}</span> : null}
+        <span>{t('pustaka.quran.pageLabel', { n: pageNum })}</span>
+        {data?.ayat[0] ? <span>{t('pustaka.quran.juzLabel', { n: data.ayat[0].juz })}</span> : null}
       </div>
       {isPending ? (
-        <p className="py-10 text-center text-sm text-slate-500">Memuat halaman {pageNum}…</p>
+        <p className="py-10 text-center text-sm text-slate-500">{t('pustaka.quran.loadingPage', { n: pageNum })}</p>
       ) : manqulMode ? (
         // Manqul mode — every Arabic WORD gets its own translation chip and
         // an inline note input. Per-ayah note also stays available at the
@@ -417,7 +422,7 @@ function MushafPage({
             <span
               key={ayah.kunciAyat}
               onClick={() => onClickAyah(ayah)}
-              title={`Klik untuk arti ayat ${ayah.kunciAyat}`}
+              title={t('pustaka.quran.ayahTitle', { key: ayah.kunciAyat })}
               className="cursor-pointer rounded px-0.5 transition hover:bg-amber-200/40"
             >
               {i > 0 ? ' ' : ''}
@@ -456,6 +461,7 @@ function ManqulAyahBlock({
   fontSize: number
   onClickAyah: (a: QuranAyah) => void
 }) {
+  const { t } = useTranslation()
   const surahNum = ayah.kunciAyat.split(':')[0]
   const ayahNum = Number(ayah.kunciAyat.split(':')[1])
 
@@ -467,7 +473,7 @@ function ManqulAyahBlock({
           type="button"
           onClick={() => onClickAyah(ayah)}
           className="inline-flex items-center gap-2 text-xs font-medium text-violet-700 transition hover:underline"
-          title={`Lihat terjemahan ayat ${ayah.kunciAyat}`}
+          title={t('pustaka.quran.ayahViewTitle', { key: ayah.kunciAyat })}
         >
           <AyahMark nomor={ayahNum} />
           <span>QS {ayah.kunciAyat}</span>
@@ -491,7 +497,7 @@ function ManqulAyahBlock({
         ))}
         {(!ayah.perKata || ayah.perKata.length === 0) && (
           <p className="px-2 py-1 text-xs italic text-slate-500" dir="ltr">
-            Word-by-word belum tersedia untuk ayat ini.
+            {t('pustaka.quran.wordsUnavailable')}
           </p>
         )}
       </div>
@@ -517,6 +523,7 @@ function ManqulWordCell({
   word: { arab: string; terjemahan?: string; transliterasi?: string }
   fontSize: number
 }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const { data: notes = [] } = useQuery({
     queryKey: ['manqul', surahNum],
@@ -570,16 +577,16 @@ function ManqulWordCell({
         onChange={(e) => setText(e.target.value)}
         onBlur={save}
         rows={1}
-        placeholder="manqul…"
+        placeholder={t('pustaka.quran.wordPh')}
         className="w-full resize-y rounded border border-violet-200 bg-violet-50/50 px-1.5 py-0.5 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-300"
       />
       <span className="text-[9px] font-medium">
         {saved === 'saving' ? (
-          <span className="text-slate-400">save…</span>
+          <span className="text-slate-400">{t('pustaka.quran.savingShort')}</span>
         ) : saved === 'saved' ? (
           <span className="text-emerald-600">✓</span>
         ) : saved === 'error' ? (
-          <span className="text-rose-600">gagal</span>
+          <span className="text-rose-600">{t('pustaka.quran.failedShort')}</span>
         ) : existing ? (
           <span className="text-violet-500">●</span>
         ) : (
@@ -597,6 +604,7 @@ function ManqulPerAyahNote({
   ayah: QuranAyah
   surahNum: string
 }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const { data: notes = [] } = useQuery({
     queryKey: ['manqul', surahNum],
@@ -634,20 +642,20 @@ function ManqulPerAyahNote({
         onChange={(e) => setText(e.target.value)}
         onBlur={save}
         rows={2}
-        placeholder={`Catatan manqul ayat ${ayah.kunciAyat}…`}
+        placeholder={t('pustaka.quran.ayahNotePh', { key: ayah.kunciAyat })}
         className="flex-1 resize-y rounded-md border border-violet-200 bg-white px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
       />
       <div className="flex w-16 flex-shrink-0 items-center justify-center text-[10px]">
         {saved === 'saving' ? (
-          <span className="text-slate-400">Menyimpan…</span>
+          <span className="text-slate-400">{t('pustaka.quran.saveSavingLong')}</span>
         ) : saved === 'saved' ? (
-          <span className="text-emerald-600">Tersimpan</span>
+          <span className="text-emerald-600">{t('pustaka.quran.saveSaved')}</span>
         ) : saved === 'error' ? (
-          <span className="text-rose-600">Gagal</span>
+          <span className="text-rose-600">{t('pustaka.quran.saveFailed')}</span>
         ) : existing ? (
-          <span className="text-violet-600">✓ ayat</span>
+          <span className="text-violet-600">{t('pustaka.quran.ayatNoteSaved')}</span>
         ) : (
-          <span className="text-slate-300">kosong</span>
+          <span className="text-slate-300">{t('pustaka.quran.ayatNoteEmpty')}</span>
         )}
       </div>
     </div>
@@ -686,6 +694,7 @@ function AyahPopup({
   manqulMode: boolean
   onClose: () => void
 }) {
+  const { t, i18n } = useTranslation()
   const surahNum = ayah.kunciAyat.split(':')[0]
   const qc = useQueryClient()
 
@@ -735,7 +744,7 @@ function AyahPopup({
             type="button"
             onClick={onClose}
             className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            aria-label="Tutup"
+            aria-label={t('pustaka.quran.popupTitleClose')}
           >
             <X size={18} />
           </button>
@@ -762,20 +771,25 @@ function AyahPopup({
           {manqulMode ? (
             <div className="rounded-md border border-violet-200 bg-violet-50/60 p-3">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-violet-700">
-                ✍️ Catatan manqul (per ayat)
+                {t('pustaka.quran.manqulSection')}
               </label>
               <textarea
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 rows={4}
                 className="w-full rounded-md border border-violet-300 bg-white px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
-                placeholder="Tulis catatan manqul untuk ayat ini…"
+                placeholder={t('pustaka.quran.manqulInputPh')}
               />
               <div className="mt-2 flex items-center justify-between">
                 <p className="text-[11px] text-violet-700">
                   {existing
-                    ? `Tersimpan ${new Date(existing.updatedAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}`
-                    : 'Belum ada catatan untuk ayat ini.'}
+                    ? t('pustaka.quran.manqulSavedAt', {
+                        when: new Date(existing.updatedAt).toLocaleString(
+                          i18n.language === 'en' ? 'en-US' : 'id-ID',
+                          { dateStyle: 'short', timeStyle: 'short' },
+                        ),
+                      })
+                    : t('pustaka.quran.manqulNoNote')}
                 </p>
                 <button
                   type="button"
@@ -783,7 +797,7 @@ function AyahPopup({
                   disabled={saveMut.isPending}
                   className="inline-flex items-center gap-1 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Save size={12} /> {saveMut.isPending ? 'Menyimpan…' : 'Simpan'}
+                  <Save size={12} /> {saveMut.isPending ? t('common.saving') : t('common.save')}
                 </button>
               </div>
             </div>

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
 import { getSettings } from '@/api/settings'
 import { useAuth } from '@/lib/auth'
@@ -35,6 +36,7 @@ type NavItem = {
 
 export function Layout() {
   const { user, logout } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const [pending, setPending] = useState(false)
@@ -100,15 +102,15 @@ export function Layout() {
   }
 
   const items: NavItem[] = [
-    { to: '/dashboard', icon: <LayoutDashboard size={16} />, label: 'Dasbor' },
-    { to: '/students', icon: <Users size={16} />, label: 'Generus' },
-    { to: '/teachers', icon: <GraduationCap size={16} />, label: 'Pengajar' },
-    { to: '/kelas', icon: <School size={16} />, label: 'Kelas' },
-    { to: '/kehadiran', icon: <CalendarCheck size={16} />, label: 'Kehadiran' },
-    { to: '/bacaan', icon: <BookOpenCheck size={16} />, label: 'Bacaan' },
-    { to: '/pustaka', icon: <BookMarked size={16} />, label: 'Pustaka' },
-    { to: '/achievement', icon: <Trophy size={16} />, label: 'Pencapaian' },
-    { to: '/pengaturan', icon: <Settings size={16} />, label: 'Setting', adminOnly: true },
+    { to: '/dashboard', icon: <LayoutDashboard size={16} />, label: t('nav.dashboard') },
+    { to: '/students', icon: <Users size={16} />, label: t('nav.students') },
+    { to: '/teachers', icon: <GraduationCap size={16} />, label: t('nav.teachers') },
+    { to: '/kelas', icon: <School size={16} />, label: t('nav.kelas') },
+    { to: '/kehadiran', icon: <CalendarCheck size={16} />, label: t('nav.kehadiran') },
+    { to: '/bacaan', icon: <BookOpenCheck size={16} />, label: t('nav.bacaan') },
+    { to: '/pustaka', icon: <BookMarked size={16} />, label: t('nav.pustaka') },
+    { to: '/achievement', icon: <Trophy size={16} />, label: t('nav.achievement') },
+    { to: '/pengaturan', icon: <Settings size={16} />, label: t('nav.settings'), adminOnly: true },
   ].filter((it) => !it.adminOnly || user?.role === 'admin')
 
   return (
@@ -124,7 +126,7 @@ export function Layout() {
             type="button"
             onClick={() => setUserMenuOpen((v) => !v)}
             className="flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-slate-100"
-            aria-label="Buka menu pengguna"
+            aria-label={t('nav.openUserMenu')}
             aria-expanded={userMenuOpen}
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50">
@@ -150,7 +152,7 @@ export function Layout() {
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-slate-50"
               >
-                <UserIcon size={14} /> Profile
+                <UserIcon size={14} /> {t('nav.profile')}
               </button>
               <button
                 type="button"
@@ -158,7 +160,7 @@ export function Layout() {
                 disabled={pending}
                 className="flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2 text-left text-sm text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
               >
-                <LogOut size={14} /> Keluar
+                <LogOut size={14} /> {t('nav.logout')}
               </button>
             </div>
           ) : null}
@@ -180,8 +182,8 @@ export function Layout() {
             type="button"
             onClick={() => setSidebarHidden(true)}
             className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            aria-label="Sembunyikan sidebar"
-            title="Sembunyikan sidebar"
+            aria-label={t('nav.hideSidebar')}
+            title={t('nav.hideSidebar')}
           >
             <ChevronLeft size={16} />
           </button>
@@ -196,8 +198,8 @@ export function Layout() {
             type="button"
             onClick={() => setProfileOpen(true)}
             className="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-            aria-label="Buka profil saya"
-            title="Klik untuk membuka profil saya"
+            aria-label={t('nav.openMyProfile')}
+            title={t('nav.openMyProfileTitle')}
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50">
               {user?.photoUrl ? (
@@ -220,7 +222,7 @@ export function Layout() {
             onClick={handleLogout}
             disabled={pending}
           >
-            <LogOut size={16} className="mr-2" /> Keluar
+            <LogOut size={16} className="mr-2" /> {t('nav.logout')}
           </Button>
         </div>
       </aside>
@@ -231,8 +233,8 @@ export function Layout() {
           type="button"
           onClick={() => setSidebarHidden(false)}
           className="fixed left-2 top-2 z-50 hidden h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white/90 text-slate-700 shadow-md backdrop-blur transition hover:bg-white md:inline-flex"
-          aria-label="Tampilkan sidebar"
-          title="Tampilkan sidebar"
+          aria-label={t('nav.showSidebar')}
+          title={t('nav.showSidebar')}
         >
           <ChevronRight size={16} />
         </button>
@@ -248,7 +250,7 @@ export function Layout() {
           all fit on small viewports. */}
       <nav
         className="flex flex-shrink-0 items-stretch overflow-x-auto border-t border-slate-200 bg-white md:hidden"
-        aria-label="Menu utama"
+        aria-label={t('nav.mainMenu')}
       >
         {items.map((it) => (
           <BottomNavLink key={it.to} to={it.to} icon={it.icon} label={it.label} />

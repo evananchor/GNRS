@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Plus, RotateCcw, X } from 'lucide-react'
 
 import {
@@ -44,6 +45,7 @@ export function RescheduleSesiDialog({
 }) {
   const qc = useQueryClient()
   const toast = useToast()
+  const { t } = useTranslation()
   const today = new Date().toISOString().slice(0, 10)
 
   const [tanggal, setTanggal] = useState(sesi.tanggal.slice(0, 10) || today)
@@ -78,25 +80,25 @@ export function RescheduleSesiDialog({
       }
     },
     onSuccess: () => {
-      toast(`Sesi dijadwalkan ulang ke ${tanggal}`, 'success')
+      toast(t('reschedule.toastSaved', { date: tanggal }), 'success')
       qc.invalidateQueries({ queryKey: ['sesi'] })
       qc.invalidateQueries({ queryKey: ['kelas-sesi'] })
       qc.invalidateQueries({ queryKey: ['rencana'] })
       qc.invalidateQueries({ queryKey: ['rencana-full'] })
       onSaved()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menjadwalkan ulang', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('reschedule.toastFailed'), 'error'),
   })
 
   const removePicked = (id: string) =>
     setPickedMateri((cur) => cur.filter((m) => m.id !== id))
 
   return (
-    <Dialog title="Reschedule Sesi" onClose={onClose} size="md">
+    <Dialog title={t('reschedule.title')} onClose={onClose} size="md">
       <div className="mb-4 rounded-md bg-slate-50 px-3 py-2 text-xs">
         <p className="font-medium text-slate-800">{sesi.topik}</p>
         <p className="text-slate-500">
-          Asal: {sesi.tanggal}
+          {t('reschedule.origin')}: {sesi.tanggal}
           {sesi.mulai ? ` · ${sesi.mulai}${sesi.selesai ? `–${sesi.selesai}` : ''}` : ''}
         </p>
       </div>
@@ -108,7 +110,7 @@ export function RescheduleSesiDialog({
         }}
         className="space-y-4"
       >
-        <Field label="Tanggal baru" htmlFor="resched-date">
+        <Field label={t('reschedule.newDate')} htmlFor="resched-date">
           <Input
             id="resched-date"
             type="date"
@@ -118,7 +120,7 @@ export function RescheduleSesiDialog({
           />
         </Field>
 
-        <Field label="Topik" htmlFor="resched-topik">
+        <Field label={t('reschedule.topic')} htmlFor="resched-topik">
           <Input
             id="resched-topik"
             value={topik}
@@ -128,7 +130,7 @@ export function RescheduleSesiDialog({
         </Field>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Mulai" htmlFor="resched-mulai">
+          <Field label={t('reschedule.start')} htmlFor="resched-mulai">
             <Input
               id="resched-mulai"
               type="time"
@@ -136,7 +138,7 @@ export function RescheduleSesiDialog({
               onChange={(e) => setMulai(e.target.value)}
             />
           </Field>
-          <Field label="Selesai" htmlFor="resched-selesai">
+          <Field label={t('reschedule.end')} htmlFor="resched-selesai">
             <Input
               id="resched-selesai"
               type="time"
@@ -147,7 +149,7 @@ export function RescheduleSesiDialog({
         </div>
 
         {sesi.kelasId && tingkat ? (
-          <Field label="Materi pengganti (opsional, bisa lebih dari satu)" htmlFor="">
+          <Field label={t('reschedule.materiLabel')} htmlFor="">
             {pickedMateri.length > 0 ? (
               <ul className="mb-2 divide-y divide-slate-100 rounded-md border border-slate-200">
                 {pickedMateri.map((m, i) => (
@@ -163,7 +165,7 @@ export function RescheduleSesiDialog({
                       type="button"
                       onClick={() => removePicked(m.id)}
                       className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                      aria-label="Hapus"
+                      aria-label={t('common.delete')}
                     >
                       <X size={14} />
                     </button>
@@ -172,21 +174,21 @@ export function RescheduleSesiDialog({
               </ul>
             ) : null}
             <Button type="button" variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
-              <Plus size={14} className="mr-1" /> Dari Kurikulum
+              <Plus size={14} className="mr-1" /> {t('reschedule.fromKurikulum')}
             </Button>
             <p className="mt-1 text-xs text-slate-500">
-              Materi akan otomatis masuk Rencana Ajar bulan {tanggal.slice(0, 7)}.
+              {t('reschedule.materiHint', { ym: tanggal.slice(0, 7) })}
             </p>
           </Field>
         ) : null}
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} disabled={saveMut.isPending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={saveMut.isPending}>
             <RotateCcw size={14} className="mr-1" />
-            {saveMut.isPending ? 'Menjadwalkan…' : 'Jadwalkan Ulang'}
+            {saveMut.isPending ? t('reschedule.rescheduling') : t('reschedule.submit')}
           </Button>
         </div>
       </form>
@@ -217,6 +219,7 @@ function KurikulumMiniPicker({
   onPick: (items: MateriAjar[]) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
 
@@ -243,8 +246,8 @@ function KurikulumMiniPicker({
   const grouped = useMemo(() => {
     const m: Record<string, MateriAjar[]> = {}
     for (const it of filtered) {
-      const t = (it.tema || 'ALIM').toUpperCase()
-      ;(m[t] = m[t] || []).push(it)
+      const tema = (it.tema || 'ALIM').toUpperCase()
+      ;(m[tema] = m[tema] || []).push(it)
     }
     return [
       ...TEMA_ORDER.filter((k) => m[k]),
@@ -261,18 +264,18 @@ function KurikulumMiniPicker({
     })
 
   return (
-    <Dialog title={`Pilih Materi — ${tingkat}`} onClose={onClose} size="lg">
+    <Dialog title={t('materi.pickTitle', { tingkat })} onClose={onClose} size="lg">
       <Input
-        placeholder="Cari tema / detail materi…"
+        placeholder={t('materi.searchPh')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="mb-3"
       />
       <div className="max-h-[55vh] overflow-y-auto rounded-md border border-slate-200">
         {isPending ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-500">Memuat materi…</p>
+          <p className="px-4 py-6 text-center text-sm text-slate-500">{t('materi.loading')}</p>
         ) : grouped.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-500">Tidak ada materi yang cocok.</p>
+          <p className="px-4 py-6 text-center text-sm text-slate-500">{t('materi.noMatch')}</p>
         ) : (
           grouped.map((g) => (
             <div key={g.tema} className="border-b border-slate-100 last:border-b-0">
@@ -304,10 +307,10 @@ function KurikulumMiniPicker({
         )}
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
-        <span className="text-xs text-slate-500">{picked.size} dipilih</span>
+        <span className="text-xs text-slate-500">{t('materi.picked', { count: picked.size })}</span>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={onClose}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={() => {
@@ -316,7 +319,7 @@ function KurikulumMiniPicker({
             }}
             disabled={picked.size === 0}
           >
-            Tambah {picked.size > 0 ? `(${picked.size})` : ''}
+            {picked.size > 0 ? t('materi.addN', { count: picked.size }) : t('common.add')}
           </Button>
         </div>
       </div>

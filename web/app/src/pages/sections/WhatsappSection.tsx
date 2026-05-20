@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
 import { getSettings, updateSettings } from '@/api/settings'
 import { ApiError } from '@/api/client'
@@ -8,18 +9,8 @@ import { PageShell } from '@/components/PageShell'
 import { useToast } from '@/lib/toast'
 import { DEFAULT_WA_TEMPLATE } from '@/components/EndSesiSummaryDialog'
 
-const PLACEHOLDERS: { key: string; desc: string }[] = [
-  { key: '{salutation}', desc: "Sebutan ortu (Bapak/Ibu) dari profil generus" },
-  { key: '{parent_name}', desc: 'Nama orang tua' },
-  { key: '{murid_name}', desc: 'Nama generus' },
-  { key: '{topik}', desc: 'Topik sesi' },
-  { key: '{tanggal}', desc: 'Tanggal sesi (mis. 14 Mei 2026)' },
-  { key: '{durasi}', desc: 'Durasi sesi (mis. 1 jam 15 menit)' },
-  { key: '{materi_list}', desc: 'Daftar materi diajarkan (bullet)' },
-  { key: '{review_section}', desc: "Section 'Perlu Direview' (otomatis kosong jika tidak ada)" },
-]
-
 export function WhatsappSection() {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
   const { data: settings = {} } = useQuery({
@@ -36,20 +27,30 @@ export function WhatsappSection() {
   const mut = useMutation({
     mutationFn: (updates: Record<string, string>) => updateSettings(updates),
     onSuccess: () => {
-      toast('Template WhatsApp tersimpan', 'success')
+      toast(t('whatsapp.savedToast'), 'success')
       qc.invalidateQueries({ queryKey: ['settings'] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal simpan', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('whatsapp.saveFailed'), 'error'),
   })
+
+  const PLACEHOLDERS: { key: string; desc: string }[] = [
+    { key: '{salutation}', desc: t('whatsapp.ph.salutation') },
+    { key: '{parent_name}', desc: t('whatsapp.ph.parentName') },
+    { key: '{murid_name}', desc: t('whatsapp.ph.muridName') },
+    { key: '{topik}', desc: t('whatsapp.ph.topik') },
+    { key: '{tanggal}', desc: t('whatsapp.ph.tanggal') },
+    { key: '{durasi}', desc: t('whatsapp.ph.durasi') },
+    { key: '{materi_list}', desc: t('whatsapp.ph.materiList') },
+    { key: '{review_section}', desc: t('whatsapp.ph.reviewSection') },
+  ]
 
   return (
     <PageShell>
       <div className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold">Template Ringkasan WhatsApp</h2>
+          <h2 className="text-lg font-semibold">{t('whatsapp.title')}</h2>
           <p className="text-sm text-slate-500">
-            Pesan yang akan dikirim ke orang tua di akhir sesi. Kosongkan untuk
-            kembali ke template bawaan.
+            {t('whatsapp.subtitle')}
           </p>
         </div>
 
@@ -74,17 +75,17 @@ export function WhatsappSection() {
                 variant="secondary"
                 onClick={() => setTpl(DEFAULT_WA_TEMPLATE)}
               >
-                Pakai bawaan
+                {t('whatsapp.usePreset')}
               </Button>
               <Button type="submit" disabled={mut.isPending}>
-                {mut.isPending ? 'Menyimpan…' : 'Simpan'}
+                {mut.isPending ? t('common.saving') : t('common.save')}
               </Button>
             </div>
           </form>
 
           <aside className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Placeholder
+              {t('whatsapp.placeholderHeader')}
             </div>
             <ul className="space-y-2">
               {PLACEHOLDERS.map((p) => (

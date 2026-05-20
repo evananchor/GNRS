@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { LibraryShell } from '@/components/LibraryShell'
@@ -52,6 +53,7 @@ function useIsDesktop() {
  * Mobile: single page; image fills viewport height inside flex-1.
  */
 export function PustakaTilawatiPage() {
+  const { t } = useTranslation()
   const { jilidId } = useParams()
   const initialJilid = (() => {
     const n = Number(jilidId)
@@ -136,7 +138,6 @@ export function PustakaTilawatiPage() {
   return (
     <LibraryShell
       backTo="/pustaka"
-      backLabel="Pustaka"
       contentClassName="flex h-full min-h-0 flex-col"
     >
       {/* Floating header — jilid + page + nav. Single row, compact on
@@ -162,11 +163,11 @@ export function PustakaTilawatiPage() {
             type="button"
             onClick={prevSpread}
             disabled={currentPage <= 1}
-            aria-label="Sebelumnya"
+            aria-label={t('pustaka.tilawati.prevAria')}
             className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
           >
             <ChevronLeft size={14} className="shrink-0" />
-            <span className="hidden sm:inline">Sebelumnya</span>
+            <span className="hidden sm:inline">{t('pustaka.tilawati.prev')}</span>
           </button>
           <input
             type="number"
@@ -181,10 +182,10 @@ export function PustakaTilawatiPage() {
             type="button"
             onClick={nextSpread}
             disabled={currentPage >= totalPages}
-            aria-label="Berikutnya"
+            aria-label={t('pustaka.tilawati.nextAria')}
             className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
           >
-            <span className="hidden sm:inline">Berikutnya</span>
+            <span className="hidden sm:inline">{t('pustaka.tilawati.next')}</span>
             <ChevronRight size={14} className="shrink-0" />
           </button>
         </div>
@@ -207,17 +208,18 @@ export function PustakaTilawatiPage() {
 }
 
 function PageImage({ jilid, page }: { jilid: number; page: number }) {
+  const { t } = useTranslation()
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col items-center">
       <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg bg-white p-2 shadow-md">
         <img
           src={pageUrl(jilid, page)}
-          alt={`Tilawati Jilid ${jilid} halaman ${page}`}
+          alt={t('pustaka.tilawati.pageAlt', { jilid, page })}
           loading="lazy"
           className="block max-h-full max-w-full rounded object-contain"
         />
       </div>
-      <div className="mt-1 text-center text-[11px] text-slate-500">halaman {page}</div>
+      <div className="mt-1 text-center text-[11px] text-slate-500">{t('pustaka.tilawati.pageLabel', { page })}</div>
     </div>
   )
 }

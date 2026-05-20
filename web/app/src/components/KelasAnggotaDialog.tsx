@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Trash2, UserPlus } from 'lucide-react'
 
 import {
@@ -37,10 +38,11 @@ export function KelasAnggotaDialog({
   tingkat: string
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>('murid')
 
   return (
-    <Dialog title={`Anggota Kelas — ${kelasNama}`} onClose={onClose} size="lg">
+    <Dialog title={t('sesiDialog.kelasAnggota.title', { name: kelasNama })} onClose={onClose} size="lg">
       <div className="space-y-4">
         <div className="flex gap-1 rounded-md border border-slate-200 bg-slate-50 p-1">
           <button
@@ -53,7 +55,7 @@ export function KelasAnggotaDialog({
                 : 'text-slate-600 hover:text-slate-900',
             )}
           >
-            Murid
+            {t('sesiDialog.kelasAnggota.tabMurid')}
           </button>
           <button
             type="button"
@@ -65,7 +67,7 @@ export function KelasAnggotaDialog({
                 : 'text-slate-600 hover:text-slate-900',
             )}
           >
-            Guru
+            {t('sesiDialog.kelasAnggota.tabGuru')}
           </button>
         </div>
 
@@ -77,7 +79,7 @@ export function KelasAnggotaDialog({
 
         <div className="flex justify-end border-t border-slate-200 pt-4">
           <Button variant="secondary" onClick={onClose}>
-            Tutup
+            {t('common.close')}
           </Button>
         </div>
       </div>
@@ -88,6 +90,7 @@ export function KelasAnggotaDialog({
 // -----------------------------------------------------------------------
 
 function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
   const [search, setSearch] = useState('')
@@ -113,20 +116,20 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
   const addMut = useMutation({
     mutationFn: (ids: string[]) => addAnggota(kelasId, ids),
     onSuccess: () => {
-      toast('Murid ditambahkan', 'success')
+      toast(t('sesiDialog.kelasAnggota.muridAdded'), 'success')
       qc.invalidateQueries({ queryKey: ['kelas-anggota', kelasId] })
       setPicked(new Set())
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menambah murid', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('sesiDialog.kelasAnggota.muridAddFailed'), 'error'),
   })
 
   const removeMut = useMutation({
     mutationFn: (muridId: string) => removeAnggota(kelasId, muridId),
     onSuccess: () => {
-      toast('Murid dihapus', 'success')
+      toast(t('sesiDialog.kelasAnggota.muridRemoved'), 'success')
       qc.invalidateQueries({ queryKey: ['kelas-anggota', kelasId] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menghapus murid', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('sesiDialog.kelasAnggota.muridRemoveFailed'), 'error'),
   })
 
   const toggle = (id: string) =>
@@ -141,13 +144,13 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
     <div className="space-y-4">
       <section>
         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Anggota saat ini ({anggota.length})
+          {t('sesiDialog.kelasAnggota.muridCurrent', { count: anggota.length })}
         </h4>
         {isPending ? (
-          <p className="text-sm text-slate-500">Memuat…</p>
+          <p className="text-sm text-slate-500">{t('common.loading')}</p>
         ) : anggota.length === 0 ? (
           <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
-            Belum ada murid di kelas ini.
+            {t('sesiDialog.kelasAnggota.muridEmpty')}
           </p>
         ) : (
           <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
@@ -160,14 +163,14 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
                 <button
                   type="button"
                   onClick={() => {
-                    if (confirm(`Hapus ${a.muridName} dari kelas?`)) {
+                    if (confirm(t('sesiDialog.kelasAnggota.muridConfirmRemove', { name: a.muridName }))) {
                       removeMut.mutate(a.muridUserId)
                     }
                   }}
                   disabled={removeMut.isPending}
                   className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Hapus anggota"
-                  title="Hapus dari kelas"
+                  aria-label={t('sesiDialog.kelasAnggota.muridRemoveAria')}
+                  title={t('sesiDialog.kelasAnggota.muridRemoveTitle')}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -179,10 +182,10 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
 
       <section>
         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Tambah murid
+          {t('sesiDialog.kelasAnggota.muridAddSection')}
         </h4>
         <Input
-          placeholder={`Cari generus untuk tingkat ${tingkat}…`}
+          placeholder={t('sesiDialog.kelasAnggota.muridSearchPh', { tingkat })}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mb-2"
@@ -190,7 +193,9 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
         <div className="max-h-64 overflow-y-auto rounded-md border border-slate-200">
           {availableStudents.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-slate-500">
-              {search ? 'Tidak ada generus yang cocok.' : 'Semua generus aktif sudah jadi anggota.'}
+              {search
+                ? t('sesiDialog.kelasAnggota.muridNoMatch')
+                : t('sesiDialog.kelasAnggota.muridAllJoined')}
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -220,13 +225,17 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
       </section>
 
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-slate-500">{picked.size} dipilih</span>
+        <span className="text-xs text-slate-500">{t('sesiDialog.kelasAnggota.pickedCount', { count: picked.size })}</span>
         <Button
           onClick={() => addMut.mutate(Array.from(picked))}
           disabled={addMut.isPending || picked.size === 0}
         >
           <UserPlus size={16} className="mr-1" />
-          {addMut.isPending ? 'Menambah…' : `Tambah ${picked.size > 0 ? `(${picked.size})` : ''}`}
+          {addMut.isPending
+            ? t('sesiDialog.kelasAnggota.adding')
+            : picked.size > 0
+              ? t('sesiDialog.kelasAnggota.addBtnN', { count: picked.size })
+              : t('sesiDialog.kelasAnggota.addBtn')}
         </Button>
       </div>
     </div>
@@ -236,6 +245,7 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
 // -----------------------------------------------------------------------
 
 function GuruSection({ kelasId }: { kelasId: string }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
   const [search, setSearch] = useState('')
@@ -270,20 +280,20 @@ function GuruSection({ kelasId }: { kelasId: string }) {
   const addMut = useMutation({
     mutationFn: (ids: string[]) => addGuruAnggota(kelasId, ids),
     onSuccess: () => {
-      toast('Guru ditambahkan', 'success')
+      toast(t('sesiDialog.kelasAnggota.guruAdded'), 'success')
       invalidate()
       setPicked(new Set())
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menambah guru', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('sesiDialog.kelasAnggota.guruAddFailed'), 'error'),
   })
 
   const removeMut = useMutation({
     mutationFn: (guruId: string) => removeGuruAnggota(kelasId, guruId),
     onSuccess: () => {
-      toast('Guru dihapus', 'success')
+      toast(t('sesiDialog.kelasAnggota.guruRemoved'), 'success')
       invalidate()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menghapus guru', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('sesiDialog.kelasAnggota.guruRemoveFailed'), 'error'),
   })
 
   const toggle = (id: string) =>
@@ -298,13 +308,13 @@ function GuruSection({ kelasId }: { kelasId: string }) {
     <div className="space-y-4">
       <section>
         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Guru pengajar ({gurus.length})
+          {t('sesiDialog.kelasAnggota.guruCurrent', { count: gurus.length })}
         </h4>
         {isPending ? (
-          <p className="text-sm text-slate-500">Memuat…</p>
+          <p className="text-sm text-slate-500">{t('common.loading')}</p>
         ) : gurus.length === 0 ? (
           <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
-            Belum ada guru di kelas ini.
+            {t('sesiDialog.kelasAnggota.guruEmpty')}
           </p>
         ) : (
           <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
@@ -317,7 +327,7 @@ function GuruSection({ kelasId }: { kelasId: string }) {
                   <span className="truncate text-sm">{g.guruName}</span>
                   {g.isPrimary ? (
                     <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                      wali
+                      {t('sesiDialog.kelasAnggota.guruWaliBadge')}
                     </span>
                   ) : null}
                 </div>
@@ -325,14 +335,14 @@ function GuruSection({ kelasId }: { kelasId: string }) {
                   type="button"
                   onClick={() => {
                     const msg = g.isPrimary
-                      ? `Hapus wali kelas ${g.guruName}? Guru lain akan menjadi wali otomatis.`
-                      : `Hapus ${g.guruName} dari kelas?`
+                      ? t('sesiDialog.kelasAnggota.guruConfirmRemovePrimary', { name: g.guruName })
+                      : t('sesiDialog.kelasAnggota.guruConfirmRemove', { name: g.guruName })
                     if (confirm(msg)) removeMut.mutate(g.guruUserId)
                   }}
                   disabled={removeMut.isPending}
                   className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Hapus guru"
-                  title="Hapus dari kelas"
+                  aria-label={t('sesiDialog.kelasAnggota.guruRemoveAria')}
+                  title={t('sesiDialog.kelasAnggota.guruRemoveTitle')}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -344,10 +354,10 @@ function GuruSection({ kelasId }: { kelasId: string }) {
 
       <section>
         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Tambah guru
+          {t('sesiDialog.kelasAnggota.guruAddSection')}
         </h4>
         <Input
-          placeholder="Cari guru…"
+          placeholder={t('sesiDialog.kelasAnggota.guruSearchPh')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mb-2"
@@ -355,7 +365,9 @@ function GuruSection({ kelasId }: { kelasId: string }) {
         <div className="max-h-64 overflow-y-auto rounded-md border border-slate-200">
           {availableGurus.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-slate-500">
-              {search ? 'Tidak ada guru yang cocok.' : 'Semua guru aktif sudah jadi pengajar.'}
+              {search
+                ? t('sesiDialog.kelasAnggota.guruNoMatch')
+                : t('sesiDialog.kelasAnggota.guruAllJoined')}
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -381,13 +393,17 @@ function GuruSection({ kelasId }: { kelasId: string }) {
       </section>
 
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-slate-500">{picked.size} dipilih</span>
+        <span className="text-xs text-slate-500">{t('sesiDialog.kelasAnggota.pickedCount', { count: picked.size })}</span>
         <Button
           onClick={() => addMut.mutate(Array.from(picked))}
           disabled={addMut.isPending || picked.size === 0}
         >
           <UserPlus size={16} className="mr-1" />
-          {addMut.isPending ? 'Menambah…' : `Tambah ${picked.size > 0 ? `(${picked.size})` : ''}`}
+          {addMut.isPending
+            ? t('sesiDialog.kelasAnggota.adding')
+            : picked.size > 0
+              ? t('sesiDialog.kelasAnggota.addBtnN', { count: picked.size })
+              : t('sesiDialog.kelasAnggota.addBtn')}
         </Button>
       </div>
     </div>

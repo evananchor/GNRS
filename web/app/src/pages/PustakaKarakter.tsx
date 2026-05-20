@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,6 +27,7 @@ import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 
 export function PustakaKarakterPage() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
@@ -64,57 +66,56 @@ export function PustakaKarakterPage() {
     mutationFn: ({ oldParent, input }: { oldParent: string; input: GroupRenameInput }) =>
       renameKarakterGroup(oldParent, input),
     onSuccess: () => {
-      toast('Grup karakter diperbarui', 'success')
+      toast(t('pustaka.karakter.groupUpdated'), 'success')
       qc.invalidateQueries({ queryKey: ['karakter-luhur'] })
       setDialog(null)
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal memperbarui grup', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('pustaka.karakter.groupUpdateFailed'), 'error'),
   })
 
   const deleteGroupMut = useMutation({
     mutationFn: deleteKarakterGroup,
     onSuccess: (r) => {
-      toast(`Grup dihapus (${r.deleted} item)`, 'success')
+      toast(t('pustaka.karakter.groupDeleted', { count: r.deleted }), 'success')
       qc.invalidateQueries({ queryKey: ['karakter-luhur'] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menghapus grup', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('pustaka.karakter.groupDeleteFailed'), 'error'),
   })
 
   const deleteMut = useMutation({
     mutationFn: deleteKarakter,
     onSuccess: () => {
-      toast('Karakter dihapus', 'success')
+      toast(t('pustaka.karakter.deleted'), 'success')
       qc.invalidateQueries({ queryKey: ['karakter-luhur'] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menghapus', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('pustaka.karakter.deleteFailed'), 'error'),
   })
 
   return (
     <LibraryShell
       backTo="/pustaka"
-      backLabel="Pustaka"
       bgClassName="bg-slate-50"
       contentClassName="px-4 pt-14 pb-6 md:px-8"
     >
       <div className="mx-auto max-w-4xl">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">29 Karakter Luhur</h1>
+            <h1 className="text-2xl font-semibold">{t('pustaka.karakter.title')}</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Tabiat luhur LDII per kurikulum PPG. Admin dapat menambah / mengubah / menghapus.
+              {t('pustaka.karakter.subtitle')}
             </p>
           </div>
           {isAdmin ? (
             <Button size="sm" onClick={() => setDialog({ kind: 'create' })}>
-              <Plus size={14} className="mr-1" /> Tambah Karakter
+              <Plus size={14} className="mr-1" /> {t('pustaka.karakter.btnAdd')}
             </Button>
           ) : null}
         </div>
       {isPending ? (
-        <p className="text-sm text-slate-500">Memuat…</p>
+        <p className="text-sm text-slate-500">{t('pustaka.karakter.loading')}</p>
       ) : items.length === 0 ? (
         <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-          Belum ada data karakter.
+          {t('pustaka.karakter.empty')}
         </p>
       ) : (
         <div className="space-y-4">
@@ -128,7 +129,7 @@ export function PustakaKarakterPage() {
                   <h3 className="truncate text-sm font-bold uppercase tracking-wide text-emerald-800">
                     {g.parent}
                   </h3>
-                  <p className="mt-0.5 text-xs text-emerald-700">{g.items.length} karakter</p>
+                  <p className="mt-0.5 text-xs text-emerald-700">{t('pustaka.karakter.groupCount', { count: g.items.length })}</p>
                 </div>
                 {isAdmin ? (
                   <div className="flex items-center gap-1">
@@ -143,8 +144,8 @@ export function PustakaKarakterPage() {
                         })
                       }
                       className="rounded-md p-1.5 text-emerald-700 transition hover:bg-emerald-100"
-                      aria-label="Ubah grup"
-                      title="Ubah nama grup"
+                      aria-label={t('pustaka.karakter.editGroupAria')}
+                      title={t('pustaka.karakter.editGroupTitle')}
                     >
                       <Pencil size={14} />
                     </button>
@@ -153,7 +154,10 @@ export function PustakaKarakterPage() {
                       onClick={() => {
                         if (
                           confirm(
-                            `Hapus seluruh grup "${g.parent}" dan ${g.items.length} item di dalamnya?`,
+                            t('pustaka.karakter.confirmDeleteGroup', {
+                              name: g.parent,
+                              count: g.items.length,
+                            }),
                           )
                         ) {
                           deleteGroupMut.mutate(g.parent)
@@ -161,8 +165,8 @@ export function PustakaKarakterPage() {
                       }}
                       disabled={deleteGroupMut.isPending}
                       className="rounded-md p-1.5 text-emerald-700 transition hover:bg-rose-100 hover:text-rose-700 disabled:opacity-50"
-                      aria-label="Hapus grup"
-                      title="Hapus seluruh grup"
+                      aria-label={t('pustaka.karakter.deleteGroupAria')}
+                      title={t('pustaka.karakter.deleteGroupTitle')}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -181,7 +185,7 @@ export function PustakaKarakterPage() {
                         })
                       }
                     >
-                      <Plus size={14} className="mr-1" /> Item
+                      <Plus size={14} className="mr-1" /> {t('pustaka.karakter.btnItem')}
                     </Button>
                   </div>
                 ) : null}
@@ -204,22 +208,22 @@ export function PustakaKarakterPage() {
                           type="button"
                           onClick={() => setDialog({ kind: 'edit', item: k })}
                           className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                          aria-label="Ubah"
-                          title="Ubah"
+                          aria-label={t('pustaka.karakter.rowEditAria')}
+                          title={t('pustaka.karakter.rowEditAria')}
                         >
                           <Pencil size={14} />
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm(`Hapus karakter "${k.labelId}"?`)) {
+                            if (confirm(t('pustaka.karakter.confirmDeleteItem', { name: k.labelId }))) {
                               deleteMut.mutate(k.id)
                             }
                           }}
                           disabled={deleteMut.isPending}
                           className="rounded-md p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                          aria-label="Hapus"
-                          title="Hapus"
+                          aria-label={t('pustaka.karakter.rowDeleteAria')}
+                          title={t('pustaka.karakter.rowDeleteAria')}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -279,12 +283,13 @@ function GroupRenameDialog({
   onClose: () => void
   onSubmit: (input: GroupRenameInput) => void
 }) {
+  const { t } = useTranslation()
   const [parent, setParent] = useState(oldParent)
   const [parentEn, setParentEn] = useState(defaultParentEn)
   const [urutan, setUrutan] = useState(defaultUrutan)
 
   return (
-    <Dialog title="Ubah Grup Karakter" onClose={onClose} size="md">
+    <Dialog title={t('pustaka.karakter.groupDialogTitle')} onClose={onClose} size="md">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -296,7 +301,7 @@ function GroupRenameDialog({
         }}
         className="space-y-4"
       >
-        <Field label="Nama grup (Indonesia)" htmlFor="grp-parent">
+        <Field label={t('pustaka.karakter.groupParentLabel')} htmlFor="grp-parent">
           <Input
             id="grp-parent"
             value={parent}
@@ -305,14 +310,14 @@ function GroupRenameDialog({
             required
           />
         </Field>
-        <Field label="Nama grup (English)" htmlFor="grp-parentEn">
+        <Field label={t('pustaka.karakter.groupParentEnLabel')} htmlFor="grp-parentEn">
           <Input
             id="grp-parentEn"
             value={parentEn}
             onChange={(e) => setParentEn(e.target.value)}
           />
         </Field>
-        <Field label="Urutan grup" htmlFor="grp-urutan">
+        <Field label={t('pustaka.karakter.groupUrutanLabel')} htmlFor="grp-urutan">
           <Input
             id="grp-urutan"
             type="number"
@@ -322,14 +327,14 @@ function GroupRenameDialog({
           />
         </Field>
         <p className="text-xs text-slate-500">
-          Perubahan diterapkan ke seluruh item di grup "{oldParent}".
+          {t('pustaka.karakter.groupRenameNote', { name: oldParent })}
         </p>
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
           <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={pending}>
-            {pending ? 'Menyimpan…' : 'Simpan'}
+            {pending ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>
@@ -340,10 +345,10 @@ function GroupRenameDialog({
 // ---------------------------------------------------------------------------
 
 const schema = z.object({
-  parent: z.string().min(1, 'Wajib').max(200),
+  parent: z.string().min(1, 'pustaka.karakter.errRequired').max(200),
   parentEn: z.string().optional().or(z.literal('')),
   parentUrutan: z.coerce.number().int().gte(0).lte(1000),
-  labelId: z.string().min(1, 'Wajib').max(300),
+  labelId: z.string().min(1, 'pustaka.karakter.errRequired').max(300),
   labelEn: z.string().optional().or(z.literal('')),
   itemUrutan: z.coerce.number().int().gte(0).lte(1000),
   catatan: z.string().optional().or(z.literal('')),
@@ -361,6 +366,7 @@ function KarakterFormDialog({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
   const {
@@ -380,19 +386,23 @@ function KarakterFormDialog({
     },
   })
 
+  // Translate validation messages produced by the zod schema (keys like
+  // 'pustaka.karakter.errRequired') back into human-readable text.
+  const translateErr = (msg?: string) => (msg ? t(msg) : undefined)
+
   const mut = useMutation({
     mutationFn: (input: KarakterInput) =>
       item ? updateKarakter(item.id, input) : createKarakter(input),
     onSuccess: () => {
-      toast(item ? 'Karakter diperbarui' : 'Karakter ditambah', 'success')
+      toast(item ? t('pustaka.karakter.updated') : t('pustaka.karakter.added'), 'success')
       qc.invalidateQueries({ queryKey: ['karakter-luhur'] })
       onSaved()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menyimpan', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('pustaka.karakter.saveFailed'), 'error'),
   })
 
   return (
-    <Dialog title={item ? 'Ubah Karakter' : 'Tambah Karakter'} onClose={onClose} size="md">
+    <Dialog title={item ? t('pustaka.karakter.itemDialogEdit') : t('pustaka.karakter.itemDialogAdd')} onClose={onClose} size="md">
       <form
         onSubmit={handleSubmit((v) =>
           mut.mutate({
@@ -408,15 +418,15 @@ function KarakterFormDialog({
         className="space-y-4"
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Grup (parent)" htmlFor="parent" error={errors.parent?.message}>
-            <Input id="parent" placeholder="cth: 6 Tabi'at Luhur" {...register('parent')} />
+          <Field label={t('pustaka.karakter.fldParent')} htmlFor="parent" error={translateErr(errors.parent?.message)}>
+            <Input id="parent" placeholder={t('pustaka.karakter.fldParentPh')} {...register('parent')} />
           </Field>
-          <Field label="Grup (English)" htmlFor="parentEn" error={errors.parentEn?.message}>
-            <Input id="parentEn" placeholder="cth: 6 Noble Traits" {...register('parentEn')} />
+          <Field label={t('pustaka.karakter.fldParentEn')} htmlFor="parentEn" error={translateErr(errors.parentEn?.message)}>
+            <Input id="parentEn" placeholder={t('pustaka.karakter.fldParentEnPh')} {...register('parentEn')} />
           </Field>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Urutan grup" htmlFor="parentUrutan" error={errors.parentUrutan?.message}>
+          <Field label={t('pustaka.karakter.fldParentUrutan')} htmlFor="parentUrutan" error={translateErr(errors.parentUrutan?.message)}>
             <Input
               id="parentUrutan"
               type="number"
@@ -424,7 +434,7 @@ function KarakterFormDialog({
               {...register('parentUrutan', { valueAsNumber: true })}
             />
           </Field>
-          <Field label="Urutan dalam grup" htmlFor="itemUrutan" error={errors.itemUrutan?.message}>
+          <Field label={t('pustaka.karakter.fldItemUrutan')} htmlFor="itemUrutan" error={translateErr(errors.itemUrutan?.message)}>
             <Input
               id="itemUrutan"
               type="number"
@@ -433,13 +443,13 @@ function KarakterFormDialog({
             />
           </Field>
         </div>
-        <Field label="Nama (Indonesia)" htmlFor="labelId" error={errors.labelId?.message}>
+        <Field label={t('pustaka.karakter.fldLabelId')} htmlFor="labelId" error={translateErr(errors.labelId?.message)}>
           <Input id="labelId" autoFocus {...register('labelId')} />
         </Field>
-        <Field label="Nama (English)" htmlFor="labelEn" error={errors.labelEn?.message}>
+        <Field label={t('pustaka.karakter.fldLabelEn')} htmlFor="labelEn" error={translateErr(errors.labelEn?.message)}>
           <Input id="labelEn" {...register('labelEn')} />
         </Field>
-        <Field label="Catatan / deskripsi (opsional)" htmlFor="catatan" error={errors.catatan?.message}>
+        <Field label={t('pustaka.karakter.fldCatatan')} htmlFor="catatan" error={translateErr(errors.catatan?.message)}>
           <textarea
             id="catatan"
             rows={3}
@@ -449,10 +459,10 @@ function KarakterFormDialog({
         </Field>
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
           <Button type="button" variant="secondary" onClick={onClose} disabled={mut.isPending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={mut.isPending}>
-            {mut.isPending ? 'Menyimpan…' : 'Simpan'}
+            {mut.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

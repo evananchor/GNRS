@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
 import {
   deleteUser,
   getUser,
-  MEMBERSHIP_LABEL,
   MEMBERSHIP_STATUSES,
-  ROLE_LABEL,
   setUserPassword,
   STUDENT_LEVELS,
   updateUser,
@@ -24,8 +23,10 @@ import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { Field } from '@/components/Field'
 import { PageShell } from '@/components/PageShell'
+import { useMembershipLabel, useRoleLabel } from './Users'
 
 export function UserDetailPage() {
+  const { t } = useTranslation()
   const { id = '' } = useParams<{ id: string }>()
   const [params] = useSearchParams()
   const editFlag = params.get('edit') === '1'
@@ -33,6 +34,7 @@ export function UserDetailPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [editing, setEditing] = useState(editFlag)
+  const roleLabel = useRoleLabel()
 
   const userQuery = useQuery({
     queryKey: ['users', id],
@@ -43,13 +45,13 @@ export function UserDetailPage() {
   if (userQuery.isPending)
     return (
       <PageShell>
-        <p className="text-slate-500">Memuat…</p>
+        <p className="text-slate-500">{t('common.loading')}</p>
       </PageShell>
     )
   if (userQuery.isError || !userQuery.data) {
     return (
       <PageShell>
-        <p className="text-red-600">Gagal memuat data pengguna.</p>
+        <p className="text-red-600">{t('users.loadUserFailed')}</p>
       </PageShell>
     )
   }
@@ -62,36 +64,36 @@ export function UserDetailPage() {
       <div>
         <h1 className="text-2xl font-semibold break-words">
           {u.name}
-          {isSelf ? <span className="ml-2 text-sm font-normal text-slate-500">(akun saya)</span> : null}
+          {isSelf ? <span className="ml-2 text-sm font-normal text-slate-500">{t('users.selfAccountBadge')}</span> : null}
         </h1>
         <p className="mt-1 text-xs text-slate-500">
-          {ROLE_LABEL[u.role]} · {u.email}
+          {roleLabel(u.role)} · {u.email}
           {u.username ? ` · @${u.username}` : ''}
         </p>
       </div>
         {!editing ? (
           <div className="flex gap-2 self-start sm:self-auto">
             <Button variant="secondary" onClick={() => setEditing(true)}>
-              Ubah
+              {t('users.userDetail.editBtn')}
             </Button>
             <Button
               variant="danger"
               disabled={isSelf}
-              title={isSelf ? 'Tidak bisa menghapus akun sendiri' : undefined}
+              title={isSelf ? t('users.selfDeleteBlock') : undefined}
               onClick={() => {
                 if (isSelf) return
-                if (confirm(`Hapus pengguna ${u.name}? Tindakan ini tidak dapat dibatalkan.`)) {
+                if (confirm(t('users.deleteConfirm', { name: u.name }))) {
                   deleteUser(u.id).then(
                     async () => {
                       await qc.invalidateQueries({ queryKey: ['users'] })
                       navigate('/pengaturan/pengguna')
                     },
-                    (err) => alert(err instanceof ApiError ? err.message : 'Gagal menghapus'),
+                    (err) => alert(err instanceof ApiError ? err.message : t('users.deleteFailed')),
                   )
                 }
               }}
             >
-              Hapus
+              {t('users.userDetail.deleteBtn')}
             </Button>
           </div>
         ) : null}
@@ -126,73 +128,79 @@ function ProfileSection({
 }
 
 function ReadOnlyView({ user: u }: { user: ManagedUser }) {
+  const { t } = useTranslation()
+  const roleLabel = useRoleLabel()
+  const membershipLabel = useMembershipLabel()
   const showMuridFields = u.role === 'murid' || u.level || u.parentName || u.parentPhone
   const showGuruFields = u.role === 'guru' || u.desa || u.daerah || u.notes
   return (
     <div className="space-y-4">
-      <Card title="Akun">
+      <Card title={t('users.userDetail.cardAkun')}>
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          <Row label="Email" value={u.email} />
-          <Row label="Nama pengguna" value={u.username ?? '—'} />
-          <Row label="Role" value={ROLE_LABEL[u.role]} />
-          <Row label="Status akun" value={u.active ? 'Aktif (bisa login)' : 'Nonaktif'} />
-          <Row label="Dibuat" value={new Date(u.createdAt).toLocaleString('id-ID')} />
-          <Row label="Diperbarui" value={new Date(u.updatedAt).toLocaleString('id-ID')} />
-        </dl>
-      </Card>
-
-      <Card title="Profil">
-        <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          <Row label="Nama lengkap" value={u.name} />
-          <Row label="Nama panggilan" value={u.nickname ?? '—'} />
-          <Row label="Tanggal lahir" value={u.dateOfBirth?.slice(0, 10) ?? '—'} />
+          <Row label={t('users.userDetail.akun.email')} value={u.email} />
+          <Row label={t('users.userDetail.akun.username')} value={u.username ?? '—'} />
+          <Row label={t('users.userDetail.akun.role')} value={roleLabel(u.role)} />
           <Row
-            label="Jenis kelamin"
-            value={u.gender === 'male' ? 'Laki-laki' : u.gender === 'female' ? 'Perempuan' : '—'}
+            label={t('users.userDetail.akun.statusAkun')}
+            value={u.active ? t('users.userDetail.akun.statusActiveDesc') : t('users.userDetail.akun.statusInactiveDesc')}
           />
-          <Row label="No. HP" value={u.noHp ?? '—'} />
-          <Row label="Alamat" value={u.alamat ?? '—'} className="sm:col-span-2" />
-          <Row label="Kelompok" value={u.kelompok ?? '—'} />
+          <Row label={t('users.userDetail.akun.createdAt')} value={new Date(u.createdAt).toLocaleString('id-ID')} />
+          <Row label={t('users.userDetail.akun.updatedAt')} value={new Date(u.updatedAt).toLocaleString('id-ID')} />
         </dl>
       </Card>
 
-      <Card title="Membership">
+      <Card title={t('users.userDetail.cardProfil')}>
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          <Row label="Tanggal masuk" value={u.joinedAt?.slice(0, 10) ?? '—'} />
-          <Row label="Status membership" value={MEMBERSHIP_LABEL[u.membershipStatus]} />
+          <Row label={t('users.userDetail.profil.fullName')} value={u.name} />
+          <Row label={t('users.userDetail.profil.nickname')} value={u.nickname ?? '—'} />
+          <Row label={t('users.userDetail.profil.birthDate')} value={u.dateOfBirth?.slice(0, 10) ?? '—'} />
           <Row
-            label={u.role === 'guru' ? 'Tanggal purna' : 'Tanggal keluar'}
+            label={t('users.userDetail.profil.gender')}
+            value={u.gender === 'male' ? t('users.userDetail.profil.genderMale') : u.gender === 'female' ? t('users.userDetail.profil.genderFemale') : '—'}
+          />
+          <Row label={t('users.userDetail.profil.noHp')} value={u.noHp ?? '—'} />
+          <Row label={t('users.userDetail.profil.alamat')} value={u.alamat ?? '—'} className="sm:col-span-2" />
+          <Row label={t('users.userDetail.profil.kelompok')} value={u.kelompok ?? '—'} />
+        </dl>
+      </Card>
+
+      <Card title={t('users.userDetail.cardMembership')}>
+        <dl className="grid gap-4 text-sm sm:grid-cols-2">
+          <Row label={t('users.userDetail.membership.joinedAt')} value={u.joinedAt?.slice(0, 10) ?? '—'} />
+          <Row label={t('users.userDetail.membership.status')} value={membershipLabel(u.membershipStatus)} />
+          <Row
+            label={u.role === 'guru' ? t('users.userDetail.membership.leftAtGuru') : t('users.userDetail.membership.leftAt')}
             value={u.leftAt?.slice(0, 10) ?? '—'}
           />
-          <Row label="Keterangan" value={u.leaveReason ?? '—'} className="sm:col-span-2" />
+          <Row label={t('users.userDetail.membership.leaveReason')} value={u.leaveReason ?? '—'} className="sm:col-span-2" />
         </dl>
       </Card>
 
       {showMuridFields ? (
-        <Card title="Data Murid">
+        <Card title={t('users.userDetail.cardMurid')}>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <Row label="Jenjang" value={u.level ?? '—'} />
-            <Row label="Sebutan orang tua" value={u.parentTitle ?? '—'} />
-            <Row label="Nama orang tua" value={u.parentName ?? '—'} />
+            <Row label={t('users.userDetail.murid.level')} value={u.level ?? '—'} />
+            <Row label={t('users.userDetail.murid.parentTitle')} value={u.parentTitle ?? '—'} />
+            <Row label={t('users.userDetail.murid.parentName')} value={u.parentName ?? '—'} />
             <Row
-              label="WhatsApp orang tua"
+              label={t('users.userDetail.murid.parentPhoneRO')}
               value={
                 u.parentPhone
                   ? `+${({ ID: '62', SG: '65', US: '1', CA: '1' } as any)[u.parentPhoneRegion ?? 'ID'] ?? '62'}${u.parentPhone.replace(/^0+/, '')}`
                   : '—'
               }
             />
-            <Row label="Email orang tua" value={u.parentEmail ?? '—'} className="sm:col-span-2" />
+            <Row label={t('users.userDetail.murid.parentEmail')} value={u.parentEmail ?? '—'} className="sm:col-span-2" />
           </dl>
         </Card>
       ) : null}
 
       {showGuruFields ? (
-        <Card title="Data Pengajar">
+        <Card title={t('users.userDetail.cardPengajar')}>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <Row label="Desa" value={u.desa ?? '—'} />
-            <Row label="Daerah" value={u.daerah ?? '—'} />
-            <Row label="Catatan" value={u.notes ?? '—'} className="sm:col-span-2" />
+            <Row label={t('users.userDetail.guru.desa')} value={u.desa ?? '—'} />
+            <Row label={t('users.userDetail.guru.daerah')} value={u.daerah ?? '—'} />
+            <Row label={t('users.userDetail.guru.notesRO')} value={u.notes ?? '—'} className="sm:col-span-2" />
           </dl>
         </Card>
       ) : null}
@@ -265,6 +273,9 @@ function EditForm({
   isSelf: boolean
   onClose: () => void
 }) {
+  const { t } = useTranslation()
+  const roleLabel = useRoleLabel()
+  const membershipLabel = useMembershipLabel()
   const qc = useQueryClient()
   const [f, setF] = useState<FormState>(() => userToFormState(user))
 
@@ -321,15 +332,15 @@ function EditForm({
         mutation.mutate(input)
       }}
     >
-      <Card title="Akun">
+      <Card title={t('users.userDetail.cardAkun')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Email" htmlFor="email">
+          <Field label={t('users.userDetail.akun.email')} htmlFor="email">
             <Input id="email" type="email" value={f.email} onChange={(e) => update('email', e.target.value)} required />
           </Field>
-          <Field label="Nama pengguna" htmlFor="username" hint="Kosongkan untuk hapus">
+          <Field label={t('users.userDetail.akun.username')} htmlFor="username" hint={t('users.userDetail.akun.usernameHint')}>
             <Input id="username" value={f.username} onChange={(e) => update('username', e.target.value)} />
           </Field>
-          <Field label="Role" htmlFor="role">
+          <Field label={t('users.userDetail.akun.role')} htmlFor="role">
             <select
               id="role"
               className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
@@ -338,12 +349,12 @@ function EditForm({
             >
               {USER_ROLES.map((r) => (
                 <option key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Status akun" htmlFor="active">
+          <Field label={t('users.userDetail.akun.statusAkun')} htmlFor="active">
             <label className="inline-flex h-10 items-center gap-2">
               <input
                 id="active"
@@ -352,24 +363,24 @@ function EditForm({
                 onChange={(e) => update('active', e.target.checked)}
                 className="h-4 w-4 rounded border-slate-300"
               />
-              <span className="text-sm">Aktif (bisa login)</span>
+              <span className="text-sm">{t('users.userDetail.akun.activeToggle')}</span>
             </label>
           </Field>
         </div>
       </Card>
 
-      <Card title="Profil">
+      <Card title={t('users.userDetail.cardProfil')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nama lengkap" htmlFor="name">
+          <Field label={t('users.userDetail.profil.fullName')} htmlFor="name">
             <Input id="name" value={f.name} onChange={(e) => update('name', e.target.value)} required />
           </Field>
-          <Field label="Nama panggilan" htmlFor="nickname">
+          <Field label={t('users.userDetail.profil.nickname')} htmlFor="nickname">
             <Input id="nickname" value={f.nickname} onChange={(e) => update('nickname', e.target.value)} />
           </Field>
-          <Field label="Tanggal lahir" htmlFor="dob" hint="YYYY-MM-DD">
+          <Field label={t('users.userDetail.profil.birthDate')} htmlFor="dob" hint={t('users.userDetail.profil.birthDateHint')}>
             <Input id="dob" type="date" value={f.dateOfBirth} onChange={(e) => update('dateOfBirth', e.target.value)} />
           </Field>
-          <Field label="Jenis kelamin" htmlFor="gender">
+          <Field label={t('users.userDetail.profil.gender')} htmlFor="gender">
             <select
               id="gender"
               className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
@@ -377,28 +388,28 @@ function EditForm({
               onChange={(e) => update('gender', e.target.value as FormState['gender'])}
             >
               <option value="">—</option>
-              <option value="female">Perempuan</option>
-              <option value="male">Laki-laki</option>
+              <option value="female">{t('users.userDetail.profil.genderFemale')}</option>
+              <option value="male">{t('users.userDetail.profil.genderMale')}</option>
             </select>
           </Field>
-          <Field label="No. HP" htmlFor="noHp">
+          <Field label={t('users.userDetail.profil.noHp')} htmlFor="noHp">
             <Input id="noHp" value={f.noHp} onChange={(e) => update('noHp', e.target.value)} />
           </Field>
-          <Field label="Kelompok" htmlFor="kelompok" hint={isMurid ? 'California / Chicago / New Hampshire / Canada' : 'Bebas'}>
+          <Field label={t('users.userDetail.profil.kelompok')} htmlFor="kelompok" hint={isMurid ? t('users.userDetail.profil.kelompokMuridHint') : t('users.userDetail.profil.kelompokFreeHint')}>
             <Input id="kelompok" value={f.kelompok} onChange={(e) => update('kelompok', e.target.value)} />
           </Field>
-          <Field label="Alamat" htmlFor="alamat" className="sm:col-span-2">
+          <Field label={t('users.userDetail.profil.alamat')} htmlFor="alamat" className="sm:col-span-2">
             <Input id="alamat" value={f.alamat} onChange={(e) => update('alamat', e.target.value)} />
           </Field>
         </div>
       </Card>
 
-      <Card title="Membership">
+      <Card title={t('users.userDetail.cardMembership')}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tanggal masuk" htmlFor="joined">
+          <Field label={t('users.userDetail.membership.joinedAt')} htmlFor="joined">
             <Input id="joined" type="date" value={f.joinedAt} onChange={(e) => update('joinedAt', e.target.value)} />
           </Field>
-          <Field label="Status membership" htmlFor="ms">
+          <Field label={t('users.userDetail.membership.status')} htmlFor="ms">
             <select
               id="ms"
               className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
@@ -407,24 +418,24 @@ function EditForm({
             >
               {MEMBERSHIP_STATUSES.map((ms) => (
                 <option key={ms} value={ms}>
-                  {MEMBERSHIP_LABEL[ms]}
+                  {membershipLabel(ms)}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label={isGuru ? 'Tanggal purna' : 'Tanggal keluar'} htmlFor="leftAt">
+          <Field label={isGuru ? t('users.userDetail.membership.leftAtGuru') : t('users.userDetail.membership.leftAt')} htmlFor="leftAt">
             <Input id="leftAt" type="date" value={f.leftAt} onChange={(e) => update('leftAt', e.target.value)} />
           </Field>
-          <Field label="Keterangan" htmlFor="leaveReason">
+          <Field label={t('users.userDetail.membership.leaveReason')} htmlFor="leaveReason">
             <Input id="leaveReason" value={f.leaveReason} onChange={(e) => update('leaveReason', e.target.value)} />
           </Field>
         </div>
       </Card>
 
       {(isMurid || f.level || f.parentName || f.parentPhone || f.parentEmail) && (
-        <Card title="Data Murid">
+        <Card title={t('users.userDetail.cardMurid')}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Jenjang" htmlFor="level">
+            <Field label={t('users.userDetail.murid.level')} htmlFor="level">
               <select
                 id="level"
                 className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
@@ -439,13 +450,13 @@ function EditForm({
                 ))}
               </select>
             </Field>
-            <Field label="Sebutan orang tua" htmlFor="parentTitle" hint="Mis. Bapak, Ibu, Ayahnya, Bunda…">
-              <Input id="parentTitle" value={f.parentTitle} onChange={(e) => update('parentTitle', e.target.value)} placeholder="Bapak" />
+            <Field label={t('users.userDetail.murid.parentTitle')} htmlFor="parentTitle" hint={t('users.userDetail.murid.parentTitleHint')}>
+              <Input id="parentTitle" value={f.parentTitle} onChange={(e) => update('parentTitle', e.target.value)} placeholder={t('users.userDetail.murid.parentTitlePh')} />
             </Field>
-            <Field label="Nama orang tua" htmlFor="parentName">
+            <Field label={t('users.userDetail.murid.parentName')} htmlFor="parentName">
               <Input id="parentName" value={f.parentName} onChange={(e) => update('parentName', e.target.value)} />
             </Field>
-            <Field label="Nomor WhatsApp orang tua" htmlFor="parentPhone">
+            <Field label={t('users.userDetail.murid.parentPhone')} htmlFor="parentPhone">
               <div className="flex gap-2">
                 <select
                   value={f.parentPhoneRegion}
@@ -457,10 +468,10 @@ function EditForm({
                   <option value="US">🇺🇸 +1</option>
                   <option value="CA">🇨🇦 +1</option>
                 </select>
-                <Input id="parentPhone" value={f.parentPhone} onChange={(e) => update('parentPhone', e.target.value)} placeholder="81234567890" />
+                <Input id="parentPhone" value={f.parentPhone} onChange={(e) => update('parentPhone', e.target.value)} placeholder={t('users.userDetail.murid.parentPhonePh')} />
               </div>
             </Field>
-            <Field label="Email orang tua" htmlFor="parentEmail">
+            <Field label={t('users.userDetail.murid.parentEmail')} htmlFor="parentEmail">
               <Input id="parentEmail" type="email" value={f.parentEmail} onChange={(e) => update('parentEmail', e.target.value)} />
             </Field>
           </div>
@@ -468,15 +479,15 @@ function EditForm({
       )}
 
       {(isGuru || f.desa || f.daerah || f.notes) && (
-        <Card title="Data Pengajar">
+        <Card title={t('users.userDetail.cardPengajar')}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Desa" htmlFor="desa">
+            <Field label={t('users.userDetail.guru.desa')} htmlFor="desa">
               <Input id="desa" value={f.desa} onChange={(e) => update('desa', e.target.value)} />
             </Field>
-            <Field label="Daerah" htmlFor="daerah">
+            <Field label={t('users.userDetail.guru.daerah')} htmlFor="daerah">
               <Input id="daerah" value={f.daerah} onChange={(e) => update('daerah', e.target.value)} />
             </Field>
-            <Field label="Catatan" htmlFor="notes" className="sm:col-span-2">
+            <Field label={t('users.userDetail.guru.notes')} htmlFor="notes" className="sm:col-span-2">
               <Input id="notes" value={f.notes} onChange={(e) => update('notes', e.target.value)} />
             </Field>
           </div>
@@ -485,17 +496,17 @@ function EditForm({
 
       {isSelf && (f.role !== 'admin' || !f.active) ? (
         <p className="text-xs text-amber-700">
-          ⚠ Anda mengubah akun sendiri. Backend menolak demote/deactivate kalau ini admin terakhir.
+          {t('users.userDetail.selfAdminWarn')}
         </p>
       ) : null}
       {apiError ? <p className="text-sm text-red-600">{apiError}</p> : null}
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onClose} disabled={mutation.isPending}>
-          Batal
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Menyimpan…' : 'Simpan'}
+          {mutation.isPending ? t('common.saving') : t('common.save')}
         </Button>
       </div>
     </form>
@@ -503,6 +514,7 @@ function EditForm({
 }
 
 function PasswordSection({ userId, userName }: { userId: string; userName: string }) {
+  const { t } = useTranslation()
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
   const [done, setDone] = useState(false)
@@ -521,9 +533,9 @@ function PasswordSection({ userId, userName }: { userId: string; userName: strin
   const mismatch = pw && pw2 && pw !== pw2
 
   return (
-    <Card title="Ganti kata sandi">
+    <Card title={t('users.userDetail.cardPassword')}>
       <p className="text-xs text-slate-500">
-        Set kata sandi baru untuk {userName}. Langsung berlaku — tidak perlu kata sandi lama.
+        {t('users.userDetail.password.intro', { name: userName })}
       </p>
       <form
         className="mt-3 space-y-3"
@@ -534,17 +546,17 @@ function PasswordSection({ userId, userName }: { userId: string; userName: strin
         }}
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Kata sandi baru" htmlFor="pw">
+          <Field label={t('users.userDetail.password.newPassword')} htmlFor="pw">
             <Input
               id="pw"
               type="text"
               value={pw}
               onChange={(e) => setPw(e.target.value)}
               autoComplete="new-password"
-              placeholder="Minimal 6 karakter"
+              placeholder={t('users.userDetail.password.newPasswordPh')}
             />
           </Field>
-          <Field label="Ulangi" htmlFor="pw2" error={mismatch ? 'Tidak sama' : undefined}>
+          <Field label={t('users.userDetail.password.repeat')} htmlFor="pw2" error={mismatch ? t('users.userDetail.password.mismatch') : undefined}>
             <Input
               id="pw2"
               type="text"
@@ -555,9 +567,9 @@ function PasswordSection({ userId, userName }: { userId: string; userName: strin
           </Field>
         </div>
         {apiError ? <p className="text-sm text-red-600">{apiError}</p> : null}
-        {done ? <p className="text-sm text-emerald-700">Kata sandi diperbarui.</p> : null}
+        {done ? <p className="text-sm text-emerald-700">{t('users.userDetail.password.saved')}</p> : null}
         <Button type="submit" disabled={mutation.isPending || !pw || pw.length < 6 || !!mismatch}>
-          {mutation.isPending ? 'Menyimpan…' : 'Ganti kata sandi'}
+          {mutation.isPending ? t('common.saving') : t('users.userDetail.password.submit')}
         </Button>
       </form>
     </Card>

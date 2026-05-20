@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ImagePlus, Loader2, Trash2, User } from 'lucide-react'
 
 import { apiFetch, ApiError } from '@/api/client'
@@ -27,6 +28,7 @@ export function PhotoUploader({
     ? '/api/auth/me/photo'
     : `/api/users/${encodeURIComponent(userId ?? '')}/photo`
   const toast = useToast()
+  const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState<'upload' | 'delete' | null>(null)
 
@@ -40,7 +42,7 @@ export function PhotoUploader({
     e.target.value = ''
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
-      toast('Foto maksimal 5 MB', 'error')
+      toast(t('photoUploader.maxSize'), 'error')
       return
     }
     setBusy('upload')
@@ -52,9 +54,9 @@ export function PhotoUploader({
         body: fd,
       })
       onChanged({ photoUrl: updated.photoUrl ?? null })
-      toast('Foto diunggah', 'success')
+      toast(t('photoUploader.uploaded'), 'success')
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : 'Gagal mengunggah foto', 'error')
+      toast(err instanceof ApiError ? err.message : t('photoUploader.uploadFailed'), 'error')
     } finally {
       setBusy(null)
     }
@@ -62,16 +64,16 @@ export function PhotoUploader({
 
   const handleDelete = async () => {
     if (!photoUrl || busy) return
-    if (!confirm('Hapus foto?')) return
+    if (!confirm(t('photoUploader.confirmDelete'))) return
     setBusy('delete')
     try {
       const updated = await apiFetch<{ photoUrl?: string }>(endpoint, {
         method: 'DELETE',
       })
       onChanged({ photoUrl: updated.photoUrl ?? null })
-      toast('Foto dihapus', 'success')
+      toast(t('photoUploader.deleted'), 'success')
     } catch (err) {
-      toast(err instanceof ApiError ? err.message : 'Gagal menghapus foto', 'error')
+      toast(err instanceof ApiError ? err.message : t('photoUploader.deleteFailed'), 'error')
     } finally {
       setBusy(null)
     }
@@ -85,7 +87,7 @@ export function PhotoUploader({
         className={`${dim} relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50`}
       >
         {photoUrl ? (
-          <img src={photoUrl} alt="Foto" className="h-full w-full object-cover" />
+          <img src={photoUrl} alt={t('photoUploader.altPhoto')} className="h-full w-full object-cover" />
         ) : (
           <User className="h-1/2 w-1/2 text-slate-300" />
         )}
@@ -103,7 +105,7 @@ export function PhotoUploader({
           disabled={disabled || busy != null}
           className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <ImagePlus size={14} /> {photoUrl ? 'Ganti foto' : 'Unggah foto'}
+          <ImagePlus size={14} /> {photoUrl ? t('photoUploader.change') : t('photoUploader.upload')}
         </button>
         {photoUrl ? (
           <button
@@ -112,7 +114,7 @@ export function PhotoUploader({
             disabled={disabled || busy != null}
             className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Trash2 size={14} /> Hapus
+            <Trash2 size={14} /> {t('photoUploader.delete')}
           </button>
         ) : null}
         <input

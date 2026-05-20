@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 
 import {
@@ -30,6 +31,7 @@ import { useToast } from '@/lib/toast'
  * edit/delete pencil/trash actions appear.
  */
 export function PustakaDoaPage() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
@@ -65,20 +67,19 @@ export function PustakaDoaPage() {
   const delMut = useMutation({
     mutationFn: deleteDoa,
     onSuccess: () => {
-      toast('Doa dihapus', 'success')
+      toast(t('pustaka.doa.deleted'), 'success')
       qc.invalidateQueries({ queryKey: ['doa-list'] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal hapus', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('pustaka.doa.deleteFailed'), 'error'),
   })
 
   const handleDelete = (d: Doa) => {
-    if (confirm(`Hapus doa "${d.nama}"?`)) delMut.mutate(d.id)
+    if (confirm(t('pustaka.doa.confirmDelete', { name: d.nama }))) delMut.mutate(d.id)
   }
 
   return (
     <LibraryShell
       backTo="/pustaka"
-      backLabel="Pustaka"
       bgClassName="bg-slate-50"
       contentClassName="flex h-full min-h-0 flex-col"
     >
@@ -87,10 +88,9 @@ export function PustakaDoaPage() {
         <div className="mx-auto max-w-4xl">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h1 className="text-2xl font-semibold">Kumpulan Doa</h1>
+              <h1 className="text-2xl font-semibold">{t('pustaka.doa.title')}</h1>
               <p className="mb-3 mt-1 text-sm text-slate-500">
-                Doa harian, dzikir, dan hafalan dari kurikulum PPG. Klik judul untuk membuka.
-                {editMode ? ' Mode edit aktif.' : ''}
+                {editMode ? t('pustaka.doa.subtitleEdit') : t('pustaka.doa.subtitle')}
               </p>
             </div>
             {isAdmin ? (
@@ -101,11 +101,11 @@ export function PustakaDoaPage() {
                   onClick={() => setEditMode((v) => !v)}
                 >
                   <Pencil size={14} className="mr-1" />
-                  {editMode ? 'Kunci' : 'Edit'}
+                  {editMode ? t('pustaka.doa.btnLock') : t('pustaka.doa.btnEdit')}
                 </Button>
                 {editMode ? (
                   <Button size="sm" onClick={() => setDialog({ kind: 'create' })}>
-                    <Plus size={14} className="mr-1" /> Tambah doa
+                    <Plus size={14} className="mr-1" /> {t('pustaka.doa.btnAdd')}
                   </Button>
                 ) : null}
               </div>
@@ -117,7 +117,7 @@ export function PustakaDoaPage() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Cari doa (nama / Arab / terjemahan / sumber)…"
+                placeholder={t('pustaka.doa.searchPh')}
                 className="flex-1 bg-transparent text-sm focus:outline-none"
               />
             </div>
@@ -129,11 +129,11 @@ export function PustakaDoaPage() {
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-8">
         <div className="mx-auto max-w-4xl">
           <p className="mb-3 text-xs text-slate-500">
-            {isPending ? 'Memuat…' : `${list.length} doa`}
+            {isPending ? t('common.loading') : t('pustaka.doa.countN', { count: list.length })}
           </p>
           {list.length === 0 && !isPending ? (
             <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-              Tidak ada doa yang cocok.
+              {t('pustaka.doa.noMatch')}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -185,6 +185,7 @@ function DoaRow({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <li className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="flex w-full items-center gap-2 px-2 py-3 transition hover:bg-slate-50">
@@ -212,8 +213,8 @@ function DoaRow({
               type="button"
               onClick={onEdit}
               className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-              aria-label="Ubah"
-              title="Ubah"
+              aria-label={t('pustaka.doa.rowEditAria')}
+              title={t('pustaka.doa.rowEditAria')}
             >
               <Pencil size={14} />
             </button>
@@ -221,8 +222,8 @@ function DoaRow({
               type="button"
               onClick={onDelete}
               className="rounded-md p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-              aria-label="Hapus"
-              title="Hapus"
+              aria-label={t('pustaka.doa.rowDeleteAria')}
+              title={t('pustaka.doa.rowDeleteAria')}
             >
               <Trash2 size={14} />
             </button>
@@ -244,15 +245,16 @@ function DoaRow({
           {d.teksLatin ? <p className="text-sm italic text-slate-700">{d.teksLatin}</p> : null}
           {d.terjemahan ? (
             <p className="text-sm leading-relaxed text-slate-700">
-              <span className="font-medium text-slate-500">Arti: </span>
+              <span className="font-medium text-slate-500">{t('pustaka.doa.artiLabel')}</span>
               {d.terjemahan}
             </p>
           ) : null}
           {d.sumber ? <p className="text-xs text-slate-400">📚 {d.sumber}</p> : null}
           {d.quranSurah ? (
             <p className="text-xs text-slate-400">
-              Al-Qur'an surat {d.quranSurah}
-              {d.quranAyat ? ` ayat ${d.quranAyat}` : ''}
+              {d.quranAyat
+                ? t('pustaka.doa.quranRefAyat', { surah: d.quranSurah, ayat: d.quranAyat })
+                : t('pustaka.doa.quranRef', { surah: d.quranSurah })}
             </p>
           ) : null}
         </div>
@@ -272,6 +274,7 @@ function DoaFormDialog({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
   const [form, setForm] = useState<DoaInput>(() => ({
@@ -290,11 +293,11 @@ function DoaFormDialog({
     mutationFn: (input: DoaInput) =>
       doa ? updateDoa(doa.id, input) : createDoa(input),
     onSuccess: () => {
-      toast(doa ? 'Doa diperbarui' : 'Doa ditambahkan', 'success')
+      toast(doa ? t('pustaka.doa.updated') : t('pustaka.doa.added'), 'success')
       qc.invalidateQueries({ queryKey: ['doa-list'] })
       onSaved()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal simpan', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('pustaka.doa.saveFailed'), 'error'),
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -317,9 +320,9 @@ function DoaFormDialog({
   }
 
   return (
-    <Dialog title={doa ? 'Ubah Doa' : 'Tambah Doa'} onClose={onClose} size="lg">
+    <Dialog title={doa ? t('pustaka.doa.dialogTitleEdit') : t('pustaka.doa.dialogTitleAdd')} onClose={onClose} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Nama" htmlFor="d-nama">
+        <Field label={t('pustaka.doa.fldNama')} htmlFor="d-nama">
           <Input
             id="d-nama"
             value={form.nama}
@@ -328,14 +331,14 @@ function DoaFormDialog({
             autoFocus
           />
         </Field>
-        <Field label="Deskripsi" htmlFor="d-desc">
+        <Field label={t('pustaka.doa.fldDeskripsi')} htmlFor="d-desc">
           <Input
             id="d-desc"
             value={form.deskripsi ?? ''}
             onChange={(e) => setForm({ ...form, deskripsi: e.target.value })}
           />
         </Field>
-        <Field label="Teks Arab" htmlFor="d-arab">
+        <Field label={t('pustaka.doa.fldArab')} htmlFor="d-arab">
           <textarea
             id="d-arab"
             dir="rtl"
@@ -346,7 +349,7 @@ function DoaFormDialog({
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-right text-lg leading-loose shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
           />
         </Field>
-        <Field label="Latin" htmlFor="d-latin">
+        <Field label={t('pustaka.doa.fldLatin')} htmlFor="d-latin">
           <textarea
             id="d-latin"
             rows={2}
@@ -355,7 +358,7 @@ function DoaFormDialog({
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm italic shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
           />
         </Field>
-        <Field label="Terjemahan" htmlFor="d-terjemahan">
+        <Field label={t('pustaka.doa.fldTerjemahan')} htmlFor="d-terjemahan">
           <textarea
             id="d-terjemahan"
             rows={2}
@@ -364,16 +367,16 @@ function DoaFormDialog({
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
           />
         </Field>
-        <Field label="Sumber" htmlFor="d-sumber">
+        <Field label={t('pustaka.doa.fldSumber')} htmlFor="d-sumber">
           <Input
             id="d-sumber"
             value={form.sumber ?? ''}
             onChange={(e) => setForm({ ...form, sumber: e.target.value })}
-            placeholder="HR. Muslim, dll."
+            placeholder={t('pustaka.doa.fldSumberPh')}
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Surat Quran (opsional)" htmlFor="d-surah">
+          <Field label={t('pustaka.doa.fldSurah')} htmlFor="d-surah">
             <Input
               id="d-surah"
               type="number"
@@ -388,12 +391,12 @@ function DoaFormDialog({
               }
             />
           </Field>
-          <Field label="Ayat (opsional)" htmlFor="d-ayat">
+          <Field label={t('pustaka.doa.fldAyat')} htmlFor="d-ayat">
             <Input
               id="d-ayat"
               value={form.quranAyat ?? ''}
               onChange={(e) => setForm({ ...form, quranAyat: e.target.value })}
-              placeholder="cth: 1-7"
+              placeholder={t('pustaka.doa.fldAyatPh')}
             />
           </Field>
         </div>
@@ -404,14 +407,14 @@ function DoaFormDialog({
             onChange={(e) => setForm({ ...form, aktif: e.target.checked })}
             className="h-4 w-4 rounded border-slate-300"
           />
-          Aktif (tampil di list)
+          {t('pustaka.doa.aktifLabel')}
         </label>
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} disabled={mut.isPending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={mut.isPending}>
-            {mut.isPending ? 'Menyimpan…' : 'Simpan'}
+            {mut.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

@@ -1,4 +1,5 @@
 import { Construction } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { PageShell } from '@/components/PageShell'
 
 type Props = {
@@ -6,10 +7,9 @@ type Props = {
   message?: string
 }
 
-export function UnderDevelopment({
-  title,
-  message = 'Fitur ini sedang dalam pengembangan.',
-}: Props) {
+export function UnderDevelopment({ title, message }: Props) {
+  const { t } = useTranslation()
+  const text = message ?? t('pustaka.underDev.defaultMessage')
   return (
     <PageShell>
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -17,7 +17,7 @@ export function UnderDevelopment({
           <Construction size={32} strokeWidth={1.5} />
         </div>
         <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-        <p className="mt-2 max-w-md text-sm text-slate-500">{message}</p>
+        <p className="mt-2 max-w-md text-sm text-slate-500">{text}</p>
       </div>
     </PageShell>
   )

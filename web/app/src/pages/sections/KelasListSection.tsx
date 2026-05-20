@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { ChevronDown, ChevronRight, Pencil, Play, Plus, Radio, RotateCcw, Square, Trash2, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -41,12 +42,6 @@ import { useToast } from '@/lib/toast'
 
 type Status = 'upcoming' | 'ongoing' | 'completed' | 'missed'
 
-const STATUS_LABEL: Record<Status, string> = {
-  upcoming: 'Akan datang',
-  ongoing: 'Berjalan',
-  completed: 'Selesai',
-  missed: 'Terlewat',
-}
 const STATUS_DOT: Record<Status, string> = {
   upcoming: 'bg-sky-500',
   ongoing: 'bg-amber-500',
@@ -76,6 +71,7 @@ export function KelasListSection() {
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
   const qc = useQueryClient()
+  const { t } = useTranslation()
   const [dialog, setDialog] = useState<
     | { kind: 'create' }
     | { kind: 'edit'; kelas: Kelas }
@@ -100,14 +96,14 @@ export function KelasListSection() {
   const deleteMut = useMutation({
     mutationFn: deleteKelas,
     onSuccess: () => {
-      toast('Kelas dihapus', 'success')
+      toast(t('kelasSection.list.kelasDeleted'), 'success')
       qc.invalidateQueries({ queryKey: ['kelas'] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menghapus kelas', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('kelasSection.list.kelasDeleteFailed'), 'error'),
   })
 
   const handleDelete = (k: Kelas) => {
-    if (confirm(`Hapus kelas "${k.nama}"? Sesi yang sudah ada tidak dihapus.`)) {
+    if (confirm(t('kelasSection.list.confirmDelete', { nama: k.nama }))) {
       deleteMut.mutate(k.id)
     }
   }
@@ -116,22 +112,22 @@ export function KelasListSection() {
     <PageShell>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-slate-500">
-          {isPending ? 'Memuat…' : `${list.length} kelas terdaftar`}
+          {isPending ? t('common.loading') : t('kelasSection.list.countRegistered', { count: list.length })}
         </p>
         {isAdmin ? (
           <Button size="sm" onClick={() => setDialog({ kind: 'create' })}>
-            <Plus size={16} className="mr-1" /> Tambah kelas
+            <Plus size={16} className="mr-1" /> {t('kelasSection.list.addKelas')}
           </Button>
         ) : null}
       </div>
 
       {!isPending && list.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
-          <p className="text-base font-semibold text-slate-700">Belum ada kelas</p>
+          <p className="text-base font-semibold text-slate-700">{t('kelasSection.list.emptyTitle')}</p>
           <p className="mt-1 text-sm text-slate-500">
             {isAdmin
-              ? 'Klik "Tambah kelas" untuk membuat kelas pertama.'
-              : 'Hubungi admin untuk dimasukkan ke kelas.'}
+              ? t('kelasSection.list.emptyHintAdmin')
+              : t('kelasSection.list.emptyHintUser')}
           </p>
         </div>
       ) : null}
@@ -140,7 +136,7 @@ export function KelasListSection() {
         {myKelas.length > 0 ? (
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Kelas saya
+              {t('kelasSection.list.myKelas')}
             </h3>
             <div className="space-y-3">
               {myKelas.map((k) => (
@@ -168,7 +164,7 @@ export function KelasListSection() {
               aria-expanded={showAll}
             >
               <span>
-                Semua kelas{' '}
+                {t('kelasSection.list.allKelas')}{' '}
                 <span className="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-700">
                   {otherKelas.length}
                 </span>
@@ -248,6 +244,13 @@ function KelasCard({
   const [addingSesi, setAddingSesi] = useState(false)
   const qc = useQueryClient()
   const toast = useToast()
+  const { t } = useTranslation()
+  const STATUS_LABEL: Record<Status, string> = {
+    upcoming: t('kelasSection.status.upcoming'),
+    ongoing: t('kelasSection.status.ongoing'),
+    completed: t('kelasSection.status.completed'),
+    missed: t('kelasSection.status.missed'),
+  }
   const invalidateSesi = () => {
     qc.invalidateQueries({ queryKey: ['kelas-sesi', k.id] })
     qc.invalidateQueries({ queryKey: ['sesi'] })
@@ -255,18 +258,18 @@ function KelasCard({
   const startMut = useMutation({
     mutationFn: startSesi,
     onSuccess: () => {
-      toast('Sesi dimulai', 'success')
+      toast(t('kelasSection.list.sesiStarted'), 'success')
       invalidateSesi()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal memulai sesi', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('kelasSection.list.sesiStartFailed'), 'error'),
   })
   const delMut = useMutation({
     mutationFn: deleteSesi,
     onSuccess: () => {
-      toast('Sesi dihapus', 'success')
+      toast(t('kelasSection.list.sesiDeleted'), 'success')
       invalidateSesi()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menghapus sesi', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('kelasSection.list.sesiDeleteFailed'), 'error'),
   })
   const { data: sesiList = [], isLoading } = useQuery({
     queryKey: ['kelas-sesi', k.id],
@@ -311,8 +314,16 @@ function KelasCard({
           <div className="min-w-0 flex-1">
             <div className="truncate text-base font-semibold text-slate-900">{k.nama}</div>
             <div className="truncate text-xs text-slate-500">
-              Tingkat {k.tingkat} · Tahun {k.tahun}
-              {k.guruName ? ` · Wali ${k.guruName}` : ''}
+              {k.guruName
+                ? t('kelasSection.list.cardSubtitleWithWali', {
+                    tingkat: k.tingkat,
+                    tahun: k.tahun,
+                    wali: k.guruName,
+                  })
+                : t('kelasSection.list.cardSubtitle', {
+                    tingkat: k.tingkat,
+                    tahun: k.tahun,
+                  })}
             </div>
           </div>
           {open ? (
@@ -327,8 +338,8 @@ function KelasCard({
               type="button"
               onClick={onAnggota}
               className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-              aria-label="Kelola anggota"
-              title="Kelola anggota"
+              aria-label={t('kelasSection.list.manageAnggota')}
+              title={t('kelasSection.list.manageAnggota')}
             >
               <Users size={16} />
             </button>
@@ -336,8 +347,8 @@ function KelasCard({
               type="button"
               onClick={onEdit}
               className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-              aria-label="Ubah kelas"
-              title="Ubah kelas"
+              aria-label={t('kelasSection.list.editKelas')}
+              title={t('kelasSection.list.editKelas')}
             >
               <Pencil size={16} />
             </button>
@@ -345,8 +356,8 @@ function KelasCard({
               type="button"
               onClick={onDelete}
               className="rounded-md p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-              aria-label="Hapus kelas"
-              title="Hapus kelas"
+              aria-label={t('kelasSection.list.deleteKelas')}
+              title={t('kelasSection.list.deleteKelas')}
             >
               <Trash2 size={16} />
             </button>
@@ -359,14 +370,14 @@ function KelasCard({
           {isAdmin ? (
             <div className="mb-3 flex justify-end">
               <Button size="sm" onClick={() => setAddingSesi(true)}>
-                <Plus size={14} className="mr-1" /> Tambah Sesi
+                <Plus size={14} className="mr-1" /> {t('kelasSection.list.addSesi')}
               </Button>
             </div>
           ) : null}
           {isLoading ? (
-            <p className="text-sm text-slate-500">Memuat sesi…</p>
+            <p className="text-sm text-slate-500">{t('kelasSection.list.loadingSesi')}</p>
           ) : counts.total === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada sesi untuk kelas ini.</p>
+            <p className="text-sm text-slate-500">{t('kelasSection.list.noSesi')}</p>
           ) : (
             <div className="space-y-3">
               {(['ongoing', 'upcoming', 'missed', 'completed'] as Status[]).map((st) =>
@@ -389,7 +400,7 @@ function KelasCard({
                                 type="button"
                                 onClick={() => setReviewingSesi(s)}
                                 className="min-w-0 flex-1 cursor-pointer text-left transition hover:opacity-75"
-                                title="Lihat rangkuman materi yang sudah diajarkan"
+                                title={t('kelasSection.list.reviewSummary')}
                               >
                                 <div className="text-sm font-medium text-slate-900 underline decoration-dotted underline-offset-2">
                                   {s.topik}
@@ -416,18 +427,18 @@ function KelasCard({
                                     onClick={() => startMut.mutate(s.id)}
                                     disabled={startMut.isPending}
                                     className="rounded-md p-1.5 text-slate-400 transition hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50"
-                                    aria-label="Mulai sesi"
-                                    title="Mulai sesi"
+                                    aria-label={t('kelasSection.list.startSesi')}
+                                    title={t('kelasSection.list.startSesi')}
                                   >
                                     <Play size={14} />
                                   </button>
                                 ) : !s.endedAt ? (
                                   <>
                                     <Link
-                                      to={`/kelas/${s.kelasId ?? kelas.id}/sesi/${s.id}/live`}
+                                      to={`/kelas/${s.kelasId ?? k.id}/sesi/${s.id}/live`}
                                       className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                                      aria-label="Live stage"
-                                      title="Buka tampilan Live"
+                                      aria-label={t('kelasSection.list.liveStage')}
+                                      title={t('kelasSection.list.openLive')}
                                     >
                                       <span className="relative flex h-2 w-2">
                                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
@@ -440,8 +451,8 @@ function KelasCard({
                                       type="button"
                                       onClick={() => setEndingSesi(s)}
                                       className="rounded-md p-1.5 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                                      aria-label="Akhiri sesi"
-                                      title="Akhiri sesi"
+                                      aria-label={t('kelasSection.list.endSesi')}
+                                      title={t('kelasSection.list.endSesi')}
                                     >
                                       <Square size={14} />
                                     </button>
@@ -452,8 +463,8 @@ function KelasCard({
                                     type="button"
                                     onClick={() => setRescheduling(s)}
                                     className="rounded-md p-1.5 text-slate-400 transition hover:bg-sky-50 hover:text-sky-700"
-                                    aria-label="Jadwalkan ulang"
-                                    title="Jadwalkan ulang"
+                                    aria-label={t('kelasSection.list.reschedule')}
+                                    title={t('kelasSection.list.reschedule')}
                                   >
                                     <RotateCcw size={14} />
                                   </button>
@@ -462,20 +473,20 @@ function KelasCard({
                                   type="button"
                                   onClick={() => setEditingSesi(s)}
                                   className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
-                                  aria-label="Ubah"
-                                  title="Ubah"
+                                  aria-label={t('common.edit')}
+                                  title={t('common.edit')}
                                 >
                                   <Pencil size={14} />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (confirm(`Hapus sesi "${s.topik}"?`)) delMut.mutate(s.id)
+                                    if (confirm(t('kelasSection.list.confirmDeleteSesi', { topik: s.topik }))) delMut.mutate(s.id)
                                   }}
                                   disabled={delMut.isPending}
                                   className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                                  aria-label="Hapus"
-                                  title="Hapus"
+                                  aria-label={t('common.delete')}
+                                  title={t('common.delete')}
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -557,13 +568,12 @@ function KelasCard({
 
 // -----------------------------------------------------------------------
 
-const schema = z.object({
-  nama: z.string().min(1, 'Wajib diisi').max(200),
-  tingkat: z.string().min(1, 'Wajib diisi').max(100),
-  tahun: z.coerce.number().int().gte(2000).lte(2200),
-  deskripsi: z.string().optional().or(z.literal('')),
-})
-type FormValues = z.infer<typeof schema>
+type FormValues = {
+  nama: string
+  tingkat: string
+  tahun: number
+  deskripsi?: string
+}
 
 // Compute integer age (years) from an ISO YYYY-MM-DD date string.
 function ageFromDob(dob?: string): number | null {
@@ -624,7 +634,20 @@ function KelasFormDialog({
 }) {
   const qc = useQueryClient()
   const toast = useToast()
+  const { t } = useTranslation()
   const isCreate = !kelas
+  // Build the validation schema fresh per locale so error messages
+  // localize when the user flips the language switch.
+  const schema = useMemo(
+    () =>
+      z.object({
+        nama: z.string().min(1, t('kelasSection.list.form.errRequired')).max(200),
+        tingkat: z.string().min(1, t('kelasSection.list.form.errRequired')).max(100),
+        tahun: z.coerce.number().int().gte(2000).lte(2200),
+        deskripsi: z.string().optional().or(z.literal('')),
+      }),
+    [t],
+  )
   const { data: tingkatList = [] } = useQuery({
     queryKey: ['tingkat'],
     queryFn: listTingkat,
@@ -697,8 +720,8 @@ function KelasFormDialog({
         } catch (e) {
           toast(
             e instanceof ApiError
-              ? `Kelas dibuat, tapi gagal tambah murid: ${e.message}`
-              : 'Kelas dibuat, tapi gagal menambahkan sebagian murid.',
+              ? t('kelasSection.list.form.addMuridPartialFail', { message: e.message })
+              : t('kelasSection.list.form.addMuridFailed'),
             'error',
           )
         }
@@ -706,15 +729,15 @@ function KelasFormDialog({
       return saved
     },
     onSuccess: () => {
-      toast(kelas ? 'Kelas diperbarui' : 'Kelas ditambahkan', 'success')
+      toast(kelas ? t('kelasSection.list.form.kelasUpdated') : t('kelasSection.list.form.kelasAdded'), 'success')
       qc.invalidateQueries({ queryKey: ['kelas'] })
       onSaved()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menyimpan kelas', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('kelasSection.list.form.saveFailed'), 'error'),
   })
 
   return (
-    <Dialog title={kelas ? 'Ubah Kelas' : 'Tambah Kelas'} onClose={onClose} size="lg">
+    <Dialog title={kelas ? t('kelasSection.list.form.titleEdit') : t('kelasSection.list.form.titleAdd')} onClose={onClose} size="lg">
       <form
         onSubmit={handleSubmit((v) =>
           mut.mutate({
@@ -728,25 +751,25 @@ function KelasFormDialog({
         )}
         className="space-y-4"
       >
-        <Field label="Nama kelas" htmlFor="kelas-nama" error={errors.nama?.message}>
+        <Field label={t('kelasSection.list.form.nama')} htmlFor="kelas-nama" error={errors.nama?.message}>
           <Input id="kelas-nama" autoFocus {...register('nama')} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tingkat" htmlFor="kelas-tingkat" error={errors.tingkat?.message}>
+          <Field label={t('kelasSection.list.form.tingkat')} htmlFor="kelas-tingkat" error={errors.tingkat?.message}>
             <select
               id="kelas-tingkat"
               className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               {...register('tingkat')}
             >
-              <option value="">— pilih —</option>
-              {tingkatList.map((t) => (
-                <option key={t.id} value={t.nama}>
-                  {t.nama}
+              <option value="">{t('common.selectPrompt')}</option>
+              {tingkatList.map((tk) => (
+                <option key={tk.id} value={tk.nama}>
+                  {tk.nama}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Tahun" htmlFor="kelas-tahun" error={errors.tahun?.message}>
+          <Field label={t('kelasSection.list.form.tahun')} htmlFor="kelas-tahun" error={errors.tahun?.message}>
             <Input
               id="kelas-tahun"
               type="number"
@@ -757,14 +780,14 @@ function KelasFormDialog({
           </Field>
         </div>
         <Field
-          label="Guru pengajar"
+          label={t('kelasSection.list.form.guru')}
           htmlFor="kelas-guru"
-          hint="Bisa pilih lebih dari satu — guru pertama menjadi wali kelas."
+          hint={t('kelasSection.list.form.guruHint')}
         >
           <div className="max-h-44 overflow-y-auto rounded-md border border-slate-300 bg-white">
             {guruOptions.length === 0 ? (
               <p className="px-3 py-2 text-xs text-slate-500">
-                Belum ada user dengan role guru.
+                {t('kelasSection.list.form.guruEmpty')}
               </p>
             ) : (
               guruOptions.map((g) => {
@@ -787,7 +810,7 @@ function KelasFormDialog({
                     <span className="flex-1 truncate">{g.name}</span>
                     {isPrimary ? (
                       <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                        wali
+                        {t('kelasSection.list.form.guruWali')}
                       </span>
                     ) : null}
                   </label>
@@ -798,13 +821,13 @@ function KelasFormDialog({
         </Field>
         {isCreate ? (
           <Field
-            label={`Murid (${pickedMurid.length} dipilih)`}
+            label={t('kelasSection.list.form.muridLabel', { count: pickedMurid.length })}
             htmlFor="kelas-murid"
-            hint="Pilih generus aktif. Tingkat akan menyesuaikan murid pertama bila kosong."
+            hint={t('kelasSection.list.form.muridHint')}
           >
             <Input
               id="kelas-murid"
-              placeholder="Cari nama generus…"
+              placeholder={t('kelasSection.list.form.muridSearchPh')}
               value={muridSearch}
               onChange={(e) => setMuridSearch(e.target.value)}
               className="mb-2"
@@ -812,7 +835,7 @@ function KelasFormDialog({
             <div className="max-h-56 overflow-y-auto rounded-md border border-slate-300 bg-white">
               {muridOptions.length === 0 ? (
                 <p className="px-3 py-2 text-xs text-slate-500">
-                  {muridSearch ? 'Tidak ada generus yang cocok.' : 'Belum ada generus aktif.'}
+                  {muridSearch ? t('kelasSection.list.form.muridNoMatch') : t('kelasSection.list.form.muridEmpty')}
                 </p>
               ) : (
                 muridOptions.map((s) => {
@@ -849,15 +872,15 @@ function KelasFormDialog({
             </div>
           </Field>
         ) : null}
-        <Field label="Deskripsi (opsional)" htmlFor="kelas-deskripsi">
+        <Field label={t('kelasSection.list.form.deskripsi')} htmlFor="kelas-deskripsi">
           <Input id="kelas-deskripsi" {...register('deskripsi')} />
         </Field>
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} disabled={mut.isPending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={mut.isPending}>
-            {mut.isPending ? 'Menyimpan…' : 'Simpan'}
+            {mut.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

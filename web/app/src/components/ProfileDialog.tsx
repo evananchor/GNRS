@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
 import { setMyPassword, updateMe, type UpdateMeInput } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import { ME_QUERY_KEY, useAuth, type User } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 import { DEFAULT_TIMEZONE, timezoneGroups, timezoneLabel } from '@/lib/timezones'
+import { SUPPORTED_LANGS, type Lang } from '@/lib/i18n'
 import { Button } from '@/components/Button'
 import { Dialog } from '@/components/Dialog'
 import { Field } from '@/components/Field'
@@ -21,6 +23,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
   const { user, refresh } = useAuth()
   const qc = useQueryClient()
   const toast = useToast()
+  const { t, i18n } = useTranslation()
   const [form, setForm] = useState({
     name: user?.name ?? '',
     nickname: user?.nickname ?? '',
@@ -47,10 +50,10 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
     onSuccess: async (u) => {
       qc.setQueryData(ME_QUERY_KEY, u)
       await refresh()
-      toast('Profil disimpan', 'success')
+      toast(t('profileDialog.saved'), 'success')
       onClose()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menyimpan profil', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('profileDialog.saveFailed'), 'error'),
   })
 
   const handlePhotoChanged = async () => {
@@ -74,8 +77,15 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
     })
   }
 
+  // Language switcher — persists via i18next-browser-languagedetector
+  // (localStorage). Falls back to the first supported lang if a
+  // browser-detected variant (e.g. "en-US") slipped through.
+  const currentLang: Lang = (SUPPORTED_LANGS as readonly string[]).includes(i18n.resolvedLanguage ?? '')
+    ? (i18n.resolvedLanguage as Lang)
+    : 'id'
+
   return (
-    <Dialog title="Profil saya" onClose={onClose} size="md">
+    <Dialog title={t('profileDialog.title')} onClose={onClose} size="md">
       <form onSubmit={handleSubmit} className="space-y-5">
         {user ? (
           <PhotoUploader
@@ -86,7 +96,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nama lengkap" htmlFor="profile-name">
+          <Field label={t('profileDialog.fullName')} htmlFor="profile-name">
             <Input
               id="profile-name"
               value={form.name}
@@ -95,7 +105,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
               required
             />
           </Field>
-          <Field label="Nama panggilan" htmlFor="profile-nickname">
+          <Field label={t('profileDialog.nickname')} htmlFor="profile-nickname">
             <Input
               id="profile-nickname"
               value={form.nickname}
@@ -105,9 +115,9 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <Field
-          label="Zona waktu"
+          label={t('profileDialog.timezone')}
           htmlFor="profile-tz"
-          hint={`Tampilan saat ini: ${timezoneLabel(form.timezone)}`}
+          hint={`${t('profileDialog.currentDisplay')} ${timezoneLabel(form.timezone)}`}
         >
           <select
             id="profile-tz"
@@ -128,8 +138,25 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
           </select>
         </Field>
 
+        {/* Language preference — applies immediately and persists in
+            localStorage via the language detector. */}
+        <Field label={t('common.language')} htmlFor="profile-lang">
+          <select
+            id="profile-lang"
+            value={currentLang}
+            onChange={(e) => {
+              const next = e.target.value as Lang
+              void i18n.changeLanguage(next)
+            }}
+            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          >
+            <option value="id">{t('common.indonesian')}</option>
+            <option value="en">{t('common.english')}</option>
+          </select>
+        </Field>
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="No. HP" htmlFor="profile-nohp">
+          <Field label={t('profileDialog.phone')} htmlFor="profile-nohp">
             <Input
               id="profile-nohp"
               value={form.noHp}
@@ -138,7 +165,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
               autoComplete="tel"
             />
           </Field>
-          <Field label="Alamat" htmlFor="profile-alamat">
+          <Field label={t('profileDialog.address')} htmlFor="profile-alamat">
             <Input
               id="profile-alamat"
               value={form.alamat}
@@ -150,15 +177,15 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
         {/* Taaruf-style biodata: tempat & tanggal lahir, jenis kelamin,
             pendidikan, pekerjaan. */}
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tempat lahir" htmlFor="profile-ttl">
+          <Field label={t('profileDialog.birthPlace')} htmlFor="profile-ttl">
             <Input
               id="profile-ttl"
               value={form.tempatLahir}
               onChange={(e) => setForm({ ...form, tempatLahir: e.target.value })}
-              placeholder="cth: Jakarta"
+              placeholder={t('profileDialog.birthPlacePh')}
             />
           </Field>
-          <Field label="Tanggal lahir" htmlFor="profile-dob">
+          <Field label={t('profileDialog.birthDate')} htmlFor="profile-dob">
             <Input
               id="profile-dob"
               type="date"
@@ -168,7 +195,7 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Jenis kelamin" htmlFor="profile-jk">
+          <Field label={t('profileDialog.gender')} htmlFor="profile-jk">
             <select
               id="profile-jk"
               value={form.gender}
@@ -178,30 +205,30 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
               className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             >
               <option value="">—</option>
-              <option value="male">Laki-laki</option>
-              <option value="female">Perempuan</option>
+              <option value="male">{t('profileDialog.male')}</option>
+              <option value="female">{t('profileDialog.female')}</option>
             </select>
           </Field>
-          <Field label="Pendidikan terakhir" htmlFor="profile-pendidikan">
+          <Field label={t('profileDialog.education')} htmlFor="profile-pendidikan">
             <Input
               id="profile-pendidikan"
               value={form.pendidikan}
               onChange={(e) => setForm({ ...form, pendidikan: e.target.value })}
-              placeholder="cth: SMA, D3, S1, S2"
+              placeholder={t('profileDialog.educationPh')}
             />
           </Field>
         </div>
-        <Field label="Pekerjaan" htmlFor="profile-pekerjaan">
+        <Field label={t('profileDialog.occupation')} htmlFor="profile-pekerjaan">
           <Input
             id="profile-pekerjaan"
             value={form.pekerjaan}
             onChange={(e) => setForm({ ...form, pekerjaan: e.target.value })}
-            placeholder="cth: Mahasiswa, Karyawan, Guru"
+            placeholder={t('profileDialog.occupationPh')}
           />
         </Field>
         {/* Akun: username (read-only) + password (kosongkan = skip). */}
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Username (tidak bisa diganti)" htmlFor="profile-username">
+          <Field label={t('profileDialog.usernameLocked')} htmlFor="profile-username">
             <Input
               id="profile-username"
               value={user?.username ?? ''}
@@ -211,9 +238,9 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
             />
           </Field>
           <Field
-            label="Password baru"
+            label={t('profileDialog.newPassword')}
             htmlFor="profile-password"
-            hint="Kosongkan bila tidak ingin diganti. Minimal 6 karakter."
+            hint={t('profileDialog.newPasswordHint')}
           >
             <Input
               id="profile-password"
@@ -228,19 +255,19 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
 
         <div className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
           <div>
-            Email: <span className="font-medium text-slate-800">{user?.email}</span>
+            {t('profileDialog.emailLabel')} <span className="font-medium text-slate-800">{user?.email}</span>
           </div>
           <div>
-            Role: <span className="font-medium text-slate-800">{user?.role}</span>
+            {t('profileDialog.roleLabel')} <span className="font-medium text-slate-800">{user?.role}</span>
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} disabled={saveMut.isPending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={saveMut.isPending}>
-            {saveMut.isPending ? 'Menyimpan…' : 'Simpan'}
+            {saveMut.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

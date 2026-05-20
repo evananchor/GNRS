@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react'
 
 import { listMateriAjar, listTingkat, type MateriAjar } from '@/api/kurikulum'
@@ -74,21 +75,6 @@ const ASPECTS_BY_KIND: Record<LibraryKind, LibraryAspect[]> = {
   doa: ['memorizing', 'review'],
 }
 
-const ASPECT_LABEL: Record<LibraryAspect, string> = {
-  reciting: 'Membaca',
-  memorizing: 'Menghafal',
-  review: 'Mengulang',
-  manqul: 'Manqul',
-}
-
-const KIND_LABEL: Record<LibraryKind, string> = {
-  kurikulum: 'Kurikulum',
-  quran: "Al-Qur'an",
-  hadits: 'Hadits',
-  tilawati: 'Tilawati',
-  doa: 'Doa-doa',
-}
-
 export function emptyMateriSourceValue(defaultTingkat?: string): MateriSourceValue {
   return {
     libraryKind: 'kurikulum',
@@ -129,6 +115,23 @@ export function MateriSourcePicker({
    *  dialogs) leave this off. */
   multipleLibrary?: boolean
 }) {
+  const { t } = useTranslation()
+
+  const ASPECT_LABEL: Record<LibraryAspect, string> = {
+    reciting: t('materiComp.source.aspectReciting'),
+    memorizing: t('materiComp.source.aspectMemorizing'),
+    review: t('materiComp.source.aspectReview'),
+    manqul: t('materiComp.source.aspectManqul'),
+  }
+
+  const KIND_LABEL: Record<LibraryKind, string> = {
+    kurikulum: t('materiComp.source.kindKurikulum'),
+    quran: t('materiComp.source.kindQuran'),
+    hadits: t('materiComp.source.kindHadits'),
+    tilawati: t('materiComp.source.kindTilawati'),
+    doa: t('materiComp.source.kindDoa'),
+  }
+
   const set = (patch: Partial<MateriSourceValue>) => onChange({ ...value, ...patch })
 
   // Keep the kurikulum tingkat in sync with the fixed value coming from the
@@ -175,7 +178,7 @@ export function MateriSourcePicker({
   return (
     <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50/50 p-3">
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700">Sumber materi</label>
+        <label className="mb-2 block text-sm font-medium text-slate-700">{t('materiComp.source.label')}</label>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {(Object.keys(KIND_LABEL) as LibraryKind[])
             .filter((k) => !hideKinds?.includes(k))
@@ -183,6 +186,7 @@ export function MateriSourcePicker({
               <SourceTile
                 key={k}
                 kind={k}
+                label={KIND_LABEL[k]}
                 selected={value.libraryKind === k}
                 onPick={() => {
                   const aspects = ASPECTS_BY_KIND[k]
@@ -200,7 +204,7 @@ export function MateriSourcePicker({
       {multipleLibrary && value.libraryItems.length > 0 ? (
         <section>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Daftar materi library ({value.libraryItems.length})
+            {t('materiComp.source.libraryListLabel', { count: value.libraryItems.length })}
           </label>
           <ul className="space-y-1">
             {value.libraryItems.map((it, i) => (
@@ -220,8 +224,8 @@ export function MateriSourcePicker({
                   type="button"
                   onClick={() => removeItem(i)}
                   className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                  aria-label="Hapus materi"
-                  title="Hapus dari daftar"
+                  aria-label={t('materiComp.source.removeMateriAria')}
+                  title={t('materiComp.source.removeMateriTitle')}
                 >
                   <X size={12} />
                 </button>
@@ -236,7 +240,7 @@ export function MateriSourcePicker({
       ) : null}
 
       {!isKurikulum ? (
-        <Field label="Aspek" htmlFor="src-aspect">
+        <Field label={t('materiComp.source.aspect')} htmlFor="src-aspect">
           <div className="flex flex-wrap gap-2">
             {ASPECTS_BY_KIND[value.libraryKind].map((a) => (
               <button
@@ -265,7 +269,7 @@ export function MateriSourcePicker({
       {multipleLibrary && !isKurikulum ? (
         <div className="flex items-center justify-between gap-2 border-t border-slate-200 pt-2">
           <p className="text-[11px] text-slate-500">
-            Setel pilihan di atas lalu klik tombol untuk menambahkan ke daftar materi sesi.
+            {t('materiComp.source.addToListHint')}
           </p>
           <button
             type="button"
@@ -273,7 +277,7 @@ export function MateriSourcePicker({
             disabled={!canAddCurrent}
             className="inline-flex items-center gap-1 rounded-md border border-dashed border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
           >
-            <Plus size={14} /> Tambah ke daftar
+            <Plus size={14} /> {t('materiComp.source.addToListBtn')}
           </button>
         </div>
       ) : null}
@@ -283,23 +287,26 @@ export function MateriSourcePicker({
 
 // Sitrac-style source tile: emoji icon + title + short subtitle, selectable
 // like a radio. Grid lays them 2-col on mobile, 5-col on desktop.
-const KIND_TILE: Record<LibraryKind, { icon: string; sub: string; accent: string }> = {
-  kurikulum: { icon: '🎓', sub: 'Tema, sub-tema, materi', accent: 'bg-violet-50' },
-  quran: { icon: '📖', sub: 'Surah · ayat · manqul', accent: 'bg-emerald-50' },
-  hadits: { icon: '📜', sub: 'Kitab himpunan · manqul', accent: 'bg-amber-50' },
-  tilawati: { icon: '📚', sub: 'Jilid 1–6 · halaman', accent: 'bg-sky-50' },
-  doa: { icon: '🤲', sub: 'Doa harian · hafalan', accent: 'bg-rose-50' },
+const KIND_TILE: Record<LibraryKind, { icon: string; subKey: string; accent: string }> = {
+  kurikulum: { icon: '🎓', subKey: 'materiComp.source.subKurikulum', accent: 'bg-violet-50' },
+  quran: { icon: '📖', subKey: 'materiComp.source.subQuran', accent: 'bg-emerald-50' },
+  hadits: { icon: '📜', subKey: 'materiComp.source.subHadits', accent: 'bg-amber-50' },
+  tilawati: { icon: '📚', subKey: 'materiComp.source.subTilawati', accent: 'bg-sky-50' },
+  doa: { icon: '🤲', subKey: 'materiComp.source.subDoa', accent: 'bg-rose-50' },
 }
 
 function SourceTile({
   kind,
+  label,
   selected,
   onPick,
 }: {
   kind: LibraryKind
+  label: string
   selected: boolean
   onPick: () => void
 }) {
+  const { t } = useTranslation()
   const meta = KIND_TILE[kind]
   return (
     <button
@@ -320,8 +327,8 @@ function SourceTile({
       >
         {meta.icon}
       </span>
-      <span className="text-sm font-semibold text-slate-800">{KIND_LABEL[kind]}</span>
-      <span className="text-[10px] leading-tight text-slate-500">{meta.sub}</span>
+      <span className="text-sm font-semibold text-slate-800">{label}</span>
+      <span className="text-[10px] leading-tight text-slate-500">{t(meta.subKey)}</span>
     </button>
   )
 }
@@ -359,6 +366,7 @@ function KurikulumPicker({
   set: (patch: Partial<MateriSourceValue>) => void
   fixedTingkat?: string
 }) {
+  const { t } = useTranslation()
   const k = value.kurikulum
   const { data: tingkatList = [] } = useQuery({
     queryKey: ['tingkat'],
@@ -390,10 +398,10 @@ function KurikulumPicker({
     <div className="space-y-3">
       {fixedTingkat ? (
         <div className="text-xs text-slate-500">
-          Tingkat: <span className="font-semibold text-slate-700">{fixedTingkat}</span>
+          {t('materiComp.source.tingkatLabel')}: <span className="font-semibold text-slate-700">{fixedTingkat}</span>
         </div>
       ) : (
-        <Field label="Tingkat" htmlFor="kur-tingkat">
+        <Field label={t('materiComp.source.tingkatLabel')} htmlFor="kur-tingkat">
           <select
             id="kur-tingkat"
             value={k.tingkat}
@@ -405,10 +413,10 @@ function KurikulumPicker({
             }
             className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm"
           >
-            <option value="">— pilih tingkat —</option>
-            {tingkatList.map((t) => (
-              <option key={t.id} value={t.nama}>
-                {t.nama}
+            <option value="">{t('materiComp.source.tingkatPick')}</option>
+            {tingkatList.map((tk) => (
+              <option key={tk.id} value={tk.nama}>
+                {tk.nama}
               </option>
             ))}
           </select>
@@ -434,8 +442,8 @@ function KurikulumPicker({
                 type="button"
                 onClick={() => removeOne(m.id)}
                 className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                aria-label="Hapus materi"
-                title="Hapus dari pilihan"
+                aria-label={t('materiComp.source.removeMateriAria')}
+                title={t('materiComp.source.removeMateriPilihan')}
               >
                 <X size={12} />
               </button>
@@ -450,7 +458,7 @@ function KurikulumPicker({
         disabled={!activeTingkat}
         className="inline-flex items-center gap-1 rounded-md border border-dashed border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
       >
-        <Plus size={14} /> Buka kurikulum
+        <Plus size={14} /> {t('materiComp.source.openKurikulum')}
       </button>
 
       {pickerOpen ? (
@@ -485,6 +493,7 @@ export function KurikulumMultiPickerDialog({
   onCommit: (ids: string[]) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const { data: rawMateri = [], isPending } = useQuery({
     queryKey: ['materi-ajar', { tingkat }],
     queryFn: () => listMateriAjar({ tingkat: tingkat || undefined }),
@@ -497,6 +506,7 @@ export function KurikulumMultiPickerDialog({
   // X buttons in the parent picker.
   const materi = useMemo(() => rawMateri.filter((m) => !picked.has(m.id)), [rawMateri, picked])
 
+  const noTema = t('materiComp.source.noTema')
   const [draft, setDraft] = useState<Set<string>>(() => new Set())
   const [openTemas, setOpenTemas] = useState<Set<string>>(new Set())
   const [openSubs, setOpenSubs] = useState<Set<string>>(new Set())
@@ -509,14 +519,14 @@ export function KurikulumMultiPickerDialog({
     const tWithPicks = new Set<string>()
     for (const m of materi) {
       if (draft.has(m.id)) {
-        const key = (m.tema || '').toUpperCase() || '(TANPA TEMA)'
+        const key = (m.tema || '').toUpperCase() || noTema
         tWithPicks.add(key)
       }
     }
     setOpenTemas((cur) => {
       if (cur.size > 0) return cur
       if (tWithPicks.size > 0) return tWithPicks
-      const first = (materi[0].tema || '').toUpperCase() || '(TANPA TEMA)'
+      const first = (materi[0].tema || '').toUpperCase() || noTema
       return new Set([first])
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -525,7 +535,7 @@ export function KurikulumMultiPickerDialog({
   const grouped = useMemo(() => {
     const byTema: Record<string, MateriAjar[]> = {}
     for (const m of materi) {
-      const key = (m.tema || '').toUpperCase() || '(TANPA TEMA)'
+      const key = (m.tema || '').toUpperCase() || noTema
       ;(byTema[key] = byTema[key] || []).push(m)
     }
     const orderedKeys = [
@@ -564,7 +574,7 @@ export function KurikulumMultiPickerDialog({
       })
       return { tema, subs }
     })
-  }, [materi])
+  }, [materi, noTema])
 
   const toggleDraft = (id: string) =>
     setDraft((p) => {
@@ -577,30 +587,30 @@ export function KurikulumMultiPickerDialog({
     setter(new Set(s.has(key) ? [...s].filter((x) => x !== key) : [...s, key]))
 
   return (
-    <Dialog title="Buka Kurikulum — pilih materi" onClose={onClose} size="lg">
+    <Dialog title={t('materiComp.source.multiPickerTitle')} onClose={onClose} size="lg">
       <div className="space-y-3">
         <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-          Centang materi yang ingin ditambahkan ke daftar materi sesi. Bisa pilih lebih dari satu, lintas tema.
+          {t('materiComp.source.multiHint')}
         </div>
         <div className="text-xs text-slate-500">
-          Tingkat <span className="font-semibold text-slate-700">{tingkat || '—'}</span>
+          {t('materiComp.source.multiTingkat')} <span className="font-semibold text-slate-700">{tingkat || '—'}</span>
           {' · '}
-          <span className="font-semibold text-slate-700">{draft.size}</span> akan ditambahkan
+          <span className="font-semibold text-slate-700">{t('materiComp.source.multiCountAdd', { count: draft.size })}</span>
           {picked.size > 0 ? (
             <>
               {' · '}
-              <span className="text-slate-500">{picked.size} sudah di daftar</span>
+              <span className="text-slate-500">{t('materiComp.source.multiCountExisting', { count: picked.size })}</span>
             </>
           ) : null}
         </div>
 
         {isPending ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-500">Memuat materi…</p>
+          <p className="px-4 py-6 text-center text-sm text-slate-500">{t('materiComp.source.multiLoading')}</p>
         ) : grouped.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-slate-500">
             {picked.size > 0
-              ? 'Semua materi pada tingkat ini sudah ada di daftar.'
-              : 'Tidak ada materi pada tingkat ini.'}
+              ? t('materiComp.source.multiAllInList')
+              : t('materiComp.source.multiEmpty')}
           </p>
         ) : (
           <div className="max-h-[55vh] overflow-y-auto rounded-md border border-slate-200 bg-white">
@@ -717,14 +727,14 @@ export function KurikulumMultiPickerDialog({
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button
             type="button"
             onClick={() => onCommit([...draft])}
             disabled={draft.size === 0}
           >
-            Tambah ke daftar ({draft.size})
+            {t('materiComp.source.multiAddBtn', { count: draft.size })}
           </Button>
         </div>
       </div>
@@ -741,6 +751,7 @@ function MateriRow({
   selected: boolean
   onToggle: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <li>
       <label
@@ -757,7 +768,7 @@ function MateriRow({
         />
         <div className="min-w-0 flex-1">
           <div className="text-xs text-slate-500">
-            Sem {m.semester} · {m.kodeMateri}
+            {t('materiComp.source.rowSem', { n: m.semester, kode: m.kodeMateri })}
           </div>
           <div className={selected ? 'font-medium text-slate-900' : 'text-slate-800'}>
             {m.detailMateri}
@@ -777,6 +788,7 @@ function QuranPicker({
   value: MateriSourceValue
   set: (patch: Partial<MateriSourceValue>) => void
 }) {
+  const { t } = useTranslation()
   const q = value.quran
   const { data: surahs = [] } = useQuery({
     queryKey: ['quran-surahs'],
@@ -795,22 +807,22 @@ function QuranPicker({
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <Field label="Surah" htmlFor="qrn-surah" className="sm:col-span-3">
+      <Field label={t('materiComp.source.surah')} htmlFor="qrn-surah" className="sm:col-span-3">
         <select
           id="qrn-surah"
           value={q.surah}
           onChange={(e) => update({ surah: e.target.value, ayatFrom: '', ayatTo: '' })}
           className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm"
         >
-          <option value="">— pilih surah —</option>
+          <option value="">{t('materiComp.source.surahPick')}</option>
           {surahs.map((s) => (
             <option key={s.id} value={String(s.id)}>
-              {s.id}. {s.nama} · {s.jumlahAyat} ayat
+              {t('materiComp.source.surahDescOption', { id: s.id, nama: s.nama, n: s.jumlahAyat })}
             </option>
           ))}
         </select>
       </Field>
-      <Field label="Dari ayat" htmlFor="qrn-from">
+      <Field label={t('materiComp.source.ayatFrom')} htmlFor="qrn-from">
         <Input
           id="qrn-from"
           type="number"
@@ -822,7 +834,7 @@ function QuranPicker({
           placeholder="1"
         />
       </Field>
-      <Field label="Sampai ayat" htmlFor="qrn-to">
+      <Field label={t('materiComp.source.ayatTo')} htmlFor="qrn-to">
         <Input
           id="qrn-to"
           type="number"
@@ -834,7 +846,7 @@ function QuranPicker({
           placeholder={surahInfo ? String(surahInfo.jumlahAyat) : ''}
         />
       </Field>
-      <Field label="Atau seluruh surah" htmlFor="qrn-all" className="self-end">
+      <Field label={t('materiComp.source.ayatAll')} htmlFor="qrn-all" className="self-end">
         <button
           id="qrn-all"
           type="button"
@@ -844,7 +856,7 @@ function QuranPicker({
           }
           className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100 disabled:opacity-50"
         >
-          1 – akhir
+          {t('materiComp.source.fromAkhir')}
         </button>
       </Field>
     </div>
@@ -870,6 +882,7 @@ function HaditsPicker({
   value: MateriSourceValue
   set: (patch: Partial<MateriSourceValue>) => void
 }) {
+  const { t } = useTranslation()
   const h = value.hadits
   const { data: kitabs = [] } = useQuery({
     queryKey: ['hadits-kitab', 'hadits'],
@@ -887,14 +900,14 @@ function HaditsPicker({
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <Field label="Kitab" htmlFor="hdt-kitab" className="sm:col-span-3">
+      <Field label={t('materiComp.source.kitab')} htmlFor="hdt-kitab" className="sm:col-span-3">
         <select
           id="hdt-kitab"
           value={h.kitabSlug}
           onChange={(e) => update({ kitabSlug: e.target.value, nomorFrom: '', nomorTo: '' })}
           className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm"
         >
-          <option value="">— pilih kitab —</option>
+          <option value="">{t('materiComp.source.kitabPick')}</option>
           {kitabs.map((k: HaditsKitab) => (
             <option key={k.id} value={k.slug}>
               {k.nama}
@@ -902,7 +915,7 @@ function HaditsPicker({
           ))}
         </select>
       </Field>
-      <Field label="Dari nomor" htmlFor="hdt-from">
+      <Field label={t('materiComp.source.nomorFrom')} htmlFor="hdt-from">
         <Input
           id="hdt-from"
           type="number"
@@ -913,7 +926,7 @@ function HaditsPicker({
           placeholder="1"
         />
       </Field>
-      <Field label="Sampai nomor" htmlFor="hdt-to">
+      <Field label={t('materiComp.source.nomorTo')} htmlFor="hdt-to">
         <Input
           id="hdt-to"
           type="number"
@@ -924,7 +937,7 @@ function HaditsPicker({
           placeholder="10"
         />
       </Field>
-      <Field label=" " htmlFor="hdt-clear" className="self-end">
+      <Field label={t('materiComp.source.blank')} htmlFor="hdt-clear" className="self-end">
         <button
           id="hdt-clear"
           type="button"
@@ -932,7 +945,7 @@ function HaditsPicker({
           onClick={() => update({ nomorFrom: '', nomorTo: '' })}
           className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100 disabled:opacity-50"
         >
-          Reset
+          {t('materiComp.source.reset')}
         </button>
       </Field>
     </div>
@@ -958,11 +971,12 @@ function TilawatiPicker({
   value: MateriSourceValue
   set: (patch: Partial<MateriSourceValue>) => void
 }) {
-  const t = value.tilawati
-  const jilid = t.jilid ? TILAWATI_JILID.find((x) => String(x.id) === t.jilid) : null
+  const { t } = useTranslation()
+  const tw = value.tilawati
+  const jilid = tw.jilid ? TILAWATI_JILID.find((x) => String(x.id) === tw.jilid) : null
 
   const update = (patch: Partial<MateriSourceValue['tilawati']>) => {
-    const next = { ...t, ...patch }
+    const next = { ...tw, ...patch }
     set({
       tilawati: next,
       libraryRef: buildTilawatiRef(next),
@@ -971,70 +985,70 @@ function TilawatiPicker({
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <Field label="Jilid" htmlFor="tlw-jilid" className="sm:col-span-3">
+      <Field label={t('materiComp.source.jilid')} htmlFor="tlw-jilid" className="sm:col-span-3">
         <select
           id="tlw-jilid"
-          value={t.jilid}
+          value={tw.jilid}
           onChange={(e) => update({ jilid: e.target.value, pageFrom: '', pageTo: '' })}
           className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm"
         >
-          <option value="">— pilih jilid —</option>
+          <option value="">{t('materiComp.source.jilidPick')}</option>
           {TILAWATI_JILID.map((j) => (
             <option key={j.id} value={String(j.id)}>
-              Jilid {j.id} · {j.pages} hal.
+              {t('materiComp.source.jilidOption', { n: j.id, pages: j.pages })}
             </option>
           ))}
         </select>
       </Field>
-      <Field label="Dari halaman" htmlFor="tlw-from">
+      <Field label={t('materiComp.source.pageFrom')} htmlFor="tlw-from">
         <Input
           id="tlw-from"
           type="number"
           min={1}
           max={jilid?.pages ?? 46}
-          value={t.pageFrom}
-          disabled={!t.jilid}
+          value={tw.pageFrom}
+          disabled={!tw.jilid}
           onChange={(e) => update({ pageFrom: e.target.value })}
           placeholder="1"
         />
       </Field>
-      <Field label="Sampai halaman" htmlFor="tlw-to">
+      <Field label={t('materiComp.source.pageTo')} htmlFor="tlw-to">
         <Input
           id="tlw-to"
           type="number"
           min={1}
           max={jilid?.pages ?? 46}
-          value={t.pageTo}
-          disabled={!t.jilid}
+          value={tw.pageTo}
+          disabled={!tw.jilid}
           onChange={(e) => update({ pageTo: e.target.value })}
           placeholder={jilid ? String(jilid.pages) : ''}
         />
       </Field>
-      <Field label=" " htmlFor="tlw-all" className="self-end">
+      <Field label={t('materiComp.source.blank')} htmlFor="tlw-all" className="self-end">
         <button
           id="tlw-all"
           type="button"
-          disabled={!t.jilid}
+          disabled={!tw.jilid}
           onClick={() =>
             update({ pageFrom: '1', pageTo: String(jilid?.pages ?? '') })
           }
           className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100 disabled:opacity-50"
         >
-          1 – akhir
+          {t('materiComp.source.fromAkhir')}
         </button>
       </Field>
     </div>
   )
 }
 
-function buildTilawatiRef(t: MateriSourceValue['tilawati']): string | null {
-  if (!t.jilid) return null
-  const a = t.pageFrom.trim()
-  const b = t.pageTo.trim()
-  if (!a && !b) return t.jilid
-  if (a && !b) return `${t.jilid}:${a}`
-  if (!a && b) return `${t.jilid}:${b}`
-  return a === b ? `${t.jilid}:${a}` : `${t.jilid}:${a}-${b}`
+function buildTilawatiRef(tw: MateriSourceValue['tilawati']): string | null {
+  if (!tw.jilid) return null
+  const a = tw.pageFrom.trim()
+  const b = tw.pageTo.trim()
+  if (!a && !b) return tw.jilid
+  if (a && !b) return `${tw.jilid}:${a}`
+  if (!a && b) return `${tw.jilid}:${b}`
+  return a === b ? `${tw.jilid}:${a}` : `${tw.jilid}:${a}-${b}`
 }
 
 // ---------------------------------------------------------------------- Doa
@@ -1046,6 +1060,7 @@ function DoaPicker({
   value: MateriSourceValue
   set: (patch: Partial<MateriSourceValue>) => void
 }) {
+  const { t } = useTranslation()
   const d = value.doa
   const { data: doas = [] } = useQuery({
     queryKey: ['doa-list'],
@@ -1069,20 +1084,20 @@ function DoaPicker({
       {picked ? (
         <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs">
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase text-emerald-700">Dipilih</div>
+            <div className="text-[10px] uppercase text-emerald-700">{t('materiComp.source.doaPickedBadge')}</div>
             <div className="text-sm text-slate-900">{picked.nama}</div>
           </div>
           <button
             type="button"
             onClick={() => set({ doa: { doaId: '' }, libraryRef: null })}
             className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-            aria-label="Hapus pilihan doa"
+            aria-label={t('materiComp.source.doaRemoveAria')}
           >
             <X size={12} />
           </button>
         </div>
       ) : null}
-      <Field label="Cari doa" htmlFor="doa-search">
+      <Field label={t('materiComp.source.doaSearch')} htmlFor="doa-search">
         <div className="relative">
           <Search
             size={14}
@@ -1092,7 +1107,7 @@ function DoaPicker({
             id="doa-search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ketik nama doa…"
+            placeholder={t('materiComp.source.doaSearchPh')}
             className="pl-8"
           />
         </div>
@@ -1101,7 +1116,7 @@ function DoaPicker({
         <ul className="max-h-56 overflow-y-auto rounded-md border border-slate-200 bg-white">
           {filtered.length === 0 ? (
             <li className="px-3 py-2 text-xs text-slate-500">
-              Tidak ada doa yang cocok.
+              {t('materiComp.source.doaNoMatch')}
             </li>
           ) : (
             filtered.map((x) => (

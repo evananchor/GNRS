@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Book, BookHeart, BookOpen, Sparkles, Star } from 'lucide-react'
 
 import { PageShell, PageHeader } from '@/components/PageShell'
@@ -10,13 +11,14 @@ import { PageShell, PageHeader } from '@/components/PageShell'
  * placeholders for future ports — clicking shows a "coming soon" page.
  */
 export function PustakaPage() {
+  const { t } = useTranslation()
   return (
     <PageShell
       header={
         <PageHeader
-          eyebrow="Pustaka"
-          title="Sumber Bacaan"
-          subtitle="Al-Qur'an, Doa, Asmaul Husna, Hadits — semua dalam satu tempat."
+          eyebrow={t('pustaka.hub.eyebrow')}
+          title={t('pustaka.hub.title')}
+          subtitle={t('pustaka.hub.subtitle')}
         />
       }
     >
@@ -24,43 +26,43 @@ export function PustakaPage() {
         <BigCard
           to="/pustaka/asmaul-husna"
           icon={<Sparkles size={20} />}
-          title="Asmaul Husna"
-          sub="99 nama-nama Allah"
+          title={t('pustaka.hub.asmaulTitle')}
+          sub={t('pustaka.hub.asmaulSub')}
           accent="bg-violet-50 text-violet-700"
         />
         <BigCard
           to="/pustaka/karakter-luhur"
           icon={<Star size={20} />}
-          title="29 Karakter Luhur"
-          sub="Tabiat luhur LDII (Tali Keimanan, dst.)"
+          title={t('pustaka.hub.karakterTitle')}
+          sub={t('pustaka.hub.karakterSub')}
           accent="bg-emerald-50 text-emerald-700"
         />
         <BigCard
           to="/pustaka/quran"
           icon={<BookOpen size={20} />}
-          title="Al-Qur'an"
-          sub="114 surat dengan terjemahan"
+          title={t('pustaka.hub.quranTitle')}
+          sub={t('pustaka.hub.quranSub')}
           accent="bg-sky-50 text-sky-700"
         />
         <BigCard
           to="/pustaka/hadits-himpunan"
           icon={<Book size={20} />}
-          title="Hadits Himpunan"
-          sub="Daftar judul kitab himpunan PPG"
+          title={t('pustaka.hub.haditsTitle')}
+          sub={t('pustaka.hub.haditsSub')}
           accent="bg-rose-50 text-rose-700"
         />
         <BigCard
           to="/pustaka/doa"
           icon={<BookHeart size={20} />}
-          title="Kumpulan Doa"
-          sub="Doa-doa harian, hafalan, dan dzikir"
+          title={t('pustaka.hub.doaTitle')}
+          sub={t('pustaka.hub.doaSub')}
           accent="bg-amber-50 text-amber-700"
         />
         <BigCard
           to="/pustaka/tilawati"
           icon={<BookOpen size={20} />}
-          title="Tilawati"
-          sub="6 jilid metode belajar baca Al-Qur'an"
+          title={t('pustaka.hub.tilawatiTitle')}
+          sub={t('pustaka.hub.tilawatiSub')}
           accent="bg-orange-50 text-orange-700"
         />
       </div>

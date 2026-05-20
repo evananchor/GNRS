@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Search, X } from 'lucide-react'
 
 import { getMateriAjar, listMateriAjar, type MateriAjar } from '@/api/kurikulum'
@@ -11,35 +12,12 @@ import type { DiajarkanKind, MateriDiajarkanInput } from '@/api/diajarkan'
 
 // Tab labels & ids ----------------------------------------------------------
 
-const TABS = [
-  { id: 'sesi', label: 'Rencana Ajar Sesi Ini' },
-  { id: 'kurikulum', label: 'Kurikulum' },
-  { id: 'library', label: 'Library' },
-  { id: 'lainnya', label: 'Lainnya' },
-] as const
-type TabId = (typeof TABS)[number]['id']
+const TAB_IDS = ['sesi', 'kurikulum', 'library', 'lainnya'] as const
+type TabId = (typeof TAB_IDS)[number]
 
 // Library sub-pickers --------------------------------------------------------
 
 type LibraryKind = 'quran' | 'hadits' | 'tilawati' | 'doa'
-const LIBRARY_LABELS: Record<LibraryKind, string> = {
-  quran: "Qur'an",
-  hadits: 'Hadits',
-  tilawati: 'Tilawati',
-  doa: "Do'a",
-}
-
-const TILAWATI_JILID = [
-  { value: 'pra', label: 'Pra Tilawati' },
-  { value: '1', label: 'Jilid 1' },
-  { value: '2', label: 'Jilid 2' },
-  { value: '3', label: 'Jilid 3' },
-  { value: '4', label: 'Jilid 4' },
-  { value: '5', label: 'Jilid 5' },
-  { value: '6', label: 'Jilid 6' },
-  { value: 'gharib', label: 'Gharib' },
-  { value: 'tajwid', label: 'Tajwid' },
-]
 
 export function MateriPicker({
   sesi,
@@ -50,7 +28,15 @@ export function MateriPicker({
   onPick: (input: MateriDiajarkanInput) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<TabId>('sesi')
+
+  const TABS: { id: TabId; label: string }[] = [
+    { id: 'sesi', label: t('materiComp.picker.tabSesi') },
+    { id: 'kurikulum', label: t('materiComp.picker.tabKurikulum') },
+    { id: 'library', label: t('materiComp.picker.tabLibrary') },
+    { id: 'lainnya', label: t('materiComp.picker.tabLainnya') },
+  ]
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -69,12 +55,12 @@ export function MateriPicker({
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3">
           <h3 className="flex-1 text-sm font-semibold text-neutral-100">
-            Pilih materi untuk ditampilkan
+            {t('materiComp.picker.title')}
           </h3>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
-            aria-label="Tutup"
+            aria-label={t('materiComp.picker.closeAria')}
           >
             <X size={16} />
           </button>
@@ -82,17 +68,17 @@ export function MateriPicker({
 
         {/* Tabs */}
         <div className="flex border-b border-neutral-800">
-          {TABS.map((t) => (
+          {TABS.map((tb) => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={tb.id}
+              onClick={() => setTab(tb.id)}
               className={`flex-1 px-3 py-2 text-xs font-medium transition ${
-                tab === t.id
+                tab === tb.id
                   ? 'border-b-2 border-emerald-500 text-emerald-400'
                   : 'text-neutral-400 hover:text-neutral-200'
               }`}
             >
-              {t.label}
+              {tb.label}
             </button>
           ))}
         </div>
@@ -112,6 +98,7 @@ export function MateriPicker({
 // Tab 1: Rencana Ajar Sesi Ini ----------------------------------------------
 
 function SesiTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarkanInput) => void }) {
+  const { t } = useTranslation()
   const ids = useMemo(() => {
     const list = sesi.materiAjarIds ?? []
     return list.length > 0 ? list : sesi.materiAjarId ? [sesi.materiAjarId] : []
@@ -123,7 +110,7 @@ function SesiTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarkanInpu
   if (ids.length === 0 && !hasAttachedLibrary) {
     return (
       <div className="grid h-full place-items-center p-8 text-center text-sm text-neutral-500">
-        Sesi ini belum memiliki materi yang direncanakan.
+        {t('materiComp.picker.sesiEmpty')}
       </div>
     )
   }
@@ -133,7 +120,7 @@ function SesiTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarkanInpu
       {ids.length > 0 && (
         <div>
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-            Kurikulum
+            {t('materiComp.picker.sesiKurikulumHeading')}
           </div>
           <ul className="space-y-1">
             {ids.map((id) => (
@@ -155,7 +142,7 @@ function SesiTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarkanInpu
       {hasAttachedLibrary && (
         <div className="mt-4">
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-            Library Terlampir
+            {t('materiComp.picker.sesiLibraryHeading')}
           </div>
           <button
             onClick={() =>
@@ -176,6 +163,7 @@ function SesiTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarkanInpu
 }
 
 function MateriAjarRow({ id, onPick }: { id: string; onPick: (m: MateriAjar) => void }) {
+  const { t } = useTranslation()
   const q = useQuery({ queryKey: ['materi-ajar', id], queryFn: () => getMateriAjar(id) })
   return (
     <li>
@@ -185,7 +173,7 @@ function MateriAjarRow({ id, onPick }: { id: string; onPick: (m: MateriAjar) => 
         className="block w-full rounded-lg px-3 py-2 text-left transition hover:bg-neutral-800 disabled:opacity-50"
       >
         {q.isLoading ? (
-          <span className="text-xs text-neutral-500">Memuat…</span>
+          <span className="text-xs text-neutral-500">{t('materiComp.picker.materiLoading')}</span>
         ) : q.data ? (
           <div>
             <div className="text-sm font-medium text-neutral-100">{q.data.tema}</div>
@@ -194,7 +182,7 @@ function MateriAjarRow({ id, onPick }: { id: string; onPick: (m: MateriAjar) => 
             )}
           </div>
         ) : (
-          <span className="text-xs text-neutral-500">Materi tidak ditemukan</span>
+          <span className="text-xs text-neutral-500">{t('materiComp.picker.materiNotFound')}</span>
         )}
       </button>
     </li>
@@ -204,6 +192,7 @@ function MateriAjarRow({ id, onPick }: { id: string; onPick: (m: MateriAjar) => 
 // Tab 2: Kurikulum -----------------------------------------------------------
 
 function KurikulumTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarkanInput) => void }) {
+  const { t } = useTranslation()
   const [q, setQ] = useState('')
   const list = useQuery({
     queryKey: ['materi-ajar', 'list', sesi.tingkat, q],
@@ -218,16 +207,20 @@ function KurikulumTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarka
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={`Cari materi${sesi.tingkat ? ` di ${sesi.tingkat}` : ''}…`}
+            placeholder={
+              sesi.tingkat
+                ? t('materiComp.picker.kurikulumSearchPhTingkat', { tingkat: sesi.tingkat })
+                : t('materiComp.picker.kurikulumSearchPh')
+            }
             className="w-full rounded-md border border-neutral-700 bg-neutral-950 py-1.5 pl-8 pr-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-emerald-500 focus:outline-none"
           />
         </div>
       </div>
       <div className="flex-1 overflow-auto p-2">
         {list.isLoading ? (
-          <div className="p-4 text-center text-sm text-neutral-500">Memuat…</div>
+          <div className="p-4 text-center text-sm text-neutral-500">{t('materiComp.picker.loading')}</div>
         ) : (list.data ?? []).length === 0 ? (
-          <div className="p-4 text-center text-sm text-neutral-500">Tidak ada materi.</div>
+          <div className="p-4 text-center text-sm text-neutral-500">{t('materiComp.picker.noMatch')}</div>
         ) : (
           <ul className="space-y-1">
             {(list.data ?? []).map((m) => (
@@ -247,7 +240,7 @@ function KurikulumTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarka
                     <div className="truncate text-xs text-neutral-400">{m.subTema}</div>
                   )}
                   <div className="mt-0.5 text-[10px] uppercase tracking-wider text-neutral-500">
-                    {m.tingkat} · Sem {m.semester} · {m.kategori}
+                    {m.tingkat} · {t('materiComp.picker.semShort', { n: m.semester })} · {m.kategori}
                   </div>
                 </button>
               </li>
@@ -262,7 +255,14 @@ function KurikulumTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarka
 // Tab 3: Library -------------------------------------------------------------
 
 function LibraryTab({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
+  const { t } = useTranslation()
   const [kind, setKind] = useState<LibraryKind>('quran')
+  const LIBRARY_LABELS: Record<LibraryKind, string> = {
+    quran: t('materiComp.picker.libKindQuran'),
+    hadits: t('materiComp.picker.libKindHadits'),
+    tilawati: t('materiComp.picker.libKindTilawati'),
+    doa: t('materiComp.picker.libKindDoa'),
+  }
   return (
     <div className="flex h-full flex-col">
       <div className="flex gap-1 border-b border-neutral-800 p-2">
@@ -291,6 +291,7 @@ function LibraryTab({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
 }
 
 function QuranPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
+  const { t } = useTranslation()
   const surahs = useQuery({ queryKey: ['quran-surahs'], queryFn: listQuranSurahs })
   const [q, setQ] = useState('')
   const filtered = useMemo(() => {
@@ -310,13 +311,13 @@ function QuranPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) 
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Cari surah (nama atau nomor)…"
+          placeholder={t('materiComp.picker.quranSearchPh')}
           className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-emerald-500 focus:outline-none"
         />
       </div>
       <div className="flex-1 overflow-auto p-2">
         {surahs.isLoading ? (
-          <div className="p-4 text-center text-sm text-neutral-500">Memuat…</div>
+          <div className="p-4 text-center text-sm text-neutral-500">{t('materiComp.picker.loading')}</div>
         ) : (
           <ul className="space-y-0.5">
             {filtered.map((s) => (
@@ -345,6 +346,7 @@ function QuranPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) 
 }
 
 function HaditsPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
+  const { t } = useTranslation()
   const kitabQ = useQuery({ queryKey: ['hadits-kitab'], queryFn: () => listKitab() })
   const [slug, setSlug] = useState<string | null>(null)
   const babQ = useQuery({
@@ -361,7 +363,7 @@ function HaditsPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void })
     return (
       <div className="p-2">
         {kitabQ.isLoading ? (
-          <div className="p-4 text-center text-sm text-neutral-500">Memuat…</div>
+          <div className="p-4 text-center text-sm text-neutral-500">{t('materiComp.picker.loading')}</div>
         ) : (
           <ul className="space-y-0.5">
             {(kitabQ.data ?? []).map((k) => (
@@ -386,13 +388,13 @@ function HaditsPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void })
           onClick={() => setSlug(null)}
           className="text-xs text-neutral-400 hover:text-neutral-100"
         >
-          ← Kitab
+          {t('materiComp.picker.haditsBackKitab')}
         </button>
         <span className="text-sm font-medium text-neutral-100">{activeKitab?.nama ?? slug}</span>
       </div>
       <div className="flex-1 overflow-auto p-2">
         {babQ.isLoading ? (
-          <div className="p-4 text-center text-sm text-neutral-500">Memuat…</div>
+          <div className="p-4 text-center text-sm text-neutral-500">{t('materiComp.picker.loading')}</div>
         ) : (
           <ul className="space-y-0.5">
             {(babQ.data ?? []).map((b: any) => (
@@ -419,12 +421,24 @@ function HaditsPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void })
 }
 
 function TilawatiPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
+  const { t } = useTranslation()
+  const TILAWATI_JILID = [
+    { value: 'pra', label: t('materiComp.picker.tilawatiPra') },
+    { value: '1', label: t('materiComp.picker.tilawatiJilidN', { n: 1 }) },
+    { value: '2', label: t('materiComp.picker.tilawatiJilidN', { n: 2 }) },
+    { value: '3', label: t('materiComp.picker.tilawatiJilidN', { n: 3 }) },
+    { value: '4', label: t('materiComp.picker.tilawatiJilidN', { n: 4 }) },
+    { value: '5', label: t('materiComp.picker.tilawatiJilidN', { n: 5 }) },
+    { value: '6', label: t('materiComp.picker.tilawatiJilidN', { n: 6 }) },
+    { value: 'gharib', label: t('materiComp.picker.tilawatiGharib') },
+    { value: 'tajwid', label: t('materiComp.picker.tilawatiTajwid') },
+  ]
   const [jilid, setJilid] = useState<string>('1')
   const [halaman, setHalaman] = useState<string>('')
   return (
     <div className="space-y-4 p-4">
       <div>
-        <label className="mb-1 block text-xs font-medium text-neutral-400">Jilid</label>
+        <label className="mb-1 block text-xs font-medium text-neutral-400">{t('materiComp.picker.tilawatiJilid')}</label>
         <select
           value={jilid}
           onChange={(e) => setJilid(e.target.value)}
@@ -439,14 +453,14 @@ function TilawatiPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void 
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-neutral-400">
-          Halaman <span className="text-neutral-600">(opsional)</span>
+          {t('materiComp.picker.tilawatiHalaman')} <span className="text-neutral-600">{t('materiComp.picker.tilawatiHalamanOpt')}</span>
         </label>
         <input
           type="number"
           min={1}
           value={halaman}
           onChange={(e) => setHalaman(e.target.value)}
-          placeholder="contoh: 12"
+          placeholder={t('materiComp.picker.tilawatiHalamanPh')}
           className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
         />
       </div>
@@ -456,18 +470,19 @@ function TilawatiPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void 
           onPick({
             kind: 'tilawati',
             ref: halaman ? `${jilid}/${halaman}` : jilid,
-            label: halaman ? `${label} · Hal. ${halaman}` : label,
+            label: halaman ? t('materiComp.picker.tilawatiHal', { label, n: halaman }) : label,
           })
         }}
         className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
       >
-        Pilih
+        {t('materiComp.picker.tilawatiPick')}
       </button>
     </div>
   )
 }
 
 function DoaPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
+  const { t } = useTranslation()
   const [q, setQ] = useState('')
   const list = useQuery({
     queryKey: ['doa-list', q],
@@ -479,13 +494,13 @@ function DoaPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Cari do'a…"
+          placeholder={t('materiComp.picker.doaSearchPh')}
           className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
         />
       </div>
       <div className="flex-1 overflow-auto p-2">
         {list.isLoading ? (
-          <div className="p-4 text-center text-sm text-neutral-500">Memuat…</div>
+          <div className="p-4 text-center text-sm text-neutral-500">{t('materiComp.picker.loading')}</div>
         ) : (
           <ul className="space-y-0.5">
             {(list.data ?? []).map((d) => (
@@ -509,27 +524,28 @@ function DoaPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
 // Used when the pengajian was purely conversational (nasihat, sharing) so
 // the guru can still mark something taught.
 function LainnyaTab({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
+  const { t } = useTranslation()
   const options = [
     {
-      label: 'Conversation / Nasihat',
-      hint: 'Pengajian berupa obrolan, nasihat, atau diskusi tanpa materi spesifik.',
+      label: t('materiComp.picker.lainnyaConversation'),
+      hint: t('materiComp.picker.lainnyaConversationHint'),
       kind: 'kurikulum' as DiajarkanKind,
     },
     {
-      label: 'Pembukaan / Opening',
-      hint: 'Sesi pembuka — doa, salam, ice-breaking, atau introduksi.',
+      label: t('materiComp.picker.lainnyaPembukaan'),
+      hint: t('materiComp.picker.lainnyaPembukaanHint'),
       kind: 'kurikulum' as DiajarkanKind,
     },
     {
-      label: 'Review / Murojaah',
-      hint: 'Pengulangan materi sebelumnya tanpa item baru.',
+      label: t('materiComp.picker.lainnyaReview'),
+      hint: t('materiComp.picker.lainnyaReviewHint'),
       kind: 'kurikulum' as DiajarkanKind,
     },
   ]
   return (
     <div className="space-y-2 p-3">
       <p className="px-1 text-[11px] text-neutral-500">
-        Tandai materi non-spesifik. Sesi tetap dianggap hadir.
+        {t('materiComp.picker.lainnyaHint')}
       </p>
       {options.map((opt) => (
         <button

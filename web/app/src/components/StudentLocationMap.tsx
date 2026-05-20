@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { CircleMarker, MapContainer, TileLayer, Tooltip } from 'react-leaflet'
 import type { LatLngBoundsExpression, LatLngTuple } from 'leaflet'
 
@@ -24,6 +25,7 @@ const TILE_ATTRIBUTION =
 
 export function StudentLocationMap({ buckets }: { buckets: Bucket[] }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const placed = buckets
     .filter(
       (b): b is Bucket & { label: StudentKelompok } =>
@@ -73,7 +75,7 @@ export function StudentLocationMap({ buckets }: { buckets: Bucket[] }) {
         })}
       </MapContainer>
       <p className="border-t border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-        Klik tanda lingkaran untuk membuka daftar Generus pada kelompok tersebut.
+        {t('studentMap.hint')}
       </p>
     </div>
   )

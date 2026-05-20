@@ -1,4 +1,5 @@
 import { useCallback, useId, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ArrowRight } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
@@ -42,6 +43,7 @@ export function TimeRangePicker({
   onTimezoneChange: (v: string) => void
   disabled?: boolean
 }) {
+  const { t } = useTranslation()
   const tzId = useId()
   // Derive a working state — defaults if the slot is empty.
   const startBits = parseOrDefault(start, 9, 0)
@@ -87,7 +89,7 @@ export function TimeRangePicker({
       {/* Timezone */}
       <div className="mb-3 flex flex-col gap-1">
         <label htmlFor={tzId} className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          Zona waktu
+          {t('timePicker.range.timezone')}
         </label>
         <select
           id={tzId}
@@ -113,7 +115,7 @@ export function TimeRangePicker({
       {/* Start / End chips */}
       <div className="mb-3 flex items-end justify-center gap-3">
         <TimeChip
-          label="Mulai"
+          label={t('timePicker.range.start')}
           h={startBits.h}
           m={startBits.m}
           period={startBits.period}
@@ -126,7 +128,7 @@ export function TimeRangePicker({
         />
         <ArrowRight size={20} className="mb-7 flex-shrink-0 text-slate-400" aria-hidden="true" />
         <TimeChip
-          label="Selesai"
+          label={t('timePicker.range.end')}
           h={endBits.h}
           m={endBits.m}
           period={endBits.period}
@@ -200,6 +202,7 @@ function TimeChip({
   activeUnit: Unit | null
   onSelectUnit: (u: Unit) => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
@@ -220,7 +223,7 @@ function TimeChip({
               ? 'bg-sky-600 text-white'
               : 'text-slate-900 hover:bg-slate-100',
           )}
-          aria-label={`${label} jam`}
+          aria-label={t('timePicker.range.ariaHour', { label })}
         >
           {pad2(h)}
         </button>
@@ -234,7 +237,7 @@ function TimeChip({
               ? 'bg-sky-600 text-white'
               : 'text-slate-900 hover:bg-slate-100',
           )}
-          aria-label={`${label} menit`}
+          aria-label={t('timePicker.range.ariaMinute', { label })}
         >
           {pad2(m)}
         </button>
@@ -264,6 +267,7 @@ function Dial({
   onChange: (val: number) => void
   onCommit: (val: number) => void
 }) {
+  const { t } = useTranslation()
   const svgRef = useRef<SVGSVGElement>(null)
   const lastSnap = useRef<number | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -390,7 +394,7 @@ function Dial({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       role="slider"
-      aria-label={unit === 'hour' ? 'Pilih jam' : 'Pilih menit'}
+      aria-label={unit === 'hour' ? t('timePicker.dial.ariaPickHour') : t('timePicker.dial.ariaPickMinute')}
       aria-valuemin={unit === 'hour' ? 1 : 0}
       aria-valuemax={unit === 'hour' ? 12 : 59}
       aria-valuenow={value}

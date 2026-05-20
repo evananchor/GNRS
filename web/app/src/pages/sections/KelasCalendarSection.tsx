@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Pencil, Play, Plus, Radio, RotateCcw, Square, Trash2, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -21,12 +22,6 @@ import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 
 // Calendar utilities --------------------------------------------------------
-
-const BULAN = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-]
-const HARI = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 
 function pad2(n: number) {
   return n < 10 ? `0${n}` : String(n)
@@ -52,13 +47,6 @@ function statusOf(s: Sesi, today: Date): Status {
   const iso = (s.tanggal || '').slice(0, 10)
   if (iso && iso < localDate(today)) return 'missed'
   return 'scheduled'
-}
-
-const STATUS_LABEL: Record<Status, string> = {
-  scheduled: 'Terjadwal',
-  ongoing: 'Berjalan',
-  completed: 'Selesai',
-  missed: 'Terlewat',
 }
 
 const STATUS_CLASSES: Record<Status, { dot: string; chip: string; bar: string }> = {
@@ -91,6 +79,24 @@ export function KelasCalendarSection() {
   const canManage = user?.role === 'admin' || user?.role === 'staff' || user?.role === 'pengurus' || user?.role === 'guru'
   const toast = useToast()
   const qc = useQueryClient()
+  const { t, i18n } = useTranslation()
+  const STATUS_LABEL: Record<Status, string> = {
+    scheduled: t('kelasSection.status.scheduled'),
+    ongoing: t('kelasSection.status.ongoing'),
+    completed: t('kelasSection.status.completed'),
+    missed: t('kelasSection.status.missed'),
+  }
+  // Locale-aware month + weekday names — rendered via Intl so they reflow on
+  // language change. The structural constants (status colors) stay above.
+  const BULAN = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(i18n.language, { month: 'long' })
+    return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(2000, i, 1)))
+  }, [i18n.language])
+  const HARI = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(i18n.language, { weekday: 'short' })
+    // Days that fall on Sun..Sat (2000-01-02 was a Sunday).
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2000, 0, 2 + i)))
+  }, [i18n.language])
 
   const today = useMemo(() => new Date(), [])
   const [year, setYear] = useState(today.getFullYear())
@@ -150,19 +156,19 @@ export function KelasCalendarSection() {
   const deleteMut = useMutation({
     mutationFn: deleteSesi,
     onSuccess: () => {
-      toast('Sesi dihapus', 'success')
+      toast(t('kelasSection.calendar.sesiDeleted'), 'success')
       invalidate()
     },
-    onError: (e) => toast(apiMsg(e, 'Gagal menghapus sesi'), 'error'),
+    onError: (e) => toast(apiMsg(e, t('kelasSection.calendar.sesiDeleteFailed')), 'error'),
   })
 
   const startMut = useMutation({
     mutationFn: startSesi,
     onSuccess: () => {
-      toast('Sesi dimulai', 'success')
+      toast(t('kelasSection.calendar.sesiStarted'), 'success')
       invalidate()
     },
-    onError: (e) => toast(apiMsg(e, 'Gagal memulai sesi'), 'error'),
+    onError: (e) => toast(apiMsg(e, t('kelasSection.calendar.sesiStartFailed')), 'error'),
   })
 
   const [endingSesi, setEndingSesi] = useState<Sesi | null>(null)
@@ -238,9 +244,9 @@ export function KelasCalendarSection() {
     if (!pickedDate || creatingFor || editing) return
     const cur = pickedDate
     function onKey(e: KeyboardEvent) {
-      const t = e.target as HTMLElement | null
-      const tag = t?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (t?.isContentEditable)) return
+      const el = e.target as HTMLElement | null
+      const tag = el?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (el?.isContentEditable)) return
       let delta: number | null = null
       switch (e.key) {
         case 'ArrowLeft':
@@ -283,7 +289,7 @@ export function KelasCalendarSection() {
   const dayList = pickedDate ? byDate[pickedDate] || [] : []
 
   const handleDelete = (s: Sesi) => {
-    if (confirm(`Hapus sesi "${s.topik}"? Tindakan ini tidak dapat dibatalkan.`)) {
+    if (confirm(t('kelasSection.calendar.confirmDelete', { topik: s.topik }))) {
       deleteMut.mutate(s.id)
     }
   }
@@ -312,17 +318,17 @@ export function KelasCalendarSection() {
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => navMonth(-1)} aria-label="Bulan sebelumnya">
+            <Button variant="ghost" size="sm" onClick={() => navMonth(-1)} aria-label={t('kelasSection.calendar.prevMonth')}>
               <ChevronLeft size={16} />
             </Button>
             <div className="min-w-[180px] text-center text-base font-semibold">
               {BULAN[month]} {year}
             </div>
-            <Button variant="ghost" size="sm" onClick={() => navMonth(1)} aria-label="Bulan berikutnya">
+            <Button variant="ghost" size="sm" onClick={() => navMonth(1)} aria-label={t('kelasSection.calendar.nextMonth')}>
               <ChevronRight size={16} />
             </Button>
             <Button variant="ghost" size="sm" className="ml-2" onClick={goToday}>
-              Hari ini
+              {t('kelasSection.calendar.today')}
             </Button>
           </div>
           {/* Mobile: 3-col grid so jenjang / kelas-mode / "+ Tambah sesi" share
@@ -340,32 +346,32 @@ export function KelasCalendarSection() {
                 setJenjang(e.target.value as '' | 'caberawit' | 'remaja' | 'pra-nikah')
               }
               className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 sm:px-3"
-              aria-label="Filter jenjang"
-              title="Jenjang"
+              aria-label={t('kelasSection.calendar.filterJenjang')}
+              title={t('kelasSection.calendar.jenjangTitle')}
             >
-              <option value="">Semua jenjang</option>
-              <option value="caberawit">Caberawit</option>
-              <option value="remaja">Remaja</option>
-              <option value="pra-nikah">Pra-nikah</option>
+              <option value="">{t('kelasSection.calendar.allJenjang')}</option>
+              <option value="caberawit">{t('kelasSection.calendar.caberawit')}</option>
+              <option value="remaja">{t('kelasSection.calendar.remaja')}</option>
+              <option value="pra-nikah">{t('kelasSection.calendar.praNikah')}</option>
             </select>
             <select
               value={kelasMode}
               onChange={(e) => setKelasMode(e.target.value as 'all' | 'mine')}
               className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 sm:px-3"
-              aria-label="Filter kelas"
-              title="Lingkup kelas"
+              aria-label={t('kelasSection.calendar.filterKelas')}
+              title={t('kelasSection.calendar.scopeTitle')}
             >
-              <option value="all">Semua kelas</option>
-              <option value="mine">Kelas saya</option>
+              <option value="all">{t('kelasSection.calendar.allKelas')}</option>
+              <option value="mine">{t('kelasSection.calendar.myKelas')}</option>
             </select>
             <select
               value={kelasFilter}
               onChange={(e) => setKelasFilter(e.target.value)}
               className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 sm:px-3"
-              aria-label="Filter kelas — pilih kelas"
-              title="Pilih kelas (filter)"
+              aria-label={t('kelasSection.calendar.filterKelasPick')}
+              title={t('kelasSection.calendar.pickKelasFilterTitle')}
             >
-              <option value="">Semua kelas (filter)</option>
+              <option value="">{t('kelasSection.calendar.allKelasFilter')}</option>
               {pickableKelas.map((k) => (
                 <option key={k.id} value={k.id}>
                   {k.nama} · {k.tingkat}
@@ -377,7 +383,7 @@ export function KelasCalendarSection() {
 
         {/* Stats — mobile shows 2x2: Total + Selesai on top, Berjalan + Terlewat below. */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatCard label="Total bulan ini" value={stats.total} sub={isFetching ? 'memuat…' : `${BULAN[month]} ${year}`} />
+          <StatCard label={t('kelasSection.calendar.monthTotal')} value={stats.total} sub={isFetching ? t('kelasSection.calendar.loadingSub') : `${BULAN[month]} ${year}`} />
           <StatCard label={STATUS_LABEL.completed} value={stats.completed} dot="bg-emerald-500" />
           <StatCard label={STATUS_LABEL.ongoing} value={stats.ongoing} dot="bg-amber-500" />
           <StatCard label={STATUS_LABEL.missed} value={stats.missed} dot="bg-rose-500" />
@@ -448,7 +454,7 @@ export function KelasCalendarSection() {
                       )
                     })}
                     {items.length > 3 ? (
-                      <span className="px-1.5 text-[10px] text-slate-500">+{items.length - 3} lagi</span>
+                      <span className="px-1.5 text-[10px] text-slate-500">{t('kelasSection.calendar.moreItems', { count: items.length - 3 })}</span>
                     ) : null}
                   </div>
                 </button>
@@ -465,7 +471,7 @@ export function KelasCalendarSection() {
               {STATUS_LABEL[st]}
             </span>
           ))}
-          <span>· kotak hari ini ditandai outline</span>
+          <span>· {t('kelasSection.calendar.todayHighlight')}</span>
         </div>
       </div>
 
@@ -632,10 +638,17 @@ function DayPopup({
   starting: boolean
   ending: boolean
 }) {
+  const { t, i18n } = useTranslation()
+  const STATUS_LABEL: Record<Status, string> = {
+    scheduled: t('kelasSection.status.scheduled'),
+    ongoing: t('kelasSection.status.ongoing'),
+    completed: t('kelasSection.status.completed'),
+    missed: t('kelasSection.status.missed'),
+  }
   const date = new Date(iso)
   const label = isNaN(date.getTime())
     ? iso
-    : date.toLocaleDateString('id-ID', {
+    : date.toLocaleDateString(i18n.language, {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
@@ -654,14 +667,14 @@ function DayPopup({
       <div className="my-2 flex w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl sm:my-8" style={{ maxHeight: '85vh' }}>
         <div className="sticky top-0 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Detail tanggal</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('kelasSection.calendar.dateDetail')}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={onPrev}
                 className="rounded-md p-1 text-slate-600 hover:bg-slate-100"
-                aria-label="Hari sebelumnya"
-                title="Hari sebelumnya (←)"
+                aria-label={t('kelasSection.calendar.prevDay')}
+                title={t('kelasSection.calendar.prevDayTitle')}
               >
                 <ChevronLeft size={16} />
               </button>
@@ -670,33 +683,35 @@ function DayPopup({
                 type="button"
                 onClick={onNext}
                 className="rounded-md p-1 text-slate-600 hover:bg-slate-100"
-                aria-label="Hari berikutnya"
-                title="Hari berikutnya (→)"
+                aria-label={t('kelasSection.calendar.nextDay')}
+                title={t('kelasSection.calendar.nextDayTitle')}
               >
                 <ChevronRight size={16} />
               </button>
               {iso === todayIso ? (
                 <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-medium text-white">
-                  Hari ini
+                  {t('kelasSection.calendar.todayBadge')}
                 </span>
               ) : null}
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              {items.length === 0 ? 'Tidak ada sesi terjadwal.' : `${items.length} sesi`}
-              {' · '}←/→ geser hari · ↑/↓ geser minggu · Esc tutup
+              {items.length === 0
+                ? t('kelasSection.calendar.noSesiScheduled')
+                : t('kelasSection.calendar.sesiCount', { count: items.length })}
+              {' · '}{t('kelasSection.calendar.navHelp')}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {canManage ? (
               <Button size="sm" onClick={onAdd}>
-                <Plus size={14} className="mr-1" /> Tambah sesi
+                <Plus size={14} className="mr-1" /> {t('kelasSection.calendar.addSesi')}
               </Button>
             ) : null}
             <button
               type="button"
               onClick={onClose}
               className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-              aria-label="Tutup"
+              aria-label={t('kelasSection.calendar.close')}
             >
               <X size={18} />
             </button>
@@ -705,7 +720,7 @@ function DayPopup({
 
         <div className="flex-1 overflow-y-auto p-4">
           {items.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">Tidak ada sesi pada tanggal ini.</p>
+            <p className="py-8 text-center text-sm text-slate-500">{t('kelasSection.calendar.noSesiThisDay')}</p>
           ) : (
             <ul className="space-y-2">
               {items.map((s) => {
@@ -736,7 +751,7 @@ function DayPopup({
                           type="button"
                           onClick={() => onReview?.(s)}
                           className="mt-0.5 break-words text-left text-sm font-medium text-slate-900 underline decoration-dotted underline-offset-2 hover:opacity-75"
-                          title="Lihat rangkuman materi yang sudah diajarkan"
+                          title={t('kelasSection.calendar.reviewSummary')}
                         >
                           {s.topik}
                         </button>
@@ -755,8 +770,8 @@ function DayPopup({
                             onClick={() => onStart(s)}
                             disabled={starting}
                             className="rounded-md p-1.5 text-slate-500 transition hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label="Mulai sesi"
-                            title="Mulai sesi"
+                            aria-label={t('kelasSection.calendar.startSesi')}
+                            title={t('kelasSection.calendar.startSesi')}
                           >
                             <Play size={16} />
                           </button>
@@ -765,8 +780,8 @@ function DayPopup({
                             <Link
                               to={`/kelas/${s.kelasId ?? ''}/sesi/${s.id}/live`}
                               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                              aria-label="Live stage"
-                              title="Buka tampilan Live"
+                              aria-label={t('kelasSection.calendar.liveStage')}
+                              title={t('kelasSection.calendar.openLive')}
                             >
                               <span className="relative flex h-2 w-2">
                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
@@ -780,8 +795,8 @@ function DayPopup({
                               onClick={() => onEnd(s)}
                               disabled={ending}
                               className="rounded-md p-1.5 text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                              aria-label="Akhiri sesi"
-                              title="Akhiri sesi"
+                              aria-label={t('kelasSection.calendar.endSesi')}
+                              title={t('kelasSection.calendar.endSesi')}
                             >
                               <Square size={16} />
                             </button>
@@ -792,8 +807,8 @@ function DayPopup({
                             type="button"
                             onClick={() => onReschedule(s)}
                             className="rounded-md p-1.5 text-slate-500 transition hover:bg-sky-50 hover:text-sky-700"
-                            aria-label="Jadwalkan ulang"
-                            title="Jadwalkan ulang"
+                            aria-label={t('kelasSection.calendar.reschedule')}
+                            title={t('kelasSection.calendar.reschedule')}
                           >
                             <RotateCcw size={16} />
                           </button>
@@ -802,8 +817,8 @@ function DayPopup({
                           type="button"
                           onClick={() => onEdit(s)}
                           className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                          aria-label="Ubah"
-                          title="Ubah"
+                          aria-label={t('common.edit')}
+                          title={t('common.edit')}
                         >
                           <Pencil size={16} />
                         </button>
@@ -812,8 +827,8 @@ function DayPopup({
                           onClick={() => onDelete(s)}
                           disabled={deleting}
                           className="rounded-md p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-                          aria-label="Hapus"
-                          title="Hapus"
+                          aria-label={t('common.delete')}
+                          title={t('common.delete')}
                         >
                           <Trash2 size={16} />
                         </button>

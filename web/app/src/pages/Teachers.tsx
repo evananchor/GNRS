@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Grid3x3, List, Plus, Search, User as UserIcon } from 'lucide-react'
 
 import {
@@ -28,6 +29,7 @@ type DialogMode = { kind: 'create' } | { kind: 'edit'; id: string } | null
 
 export function TeachersPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [params] = useSearchParams()
   const q = params.get('q') ?? ''
   const statusParam = params.get('status')
@@ -70,27 +72,27 @@ export function TeachersPage() {
 
   const createMut = useMutation({
     mutationFn: (input: TeacherInput) => createTeacher(input),
-    onSuccess: (t) => {
-      toast('Pengajar ditambahkan', 'success')
+    onSuccess: (tch) => {
+      toast(t('teachers.added'), 'success')
       invalidate()
-      setDialog({ kind: 'edit', id: t.id })
+      setDialog({ kind: 'edit', id: tch.id })
     },
-    onError: (e) => toast(apiMsg(e, 'Gagal menambah pengajar'), 'error'),
+    onError: (e) => toast(apiMsg(e, t('teachers.addFailed')), 'error'),
   })
 
   const updateMut = useMutation({
     mutationFn: ({ id, input }: { id: string; input: TeacherInput }) => updateTeacher(id, input),
     onSuccess: () => {
-      toast('Pengajar diperbarui', 'success')
+      toast(t('teachers.updated'), 'success')
       invalidate()
       setDialog(null)
     },
-    onError: (e) => toast(apiMsg(e, 'Gagal memperbarui pengajar'), 'error'),
+    onError: (e) => toast(apiMsg(e, t('teachers.updateFailed')), 'error'),
   })
 
-  const handleDelete = (t: Teacher) => {
-    if (confirm(`Hapus ${t.name}? Tindakan ini tidak dapat dibatalkan.`)) {
-      deleteMutation.mutate(t.id)
+  const handleDelete = (tch: Teacher) => {
+    if (confirm(t('common.deleteConfirm', { name: tch.name }))) {
+      deleteMutation.mutate(tch.id)
     }
   }
 
@@ -107,7 +109,7 @@ export function TeachersPage() {
 
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h1 className="text-2xl font-semibold">Pengajar</h1>
+      <h1 className="text-2xl font-semibold">{t('teachers.title')}</h1>
       <div className="flex items-center gap-2 self-start sm:self-auto">
         <div className="inline-flex rounded-md border border-slate-300 bg-white shadow-sm">
           <button
@@ -119,10 +121,10 @@ export function TeachersPage() {
                 ? 'bg-slate-900 text-white'
                 : 'text-slate-700 hover:bg-slate-50')
             }
-            aria-label="Thumbnail"
-            title="Thumbnail"
+            aria-label={t('teachers.viewThumb')}
+            title={t('teachers.viewThumb')}
           >
-            <Grid3x3 size={14} /> Thumbnail
+            <Grid3x3 size={14} /> {t('teachers.viewThumb')}
           </button>
           <button
             type="button"
@@ -133,16 +135,16 @@ export function TeachersPage() {
                 ? 'bg-slate-900 text-white'
                 : 'text-slate-700 hover:bg-slate-50')
             }
-            aria-label="Daftar"
-            title="Daftar"
+            aria-label={t('teachers.viewList')}
+            title={t('teachers.viewList')}
           >
-            <List size={14} /> Daftar
+            <List size={14} /> {t('teachers.viewList')}
           </button>
         </div>
         {isAdmin ? (
           <Button onClick={() => setDialog({ kind: 'create' })}>
             <Plus size={16} className="mr-1" />
-            Tambah Pengajar
+            {t('teachers.add')}
           </Button>
         ) : null}
       </div>
@@ -169,19 +171,19 @@ export function TeachersPage() {
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
-          <Input name="q" defaultValue={q} placeholder="Cari nama atau panggilan" className="pl-9" />
+          <Input name="q" defaultValue={q} placeholder={t('teachers.searchPh')} className="pl-9" />
         </div>
         <select
           name="status"
           defaultValue={status ?? ''}
           className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
         >
-          <option value="">Semua status</option>
-          <option value="active">Aktif</option>
-          <option value="retired">Purna</option>
+          <option value="">{t('teachers.allStatus')}</option>
+          <option value="active">{t('teachers.statusActive')}</option>
+          <option value="retired">{t('teachers.statusRetired')}</option>
         </select>
         <Button type="submit" variant="secondary" size="md">
-          Terapkan
+          {t('common.apply')}
         </Button>
       </form>
 
@@ -189,24 +191,24 @@ export function TeachersPage() {
         <div>
           {isPending ? (
             <div className="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
-              Memuat…
+              {t('common.loading')}
             </div>
           ) : data && data.items.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {data.items.map((t) => (
+              {data.items.map((tch) => (
                 <TeacherThumb
-                  key={t.id}
-                  t={t}
+                  key={tch.id}
+                  t={tch}
                   isAdmin={isAdmin}
-                  onEdit={() => setDialog({ kind: 'edit', id: t.id })}
-                  onDelete={() => handleDelete(t)}
+                  onEdit={() => setDialog({ kind: 'edit', id: tch.id })}
+                  onDelete={() => handleDelete(tch)}
                   deleting={deleteMutation.isPending}
                 />
               ))}
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
-              Belum ada data Pengajar.
+              {t('teachers.empty')}
             </div>
           )}
         </div>
@@ -216,43 +218,43 @@ export function TeachersPage() {
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-2 w-12"></th>
-              <th className="px-4 py-2">Nama</th>
-              <th className="hidden px-4 py-2 sm:table-cell">Panggilan</th>
-              <th className="hidden px-4 py-2 md:table-cell">Kelompok</th>
-              <th className="hidden px-4 py-2 md:table-cell">Daerah</th>
-              <th className="px-4 py-2">Status</th>
-              {isAdmin ? <th className="px-4 py-2 text-right">Aksi</th> : null}
+              <th className="px-4 py-2">{t('teachers.cols.name')}</th>
+              <th className="hidden px-4 py-2 sm:table-cell">{t('teachers.cols.nickname')}</th>
+              <th className="hidden px-4 py-2 md:table-cell">{t('teachers.cols.kelompok')}</th>
+              <th className="hidden px-4 py-2 md:table-cell">{t('teachers.cols.daerah')}</th>
+              <th className="px-4 py-2">{t('teachers.cols.status')}</th>
+              {isAdmin ? <th className="px-4 py-2 text-right">{t('common.actions')}</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isPending ? (
               <tr>
                 <td colSpan={isAdmin ? 7 : 6} className="px-4 py-6 text-center text-slate-500">
-                  Memuat…
+                  {t('common.loading')}
                 </td>
               </tr>
             ) : data && data.items.length > 0 ? (
-              data.items.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50">
+              data.items.map((tch) => (
+                <tr key={tch.id} className="hover:bg-slate-50">
                   <td className="px-4 py-2">
-                    <Avatar url={t.photoUrl} />
+                    <Avatar url={tch.photoUrl} />
                   </td>
                   <td className="px-4 py-2">
-                    <Link to={`/teachers/${t.id}`} className="text-slate-900 hover:underline">
-                      {t.name}
+                    <Link to={`/teachers/${tch.id}`} className="text-slate-900 hover:underline">
+                      {tch.name}
                     </Link>
                   </td>
-                  <td className="hidden px-4 py-2 sm:table-cell">{t.nickname ?? '—'}</td>
-                  <td className="hidden px-4 py-2 md:table-cell">{t.kelompok}</td>
-                  <td className="hidden px-4 py-2 md:table-cell">{t.daerah}</td>
+                  <td className="hidden px-4 py-2 sm:table-cell">{tch.nickname ?? '—'}</td>
+                  <td className="hidden px-4 py-2 md:table-cell">{tch.kelompok}</td>
+                  <td className="hidden px-4 py-2 md:table-cell">{tch.daerah}</td>
                   <td className="px-4 py-2">
-                    <StatusPill status={t.status} />
+                    <StatusPill status={tch.status} />
                   </td>
                   {isAdmin ? (
                     <td className="px-4 py-2 text-right">
                       <RowActions
-                        onEdit={() => setDialog({ kind: 'edit', id: t.id })}
-                        onDelete={() => handleDelete(t)}
+                        onEdit={() => setDialog({ kind: 'edit', id: tch.id })}
+                        onDelete={() => handleDelete(tch)}
                         deleteDisabled={deleteMutation.isPending}
                       />
                     </td>
@@ -262,7 +264,7 @@ export function TeachersPage() {
             ) : (
               <tr>
                 <td colSpan={isAdmin ? 7 : 6} className="px-4 py-6 text-center text-slate-500">
-                  Belum ada data Pengajar.
+                  {t('teachers.empty')}
                 </td>
               </tr>
             )}
@@ -272,9 +274,7 @@ export function TeachersPage() {
       )}
 
       <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-        <span>
-          Halaman {page} dari {totalPages} · {total} total
-        </span>
+        <span>{t('common.pagination', { page, total: totalPages, count: total })}</span>
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -282,7 +282,7 @@ export function TeachersPage() {
             disabled={page <= 1}
             onClick={() => updateSearch({ q, status, page: Math.max(1, page - 1) })}
           >
-            Sebelumnya
+            {t('common.previous')}
           </Button>
           <Button
             variant="secondary"
@@ -290,15 +290,15 @@ export function TeachersPage() {
             disabled={page >= totalPages}
             onClick={() => updateSearch({ q, status, page: Math.min(totalPages, page + 1) })}
           >
-            Berikutnya
+            {t('common.next')}
           </Button>
         </div>
       </div>
 
       {dialog?.kind === 'create' ? (
-        <Dialog title="Tambah Pengajar" onClose={() => setDialog(null)} size="lg">
+        <Dialog title={t('teachers.add')} onClose={() => setDialog(null)} size="lg">
           <TeacherForm
-            submitLabel={createMut.isPending ? 'Menyimpan…' : 'Simpan'}
+            submitLabel={createMut.isPending ? t('common.saving') : t('common.save')}
             pending={createMut.isPending}
             error={createMut.error}
             onSubmit={(input) => createMut.mutate(input)}
@@ -337,6 +337,7 @@ function TeacherEditDialog({
   onClose: () => void
   onPhotoChanged: () => void
 }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const { data, isPending } = useQuery({
     queryKey: ['teachers', 'detail', id],
@@ -344,9 +345,13 @@ function TeacherEditDialog({
   })
 
   return (
-    <Dialog title={`Ubah Pengajar${data ? ` — ${data.name}` : ''}`} onClose={onClose} size="lg">
+    <Dialog
+      title={data ? t('teachers.editWithName', { name: data.name }) : t('teachers.edit')}
+      onClose={onClose}
+      size="lg"
+    >
       {isPending ? (
-        <div className="py-6 text-center text-slate-500">Memuat…</div>
+        <div className="py-6 text-center text-slate-500">{t('common.loading')}</div>
       ) : data ? (
         <div className="space-y-4">
           <PhotoUploader
@@ -359,7 +364,7 @@ function TeacherEditDialog({
           />
           <TeacherForm
             initial={data}
-            submitLabel={pending ? 'Menyimpan…' : 'Simpan'}
+            submitLabel={pending ? t('common.saving') : t('common.save')}
             pending={pending}
             error={error}
             onSubmit={onSubmit}
@@ -367,7 +372,7 @@ function TeacherEditDialog({
           />
         </div>
       ) : (
-        <div className="py-6 text-center text-red-600">Data tidak ditemukan</div>
+        <div className="py-6 text-center text-red-600">{t('common.dataNotFound')}</div>
       )}
     </Dialog>
   )
@@ -391,7 +396,7 @@ function Avatar({ url }: { url?: string | null }) {
 }
 
 function TeacherThumb({
-  t,
+  t: tch,
   isAdmin,
   onEdit,
   onDelete,
@@ -405,26 +410,26 @@ function TeacherThumb({
 }) {
   return (
     <div className="group relative flex flex-col rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-md">
-      <Link to={`/teachers/${t.id}`} className="flex flex-col items-center text-center">
+      <Link to={`/teachers/${tch.id}`} className="flex flex-col items-center text-center">
         <div className="mb-2 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50">
-          {t.photoUrl ? (
-            <img src={t.photoUrl} alt="" className="h-full w-full object-cover" />
+          {tch.photoUrl ? (
+            <img src={tch.photoUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <UserIcon size={32} className="text-slate-300" />
           )}
         </div>
-        <div className="line-clamp-2 text-sm font-semibold text-slate-900">{t.name}</div>
-        <div className="mt-0.5 text-xs text-slate-500">{t.nickname ?? '—'}</div>
+        <div className="line-clamp-2 text-sm font-semibold text-slate-900">{tch.name}</div>
+        <div className="mt-0.5 text-xs text-slate-500">{tch.nickname ?? '—'}</div>
         <div className="mt-1 flex flex-wrap items-center justify-center gap-1 text-[10px] text-slate-500">
-          {t.kelompok ? (
-            <span className="rounded-full bg-slate-100 px-1.5 py-0.5">{t.kelompok}</span>
+          {tch.kelompok ? (
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5">{tch.kelompok}</span>
           ) : null}
-          {t.daerah ? (
-            <span className="rounded-full bg-slate-100 px-1.5 py-0.5">{t.daerah}</span>
+          {tch.daerah ? (
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5">{tch.daerah}</span>
           ) : null}
         </div>
         <div className="mt-1.5">
-          <StatusPill status={t.status} />
+          <StatusPill status={tch.status} />
         </div>
       </Link>
       {isAdmin ? (
@@ -437,16 +442,17 @@ function TeacherThumb({
 }
 
 function StatusPill({ status }: { status: 'active' | 'retired' }) {
+  const { t } = useTranslation()
   if (status === 'active') {
     return (
       <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
-        Aktif
+        {t('teachers.statusActive')}
       </span>
     )
   }
   return (
     <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">
-      Purna
+      {t('teachers.statusRetired')}
     </span>
   )
 }

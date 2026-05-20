@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from './App'
 import { AuthProvider } from './lib/auth'
 import { ToastProvider } from './lib/toast'
+import './lib/i18n'
 import './index.css'
 import 'leaflet/dist/leaflet.css'
 

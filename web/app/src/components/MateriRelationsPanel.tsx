@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Plus, Search, X } from 'lucide-react'
 
 import {
@@ -47,6 +48,7 @@ export function MateriRelationsPanel({ materiId }: { materiId: string }) {
 // ----------------------------------------------------------- Library refs
 
 function LibraryRefsCard({ materiId }: { materiId: string }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -64,11 +66,11 @@ function LibraryRefsCard({ materiId }: { materiId: string }) {
         libraryRef: v.libraryRef ?? '',
       }),
     onSuccess: () => {
-      toast('Library terhubung', 'success')
+      toast(t('materiComp.relations.libraryConnected'), 'success')
       qc.invalidateQueries({ queryKey: ['materi-library-refs', materiId] })
       setOpen(false)
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('materiComp.relations.errGeneric'), 'error'),
   })
 
   const delMut = useMutation({
@@ -76,27 +78,26 @@ function LibraryRefsCard({ materiId }: { materiId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['materi-library-refs', materiId] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('materiComp.relations.errGeneric'), 'error'),
   })
 
   return (
     <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-semibold">Library Relation</div>
+          <div className="text-sm font-semibold">{t('materiComp.relations.libraryTitle')}</div>
           <p className="text-xs text-slate-500">
-            Materi library yang relate dengan kurikulum ini — saat library itu
-            di-tuntaskan, pencapaian otomatis ikut tuntas.
+            {t('materiComp.relations.libraryDesc')}
           </p>
         </div>
         <Button size="sm" type="button" onClick={() => setOpen(true)}>
-          <Plus size={14} className="mr-1" /> Tambah
+          <Plus size={14} className="mr-1" /> {t('materiComp.relations.addBtn')}
         </Button>
       </div>
 
       {refs.length === 0 ? (
         <p className="mt-2 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-          Belum ada relasi library.
+          {t('materiComp.relations.libraryEmpty')}
         </p>
       ) : (
         <ul className="mt-2 space-y-1">
@@ -131,6 +132,7 @@ function LibraryRefChip({
   onRemove: () => void
   busy: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <li className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs">
       <div className="min-w-0 flex-1">
@@ -145,7 +147,7 @@ function LibraryRefChip({
         onClick={onRemove}
         disabled={busy}
         className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-        aria-label="Hapus relasi"
+        aria-label={t('materiComp.relations.removeRelationAria')}
       >
         <X size={12} />
       </button>
@@ -162,6 +164,7 @@ function LibraryRefDialog({
   onClose: () => void
   pending: boolean
 }) {
+  const { t } = useTranslation()
   const [value, setValue] = useState<MateriSourceValue>(() => {
     const v = emptyMateriSourceValue()
     v.libraryKind = 'quran'
@@ -170,7 +173,7 @@ function LibraryRefDialog({
   })
   const ready = value.libraryKind !== 'kurikulum' && (value.libraryRef ?? '').trim() !== ''
   return (
-    <Dialog title="Hubungkan ke library" onClose={onClose} size="lg">
+    <Dialog title={t('materiComp.relations.libDialogTitle')} onClose={onClose} size="lg">
       <div className="space-y-4">
         <MateriSourcePicker
           value={value}
@@ -179,10 +182,10 @@ function LibraryRefDialog({
         />
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
           <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="button" onClick={() => onSave(value)} disabled={!ready || pending}>
-            {pending ? 'Menyimpan…' : 'Hubungkan'}
+            {pending ? t('common.saving') : t('materiComp.relations.libConnectBtn')}
           </Button>
         </div>
       </div>
@@ -193,6 +196,7 @@ function LibraryRefDialog({
 // -------------------------------------------------------- Kurikulum relation
 
 function RelationsCard({ materiId }: { materiId: string }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -214,11 +218,11 @@ function RelationsCard({ materiId }: { materiId: string }) {
   const addMut = useMutation({
     mutationFn: (otherId: string) => addMateriRelation(materiId, otherId),
     onSuccess: () => {
-      toast('Relasi disimpan', 'success')
+      toast(t('materiComp.relations.kurikulumSaved'), 'success')
       qc.invalidateQueries({ queryKey: ['materi-relations', materiId] })
       setOpen(false)
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('materiComp.relations.errGeneric'), 'error'),
   })
 
   const delMut = useMutation({
@@ -226,26 +230,26 @@ function RelationsCard({ materiId }: { materiId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['materi-relations', materiId] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('materiComp.relations.errGeneric'), 'error'),
   })
 
   return (
     <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-semibold">Kurikulum Relation</div>
+          <div className="text-sm font-semibold">{t('materiComp.relations.kurikulumTitle')}</div>
           <p className="text-xs text-slate-500">
-            Materi kurikulum sejenis di tingkat / umur yang berbeda.
+            {t('materiComp.relations.kurikulumDesc')}
           </p>
         </div>
         <Button size="sm" type="button" onClick={() => setOpen(true)}>
-          <Plus size={14} className="mr-1" /> Tambah
+          <Plus size={14} className="mr-1" /> {t('materiComp.relations.addBtn')}
         </Button>
       </div>
 
       {related.length === 0 ? (
         <p className="mt-2 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-          Belum ada relasi kurikulum.
+          {t('materiComp.relations.kurikulumEmpty')}
         </p>
       ) : (
         <ul className="mt-2 space-y-1">
@@ -265,7 +269,7 @@ function RelationsCard({ materiId }: { materiId: string }) {
                 onClick={() => delMut.mutate(m.id)}
                 disabled={delMut.isPending}
                 className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                aria-label="Hapus relasi"
+                aria-label={t('materiComp.relations.removeRelationAria')}
               >
                 <X size={12} />
               </button>
@@ -303,6 +307,7 @@ function RelationPickerDialog({
   onClose: () => void
   pending: boolean
 }) {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -322,7 +327,7 @@ function RelationPickerDialog({
   void materiId
 
   return (
-    <Dialog title="Pilih materi kurikulum yang relate" onClose={onClose} size="lg">
+    <Dialog title={t('materiComp.relations.relDialogTitle')} onClose={onClose} size="lg">
       <div className="space-y-3">
         <div className="relative">
           <Search
@@ -332,14 +337,14 @@ function RelationPickerDialog({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="cari tingkat / tema / detail materi…"
+            placeholder={t('materiComp.relations.relSearchPh')}
             className="pl-8"
           />
         </div>
         <ul className="max-h-[55vh] overflow-y-auto rounded-md border border-slate-200 bg-white">
           {filtered.length === 0 ? (
             <li className="px-3 py-4 text-center text-xs text-slate-500">
-              Tidak ada materi yang cocok.
+              {t('materiComp.relations.relNoMatch')}
             </li>
           ) : (
             filtered.map((m) => (
@@ -352,7 +357,7 @@ function RelationPickerDialog({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] text-slate-500">
-                      {m.tingkat} · {m.tema} · {m.subTema} · Sem {m.semester}
+                      {m.tingkat} · {m.tema} · {m.subTema} · {t('materiComp.relations.semShort', { n: m.semester })}
                     </div>
                     <div>{m.detailMateri}</div>
                   </div>

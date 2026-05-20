@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/lib/auth'
 import { Layout } from '@/components/Layout'
 import { LoginPage } from '@/pages/Login'
@@ -110,9 +111,10 @@ export function App() {
 }
 
 function FullScreenLoader() {
+  const { t } = useTranslation()
   return (
     <div style={{ display: 'grid', placeItems: 'center', height: '100vh' }}>
-      <div className="text-slate-500 text-sm">Memuat…</div>
+      <div className="text-slate-500 text-sm">{t('common.loading')}</div>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { BookOpenCheck, CalendarRange, List } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 
 /**
@@ -8,20 +9,19 @@ import { cn } from '@/lib/cn'
  * (monthly teaching plan per kelas). Outlet is filled by the sub-routes.
  */
 export function KelasLayout() {
+  const { t } = useTranslation()
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex-shrink-0 px-4 pt-5 md:px-6 md:pt-6">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Ruang Kelas</p>
-          <h1 className="mt-1 text-2xl font-semibold">Kelas</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Kelola kelas, kalender sesi, dan rencana ajar bulanan.
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('kelas.eyebrow')}</p>
+          <h1 className="mt-1 text-2xl font-semibold">{t('kelas.title')}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t('kelas.subtitle')}</p>
         </div>
         <div className="mt-4 flex flex-wrap gap-2 border-b border-slate-200">
-          <TabLink to="/kelas/list" icon={<List size={16} />} label="Daftar" />
-          <TabLink to="/kelas/calendar" icon={<CalendarRange size={16} />} label="Kalender" />
-          <TabLink to="/kelas/rencana" icon={<BookOpenCheck size={16} />} label="Rencana Ajar" />
+          <TabLink to="/kelas/list" icon={<List size={16} />} label={t('kelas.tabs.list')} />
+          <TabLink to="/kelas/calendar" icon={<CalendarRange size={16} />} label={t('kelas.tabs.calendar')} />
+          <TabLink to="/kelas/rencana" icon={<BookOpenCheck size={16} />} label={t('kelas.tabs.rencana')} />
         </div>
       </div>
 

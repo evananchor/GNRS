@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { CheckCircle2, MessageCircle, X } from 'lucide-react'
 
 import { endSesi, type Sesi } from '@/api/sesi'
@@ -56,23 +57,10 @@ function toE164(region: string | undefined | null, raw: string | undefined | nul
   return dial + local
 }
 
-function fmtDate(iso: string) {
+function fmtDate(iso: string, months: string[]) {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (!m) return iso
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
   return `${Number(m[3])} ${months[Number(m[2]) - 1]} ${m[1]}`
-}
-
-function fmtDuration(startedAt: string | null | undefined, endedAt: string | null | undefined) {
-  if (!startedAt) return '–'
-  const start = new Date(startedAt).getTime()
-  const end = endedAt ? new Date(endedAt).getTime() : Date.now()
-  if (Number.isNaN(start) || Number.isNaN(end)) return '–'
-  const sec = Math.max(0, Math.floor((end - start) / 1000))
-  const h = Math.floor(sec / 3600)
-  const m = Math.floor((sec % 3600) / 60)
-  if (h > 0) return `${h} jam ${m} menit`
-  return `${m} menit`
 }
 
 function buildMessage(
@@ -100,8 +88,45 @@ export function EndSesiSummaryDialog({
   onClose: () => void
   onEnded: () => void
 }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
+
+  // Localized month abbreviations for fmtDate. Falls back to ISO if returnObjects
+  // resolves to something unexpected.
+  const months = (() => {
+    const m = t('sesiDialog.summary.monthsShort', { returnObjects: true }) as unknown
+    return Array.isArray(m) ? (m as string[]) : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  })()
+
+  // Localized helpers (depend on t).
+  const fmtDuration = (startedAt: string | null | undefined, endedAt: string | null | undefined) => {
+    if (!startedAt) return t('sesiDialog.summary.durationNone')
+    const start = new Date(startedAt).getTime()
+    const end = endedAt ? new Date(endedAt).getTime() : Date.now()
+    if (Number.isNaN(start) || Number.isNaN(end)) return t('sesiDialog.summary.durationNone')
+    const sec = Math.max(0, Math.floor((end - start) / 1000))
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    if (h > 0) return t('sesiDialog.summary.durationHM', { h, m })
+    return t('sesiDialog.summary.durationM', { m })
+  }
+
+  const labelFor = (it: MateriDiajarkan): string => {
+    if (it.label) return it.label
+    if (it.ref) return `${it.kind}:${it.ref}`
+    return it.kind
+  }
+
+  const kindLabel = (k: MateriDiajarkan['kind']) => {
+    switch (k) {
+      case 'kurikulum': return t('sesiDialog.summary.kindKurikulum')
+      case 'quran': return t('sesiDialog.summary.kindQuran')
+      case 'hadits': return t('sesiDialog.summary.kindHadits')
+      case 'tilawati': return t('sesiDialog.summary.kindTilawati')
+      case 'doa': return t('sesiDialog.summary.kindDoa')
+    }
+  }
 
   // Materi diajarkan + local edit buffer keyed by row id.
   const diajarkanQ = useQuery({
@@ -170,13 +195,13 @@ export function EndSesiSummaryDialog({
       if (!sesi.endedAt) await endSesi(sesi.id)
     },
     onSuccess: () => {
-      toast('Sesi diakhiri & rangkuman tersimpan', 'success')
+      toast(t('sesiDialog.summary.endedToast'), 'success')
       qc.invalidateQueries({ queryKey: ['sesi'] })
       qc.invalidateQueries({ queryKey: ['diajarkan', sesi.id] })
       qc.invalidateQueries({ queryKey: ['kelas-sesi'] })
       onEnded()
     },
-    onError: (e: any) => toast(e?.message ?? 'Gagal menyimpan', 'error'),
+    onError: (e: any) => toast(e?.message ?? t('sesiDialog.summary.saveFailed'), 'error'),
   })
 
   // Build WA message for one student ---------------------------------------
@@ -185,7 +210,7 @@ export function EndSesiSummaryDialog({
     const phone = toE164(murid.parentPhoneRegion, murid.parentPhone)
     const materiList =
       diajarkan.length === 0
-        ? '(belum ada materi tercatat)'
+        ? t('sesiDialog.summary.noMateriRecorded')
         : diajarkan.map((it) => `• ${labelFor(it)}`).join('\n')
     const reviewItems = diajarkan
       .map((it) => ({ ...it, ...(edits[it.id] ?? { review: it.needsParentReview, note: it.parentNote ?? '' }) }))
@@ -193,16 +218,16 @@ export function EndSesiSummaryDialog({
     const reviewSection =
       reviewItems.length === 0
         ? ''
-        : '📌 Perlu Direview Bersama:\n' +
+        : t('sesiDialog.summary.reviewSectionHeader') + '\n' +
           reviewItems
-            .map((it) => `• ${labelFor(it)}${it.note ? `\n   Catatan: ${it.note}` : ''}`)
+            .map((it) => `• ${labelFor(it)}${it.note ? `\n   ${t('sesiDialog.summary.reviewItemNote', { note: it.note })}` : ''}`)
             .join('\n')
     const msg = buildMessage(waTemplate, {
-      salutation: murid.parentTitle ?? 'Bapak/Ibu',
+      salutation: murid.parentTitle ?? t('sesiDialog.summary.defaultSalutation'),
       parent_name: murid.parentName ?? '',
       murid_name: murid.name,
       topik: sesi.topik,
-      tanggal: fmtDate(sesi.tanggal),
+      tanggal: fmtDate(sesi.tanggal, months),
       durasi: fmtDuration(sesi.startedAt, sesi.endedAt),
       materi_list: materiList,
       review_section: reviewSection,
@@ -222,15 +247,19 @@ export function EndSesiSummaryDialog({
         {/* Header */}
         <div className="flex items-start gap-3 border-b border-slate-200 px-5 py-3">
           <div className="flex-1">
-            <h2 className="text-base font-semibold text-slate-900">Rangkuman Akhir Sesi</h2>
+            <h2 className="text-base font-semibold text-slate-900">{t('sesiDialog.summary.title')}</h2>
             <p className="mt-0.5 text-xs text-slate-500">
-              {sesi.topik} · {fmtDate(sesi.tanggal)} · Durasi {fmtDuration(sesi.startedAt, sesi.endedAt)}
+              {t('sesiDialog.summary.subtitle', {
+                topik: sesi.topik,
+                date: fmtDate(sesi.tanggal, months),
+                durasi: fmtDuration(sesi.startedAt, sesi.endedAt),
+              })}
             </p>
           </div>
           <button
             onClick={onClose}
             className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Tutup"
+            aria-label={t('sesiDialog.summary.closeAria')}
           >
             <X size={16} />
           </button>
@@ -241,11 +270,11 @@ export function EndSesiSummaryDialog({
           {/* Materi diajarkan */}
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Materi yang Diajarkan ({diajarkan.length})
+              {t('sesiDialog.summary.materiHeading', { count: diajarkan.length })}
             </h3>
             {diajarkan.length === 0 ? (
               <p className="rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
-                Belum ada materi yang tercatat selama sesi ini.
+                {t('sesiDialog.summary.materiEmpty')}
               </p>
             ) : (
               <ul className="space-y-2">
@@ -273,7 +302,7 @@ export function EndSesiSummaryDialog({
                           }
                           className="h-4 w-4 rounded border-slate-300 text-emerald-600"
                         />
-                        Perlu review bersama orang tua
+                        {t('sesiDialog.summary.needsReview')}
                       </label>
                       <textarea
                         value={e.note}
@@ -283,7 +312,7 @@ export function EndSesiSummaryDialog({
                             [it.id]: { ...e, note: ev.target.value },
                           }))
                         }
-                        placeholder="Catatan untuk orang tua (opsional, hanya orang tua & guru yang melihat)…"
+                        placeholder={t('sesiDialog.summary.notePh')}
                         rows={2}
                         className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none"
                       />
@@ -298,13 +327,13 @@ export function EndSesiSummaryDialog({
           {sesi.kelasId && (
             <section className="mt-6">
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Kirim Ringkasan ke Orang Tua ({anggota.length})
+                {t('sesiDialog.summary.notifHeading', { count: anggota.length })}
               </h3>
               {anggotaQ.isLoading ? (
-                <p className="text-sm text-slate-500">Memuat anggota…</p>
+                <p className="text-sm text-slate-500">{t('sesiDialog.summary.loadingAnggota')}</p>
               ) : anggota.length === 0 ? (
                 <p className="rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
-                  Kelas tidak memiliki anggota.
+                  {t('sesiDialog.summary.noAnggota')}
                 </p>
               ) : (
                 <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200">
@@ -324,17 +353,17 @@ export function EndSesiSummaryDialog({
                                 {(user!.parentPhone ?? '').replace(/^0+/, '')}
                               </>
                             ) : (
-                              <span className="text-slate-400">Kontak ortu belum lengkap</span>
+                              <span className="text-slate-400">{t('sesiDialog.summary.contactIncomplete')}</span>
                             )}
                           </div>
                         </div>
                         <button
                           onClick={() => setPreviewFor(a.muridUserId)}
                           disabled={!m.url}
-                          title={m.url ? 'Lihat pesan & kirim' : 'Kontak orang tua belum lengkap'}
+                          title={m.url ? t('sesiDialog.summary.waTitleSend') : t('sesiDialog.summary.waTitleIncomplete')}
                           className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <MessageCircle size={13} /> WhatsApp
+                          <MessageCircle size={13} /> {t('sesiDialog.summary.waBtn')}
                         </button>
                       </li>
                     )
@@ -352,7 +381,7 @@ export function EndSesiSummaryDialog({
             disabled={save.isPending}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            Tutup
+            {t('common.close')}
           </button>
           {!sesi.endedAt ? (
             <button
@@ -361,7 +390,7 @@ export function EndSesiSummaryDialog({
               className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
             >
               <CheckCircle2 size={14} />
-              {save.isPending ? 'Menyimpan…' : 'Akhiri Sesi'}
+              {save.isPending ? t('common.saving') : t('sesiDialog.summary.endBtn')}
             </button>
           ) : (
             <button
@@ -369,7 +398,7 @@ export function EndSesiSummaryDialog({
               disabled={save.isPending}
               className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
             >
-              {save.isPending ? 'Menyimpan…' : 'Simpan Catatan'}
+              {save.isPending ? t('common.saving') : t('sesiDialog.summary.saveBtn')}
             </button>
           )}
         </div>
@@ -390,7 +419,10 @@ export function EndSesiSummaryDialog({
               >
                 <div className="mb-2 flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-slate-900">
-                    Pesan untuk {user?.parentTitle} {user?.parentName}
+                    {t('sesiDialog.summary.previewTitle', {
+                      salutation: user?.parentTitle ?? '',
+                      name: user?.parentName ?? '',
+                    })}
                   </h4>
                   <button
                     onClick={() => setPreviewFor(null)}
@@ -407,7 +439,7 @@ export function EndSesiSummaryDialog({
                     onClick={() => setPreviewFor(null)}
                     className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    Tutup
+                    {t('common.close')}
                   </button>
                   {m.url ? (
                     <a
@@ -417,7 +449,7 @@ export function EndSesiSummaryDialog({
                       onClick={() => setPreviewFor(null)}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700"
                     >
-                      <MessageCircle size={13} /> Buka WhatsApp
+                      <MessageCircle size={13} /> {t('sesiDialog.summary.openWa')}
                     </a>
                   ) : null}
                 </div>
@@ -428,20 +460,4 @@ export function EndSesiSummaryDialog({
       </div>
     </div>
   )
-}
-
-function labelFor(it: MateriDiajarkan): string {
-  if (it.label) return it.label
-  if (it.ref) return `${it.kind}:${it.ref}`
-  return it.kind
-}
-
-function kindLabel(k: MateriDiajarkan['kind']) {
-  switch (k) {
-    case 'kurikulum': return 'Kurikulum'
-    case 'quran': return "Qur'an"
-    case 'hadits': return 'Hadits'
-    case 'tilawati': return 'Tilawati'
-    case 'doa': return "Do'a"
-  }
 }

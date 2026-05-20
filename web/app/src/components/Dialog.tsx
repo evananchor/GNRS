@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 
 type Props = {
@@ -15,6 +16,7 @@ const SIZE: Record<NonNullable<Props['size']>, string> = {
 }
 
 export function Dialog({ title, onClose, children, size = 'md' }: Props) {
+  const { t } = useTranslation()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -46,7 +48,7 @@ export function Dialog({ title, onClose, children, size = 'md' }: Props) {
             type="button"
             onClick={onClose}
             className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            aria-label="Tutup"
+            aria-label={t('common.close')}
           >
             <X size={18} />
           </button>

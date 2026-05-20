@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { BookOpenText, Pencil, Plus, Trash2 } from 'lucide-react'
 
 import {
@@ -24,6 +25,7 @@ const fieldCx =
  * other roles see a read-only catalogue.
  */
 export function PustakaHaditsPage() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const qc = useQueryClient()
@@ -42,39 +44,37 @@ export function PustakaHaditsPage() {
   })
 
   const onDelete = (k: HaditsKitab) => {
-    if (!window.confirm(`Hapus kitab "${k.nama}"? Semua bab + hadits di dalamnya juga akan dihapus.`)) return
+    if (!window.confirm(t('pustaka.hadits.confirmDelete', { name: k.nama }))) return
     removeMut.mutate(k.slug)
   }
 
   return (
     <LibraryShell
       backTo="/pustaka"
-      backLabel="Pustaka"
       bgClassName="bg-slate-50"
       contentClassName="px-4 pt-14 pb-6 md:px-8"
     >
       <div className="mx-auto max-w-5xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <h1 className="text-2xl font-semibold">Hadits Himpunan</h1>
+            <h1 className="text-2xl font-semibold">{t('pustaka.hadits.title')}</h1>
             <p className="mb-4 mt-1 text-sm text-slate-500">
-              Daftar judul kitab himpunan hadits PPG. Konten hadits disembunyikan; hanya metadata
-              yang ditampilkan.
+              {t('pustaka.hadits.subtitle')}
             </p>
           </div>
           {isAdmin ? (
             <Button size="sm" onClick={() => setEditing('new')}>
-              <Plus size={14} className="mr-1.5" /> Tambah kitab
+              <Plus size={14} className="mr-1.5" /> {t('pustaka.hadits.btnAdd')}
             </Button>
           ) : null}
         </div>
 
         {isError ? (
           <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            Gagal memuat daftar kitab.
+            {t('pustaka.hadits.loadFailed')}
           </p>
         ) : null}
-        {isPending ? <p className="text-sm text-slate-500">Memuat kitab…</p> : null}
+        {isPending ? <p className="text-sm text-slate-500">{t('pustaka.hadits.loading')}</p> : null}
 
         <div className="grid gap-2 sm:grid-cols-2">
           {himpunan.map((k) => (
@@ -114,6 +114,7 @@ function KitabCard({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="group relative flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-slate-300 hover:shadow-md">
       <Link
@@ -126,8 +127,8 @@ function KitabCard({
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold text-slate-900">{k.nama}</div>
           <div className="truncate text-xs text-slate-500">
-            {k.babCount} bab · {k.haditsCount} hadits
-            {k.perawi ? ` · ${k.perawi}` : ''}
+            {t('pustaka.hadits.metaBabHadits', { bab: k.babCount, hadits: k.haditsCount })}
+            {k.perawi ? t('pustaka.hadits.metaPerawi', { perawi: k.perawi }) : ''}
           </div>
         </div>
         {k.namaArab ? (
@@ -145,8 +146,8 @@ function KitabCard({
               onEdit()
             }}
             className="rounded p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            title="Edit kitab"
-            aria-label="Edit kitab"
+            title={t('pustaka.hadits.editKitab')}
+            aria-label={t('pustaka.hadits.editKitab')}
           >
             <Pencil size={14} />
           </button>
@@ -157,8 +158,8 @@ function KitabCard({
               onDelete()
             }}
             className="rounded p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-            title="Hapus kitab"
-            aria-label="Hapus kitab"
+            title={t('pustaka.hadits.deleteKitab')}
+            aria-label={t('pustaka.hadits.deleteKitab')}
           >
             <Trash2 size={14} />
           </button>
@@ -177,6 +178,7 @@ function KitabFormDialog({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const isEdit = !!kitab
   const [form, setForm] = useState<KitabInput>({
     slug: kitab?.slug ?? '',
@@ -192,19 +194,19 @@ function KitabFormDialog({
   const saveMut = useMutation({
     mutationFn: () => (isEdit ? updateKitab(kitab!.slug, form) : createKitab(form)),
     onSuccess: onSaved,
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : 'Gagal menyimpan'),
+    onError: (err: unknown) => setError(err instanceof Error ? err.message : t('pustaka.hadits.saveFailed')),
   })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-          <h2 className="text-base font-semibold">{isEdit ? 'Edit kitab' : 'Tambah kitab'}</h2>
+          <h2 className="text-base font-semibold">{isEdit ? t('pustaka.hadits.dialogEdit') : t('pustaka.hadits.dialogAdd')}</h2>
           <button
             type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-700"
-            aria-label="Tutup"
+            aria-label={t('pustaka.hadits.close')}
           >
             ×
           </button>
@@ -217,21 +219,21 @@ function KitabFormDialog({
           }}
           className="space-y-3 px-5 py-4"
         >
-          <Field label="Nama kitab" required>
+          <Field label={t('pustaka.hadits.fldNama')} required>
             <Input
               required
               value={form.nama}
               onChange={(e) => setForm((f) => ({ ...f, nama: e.target.value }))}
             />
           </Field>
-          <Field label="Slug" hint="kosongkan untuk auto dari nama">
+          <Field label={t('pustaka.hadits.fldSlug')} hint={t('pustaka.hadits.fldSlugHint')}>
             <Input
               value={form.slug}
               onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
               disabled={isEdit}
             />
           </Field>
-          <Field label="Nama Arab">
+          <Field label={t('pustaka.hadits.fldNamaArab')}>
             <Input
               dir="rtl"
               className="font-arab text-right"
@@ -239,13 +241,13 @@ function KitabFormDialog({
               onChange={(e) => setForm((f) => ({ ...f, namaArab: e.target.value }))}
             />
           </Field>
-          <Field label="Perawi">
+          <Field label={t('pustaka.hadits.fldPerawi')}>
             <Input
               value={form.perawi ?? ''}
               onChange={(e) => setForm((f) => ({ ...f, perawi: e.target.value }))}
             />
           </Field>
-          <Field label="Deskripsi">
+          <Field label={t('pustaka.hadits.fldDeskripsi')}>
             <textarea
               rows={3}
               className={fieldCx}
@@ -254,7 +256,7 @@ function KitabFormDialog({
             />
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Field label="Urutan">
+            <Field label={t('pustaka.hadits.fldUrutan')}>
               <Input
                 type="number"
                 value={form.urutan}
@@ -263,7 +265,7 @@ function KitabFormDialog({
                 }
               />
             </Field>
-            <Field label="Jumlah halaman">
+            <Field label={t('pustaka.hadits.fldJumlahHalaman')}>
               <Input
                 type="number"
                 min={0}
@@ -274,7 +276,7 @@ function KitabFormDialog({
                 }
               />
             </Field>
-            <Field label="Scope">
+            <Field label={t('pustaka.hadits.fldScope')}>
               <select
                 className={fieldCx + ' h-10'}
                 value={form.scope}
@@ -282,9 +284,9 @@ function KitabFormDialog({
                   setForm((f) => ({ ...f, scope: e.target.value as KitabInput['scope'] }))
                 }
               >
-                <option value="hadits">Hadits</option>
-                <option value="maktabah">Maktabah</option>
-                <option value="both">Keduanya</option>
+                <option value="hadits">{t('pustaka.hadits.scopeHadits')}</option>
+                <option value="maktabah">{t('pustaka.hadits.scopeMaktabah')}</option>
+                <option value="both">{t('pustaka.hadits.scopeBoth')}</option>
               </select>
             </Field>
           </div>
@@ -297,10 +299,10 @@ function KitabFormDialog({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Batal
+              {t('common.cancel')}
             </Button>
             <Button type="submit" size="sm" disabled={saveMut.isPending}>
-              {saveMut.isPending ? 'Menyimpan…' : isEdit ? 'Simpan' : 'Buat kitab'}
+              {saveMut.isPending ? t('pustaka.hadits.btnSaving') : isEdit ? t('common.save') : t('pustaka.hadits.btnCreate')}
             </Button>
           </div>
         </form>

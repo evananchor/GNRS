@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Grid3x3, List, Plus, Search, User as UserIcon } from 'lucide-react'
 
 import {
@@ -34,6 +35,7 @@ type DialogMode = { kind: 'create' } | { kind: 'edit'; id: string } | null
 
 export function StudentsPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [params] = useSearchParams()
   const q = params.get('q') ?? ''
   const statusParam = params.get('status')
@@ -83,25 +85,25 @@ export function StudentsPage() {
   const createMut = useMutation({
     mutationFn: (input: StudentInput) => createStudent(input),
     onSuccess: (s) => {
-      toast('Generus ditambahkan', 'success')
+      toast(t('students.added'), 'success')
       invalidate()
       setDialog({ kind: 'edit', id: s.id })
     },
-    onError: (e) => toast(apiMsg(e, 'Gagal menambah generus'), 'error'),
+    onError: (e) => toast(apiMsg(e, t('students.addFailed')), 'error'),
   })
 
   const updateMut = useMutation({
     mutationFn: ({ id, input }: { id: string; input: StudentInput }) => updateStudent(id, input),
     onSuccess: () => {
-      toast('Generus diperbarui', 'success')
+      toast(t('students.updated'), 'success')
       invalidate()
       setDialog(null)
     },
-    onError: (e) => toast(apiMsg(e, 'Gagal memperbarui generus'), 'error'),
+    onError: (e) => toast(apiMsg(e, t('students.updateFailed')), 'error'),
   })
 
   const handleDelete = (s: Student) => {
-    if (confirm(`Hapus ${s.name}? Tindakan ini tidak dapat dibatalkan.`)) {
+    if (confirm(t('common.deleteConfirm', { name: s.name }))) {
       deleteMutation.mutate(s.id)
     }
   }
@@ -120,7 +122,7 @@ export function StudentsPage() {
 
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h1 className="text-2xl font-semibold">Generus</h1>
+      <h1 className="text-2xl font-semibold">{t('students.title')}</h1>
       <div className="flex items-center gap-2 self-start sm:self-auto">
         <div className="inline-flex rounded-md border border-slate-300 bg-white shadow-sm">
           <button
@@ -132,10 +134,10 @@ export function StudentsPage() {
                 ? 'bg-slate-900 text-white'
                 : 'text-slate-700 hover:bg-slate-50')
             }
-            aria-label="Thumbnail"
-            title="Thumbnail"
+            aria-label={t('students.viewThumb')}
+            title={t('students.viewThumb')}
           >
-            <Grid3x3 size={14} /> Thumbnail
+            <Grid3x3 size={14} /> {t('students.viewThumb')}
           </button>
           <button
             type="button"
@@ -146,16 +148,16 @@ export function StudentsPage() {
                 ? 'bg-slate-900 text-white'
                 : 'text-slate-700 hover:bg-slate-50')
             }
-            aria-label="Daftar"
-            title="Daftar"
+            aria-label={t('students.viewList')}
+            title={t('students.viewList')}
           >
-            <List size={14} /> Daftar
+            <List size={14} /> {t('students.viewList')}
           </button>
         </div>
         {isAdmin ? (
           <Button onClick={() => setDialog({ kind: 'create' })}>
             <Plus size={16} className="mr-1" />
-            Tambah Generus
+            {t('students.add')}
           </Button>
         ) : null}
       </div>
@@ -183,23 +185,23 @@ export function StudentsPage() {
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
-          <Input name="q" defaultValue={q} placeholder="Cari nama atau panggilan" className="pl-9" />
+          <Input name="q" defaultValue={q} placeholder={t('students.searchPh')} className="pl-9" />
         </div>
         <select
           name="status"
           defaultValue={status ?? ''}
           className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
         >
-          <option value="">Semua status</option>
-          <option value="active">Aktif</option>
-          <option value="left">Keluar</option>
+          <option value="">{t('students.allStatus')}</option>
+          <option value="active">{t('students.statusActive')}</option>
+          <option value="left">{t('students.statusLeft')}</option>
         </select>
         <select
           name="kelompok"
           defaultValue={kelompok ?? ''}
           className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
         >
-          <option value="">Semua kelompok</option>
+          <option value="">{t('students.allKelompok')}</option>
           {STUDENT_KELOMPOKS.map((k) => (
             <option key={k} value={k}>
               {k}
@@ -207,7 +209,7 @@ export function StudentsPage() {
           ))}
         </select>
         <Button type="submit" variant="secondary" size="md">
-          Terapkan
+          {t('common.apply')}
         </Button>
       </form>
 
@@ -215,7 +217,7 @@ export function StudentsPage() {
         <div>
           {isPending ? (
             <div className="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
-              Memuat…
+              {t('common.loading')}
             </div>
           ) : data && data.items.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -232,7 +234,7 @@ export function StudentsPage() {
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
-              Belum ada data Generus.
+              {t('students.empty')}
             </div>
           )}
         </div>
@@ -242,21 +244,21 @@ export function StudentsPage() {
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-2 w-12"></th>
-              <th className="px-4 py-2">Nama</th>
-              <th className="hidden px-4 py-2 sm:table-cell">Panggilan</th>
-              <th className="hidden px-4 py-2 sm:table-cell">L/P</th>
-              <th className="hidden px-4 py-2 sm:table-cell">Usia</th>
-              <th className="hidden px-4 py-2 md:table-cell">Jenjang</th>
-              <th className="hidden px-4 py-2 md:table-cell">Kelompok</th>
-              <th className="px-4 py-2">Status</th>
-              {isAdmin ? <th className="px-4 py-2 text-right">Aksi</th> : null}
+              <th className="px-4 py-2">{t('students.cols.name')}</th>
+              <th className="hidden px-4 py-2 sm:table-cell">{t('students.cols.nickname')}</th>
+              <th className="hidden px-4 py-2 sm:table-cell">{t('students.cols.gender')}</th>
+              <th className="hidden px-4 py-2 sm:table-cell">{t('students.cols.age')}</th>
+              <th className="hidden px-4 py-2 md:table-cell">{t('students.cols.level')}</th>
+              <th className="hidden px-4 py-2 md:table-cell">{t('students.cols.kelompok')}</th>
+              <th className="px-4 py-2">{t('students.cols.status')}</th>
+              {isAdmin ? <th className="px-4 py-2 text-right">{t('common.actions')}</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isPending ? (
               <tr>
                 <td colSpan={isAdmin ? 9 : 8} className="px-4 py-6 text-center text-slate-500">
-                  Memuat…
+                  {t('common.loading')}
                 </td>
               </tr>
             ) : data && data.items.length > 0 ? (
@@ -271,7 +273,9 @@ export function StudentsPage() {
                     </Link>
                   </td>
                   <td className="hidden px-4 py-2 sm:table-cell">{s.nickname ?? '—'}</td>
-                  <td className="hidden px-4 py-2 sm:table-cell">{s.gender === 'male' ? 'L' : 'P'}</td>
+                  <td className="hidden px-4 py-2 sm:table-cell">
+                    {s.gender === 'male' ? t('dashboard.genderMaleShort') : t('dashboard.genderFemaleShort')}
+                  </td>
                   <td className="hidden px-4 py-2 sm:table-cell">
                     {(() => {
                       const age = ageInYears(s.dateOfBirth)
@@ -297,7 +301,7 @@ export function StudentsPage() {
             ) : (
               <tr>
                 <td colSpan={isAdmin ? 9 : 8} className="px-4 py-6 text-center text-slate-500">
-                  Belum ada data Generus.
+                  {t('students.empty')}
                 </td>
               </tr>
             )}
@@ -307,9 +311,7 @@ export function StudentsPage() {
       )}
 
       <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-        <span>
-          Halaman {page} dari {totalPages} · {total} total
-        </span>
+        <span>{t('common.pagination', { page, total: totalPages, count: total })}</span>
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -317,7 +319,7 @@ export function StudentsPage() {
             disabled={page <= 1}
             onClick={() => updateSearch({ q, status, kelompok, page: Math.max(1, page - 1) })}
           >
-            Sebelumnya
+            {t('common.previous')}
           </Button>
           <Button
             variant="secondary"
@@ -325,15 +327,15 @@ export function StudentsPage() {
             disabled={page >= totalPages}
             onClick={() => updateSearch({ q, status, kelompok, page: Math.min(totalPages, page + 1) })}
           >
-            Berikutnya
+            {t('common.next')}
           </Button>
         </div>
       </div>
 
       {dialog?.kind === 'create' ? (
-        <Dialog title="Tambah Generus" onClose={() => setDialog(null)} size="lg">
+        <Dialog title={t('students.add')} onClose={() => setDialog(null)} size="lg">
           <StudentForm
-            submitLabel={createMut.isPending ? 'Menyimpan…' : 'Simpan'}
+            submitLabel={createMut.isPending ? t('common.saving') : t('common.save')}
             pending={createMut.isPending}
             error={createMut.error}
             onSubmit={(input) => createMut.mutate(input)}
@@ -372,6 +374,7 @@ function StudentEditDialog({
   onClose: () => void
   onPhotoChanged: () => void
 }) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const { data, isPending } = useQuery({
     queryKey: ['students', 'detail', id],
@@ -379,9 +382,13 @@ function StudentEditDialog({
   })
 
   return (
-    <Dialog title={`Ubah Generus${data ? ` — ${data.name}` : ''}`} onClose={onClose} size="lg">
+    <Dialog
+      title={data ? t('students.editWithName', { name: data.name }) : t('students.edit')}
+      onClose={onClose}
+      size="lg"
+    >
       {isPending ? (
-        <div className="py-6 text-center text-slate-500">Memuat…</div>
+        <div className="py-6 text-center text-slate-500">{t('common.loading')}</div>
       ) : data ? (
         <div className="space-y-4">
           <PhotoUploader
@@ -394,7 +401,7 @@ function StudentEditDialog({
           />
           <StudentForm
             initial={data}
-            submitLabel={pending ? 'Menyimpan…' : 'Simpan'}
+            submitLabel={pending ? t('common.saving') : t('common.save')}
             pending={pending}
             error={error}
             onSubmit={onSubmit}
@@ -402,7 +409,7 @@ function StudentEditDialog({
           />
         </div>
       ) : (
-        <div className="py-6 text-center text-red-600">Data tidak ditemukan</div>
+        <div className="py-6 text-center text-red-600">{t('common.dataNotFound')}</div>
       )}
     </Dialog>
   )
@@ -438,6 +445,7 @@ function StudentThumb({
   onDelete: () => void
   deleting: boolean
 }) {
+  const { t } = useTranslation()
   const age = ageInYears(s.dateOfBirth)
   return (
     <div className="group relative flex flex-col rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-md">
@@ -452,7 +460,7 @@ function StudentThumb({
         <div className="line-clamp-2 text-sm font-semibold text-slate-900">{s.name}</div>
         <div className="mt-0.5 text-xs text-slate-500">
           {s.nickname ? s.nickname + ' · ' : ''}
-          {age !== null ? `${age}th` : '—'}
+          {age !== null ? t('students.ageShort', { count: age }) : '—'}
         </div>
         <div className="mt-1 flex flex-wrap items-center justify-center gap-1 text-[10px] text-slate-500">
           {s.kelompok ? (
@@ -476,16 +484,17 @@ function StudentThumb({
 }
 
 function StatusPill({ status }: { status: 'active' | 'left' }) {
+  const { t } = useTranslation()
   if (status === 'active') {
     return (
       <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
-        Aktif
+        {t('students.statusActive')}
       </span>
     )
   }
   return (
     <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">
-      Keluar
+      {t('students.statusLeft')}
     </span>
   )
 }

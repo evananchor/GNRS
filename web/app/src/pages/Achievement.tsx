@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, ChevronRight, Minus, Search, X } from 'lucide-react'
 
 import {
@@ -51,23 +52,24 @@ const TEMA_COLOR: Record<string, string> = {
 const STATUS_CYCLE: PencapaianStatus[] = ['belum', 'proses', 'tuntas']
 
 export function AchievementPage() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<'kurikulum' | 'library'>('kurikulum')
   return (
     <PageShell
       header={
         <PageHeader
-          eyebrow="Pencapaian"
-          title="Tracker pencapaian murid"
-          subtitle="Pilih tab untuk melihat kurikulum atau library tracker."
+          eyebrow={t('achievement.eyebrow')}
+          title={t('achievement.title')}
+          subtitle={t('achievement.subtitle')}
         />
       }
     >
       <div className="mb-4 flex border-b border-slate-200">
         <TabButton active={tab === 'kurikulum'} onClick={() => setTab('kurikulum')}>
-          Kurikulum
+          {t('achievement.tabKurikulum')}
         </TabButton>
         <TabButton active={tab === 'library'} onClick={() => setTab('library')}>
-          Library
+          {t('achievement.tabLibrary')}
         </TabButton>
       </div>
       {tab === 'kurikulum' ? <KurikulumTab /> : <LibraryTab />}
@@ -101,6 +103,7 @@ function TabButton({
 }
 
 function KurikulumTab() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const isMurid = user?.role === 'murid'
   const canEdit = user?.role === 'admin' || user?.role === 'pengurus' || user?.role === 'guru'
@@ -134,21 +137,21 @@ function KurikulumTab() {
   const umurSemOptions = useMemo(() => {
     type Opt = { key: string; umur: number; sem: 1 | 2; label: string; tingkat: string }
     const opts: Opt[] = []
-    for (const t of tingkatList) {
-      if (typeof t.umur !== 'number') continue
+    for (const ting of tingkatList) {
+      if (typeof ting.umur !== 'number') continue
       for (const sem of [1, 2] as const) {
         opts.push({
-          key: `${t.umur}-${sem}`,
-          umur: t.umur,
+          key: `${ting.umur}-${sem}`,
+          umur: ting.umur,
           sem,
-          tingkat: t.nama,
-          label: `${t.umur} th · Sem ${sem} · ${t.nama}`,
+          tingkat: ting.nama,
+          label: t('achievement.umurSemLabel', { umur: ting.umur, sem, tingkat: ting.nama }),
         })
       }
     }
     opts.sort((a, b) => (a.umur - b.umur) || (a.sem - b.sem) || a.tingkat.localeCompare(b.tingkat))
     return opts
-  }, [tingkatList])
+  }, [tingkatList, t])
 
   // Parse the (umur, sem) tuple from a key string.
   const parseKey = (k: string): { umur: number; sem: 1 | 2 } | null => {
@@ -223,7 +226,7 @@ function KurikulumTab() {
         {/* Filter card */}
         <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
           <div className="space-y-3">
-            <Field label="Murid" htmlFor="p-murid">
+            <Field label={t('achievement.muridLabel')} htmlFor="p-murid">
               {isMurid ? (
                 <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm">
                   {user?.name}
@@ -241,7 +244,7 @@ function KurikulumTab() {
                 "Umur sampai" with the same key. User can broaden the range
                 by changing "Umur sampai" independently. */}
             <div className="grid grid-cols-2 gap-2">
-              <Field label="Umur dari" htmlFor="p-from-key">
+              <Field label={t('achievement.fromLabel')} htmlFor="p-from-key">
                 <UmurSemCombo
                   id="p-from-key"
                   options={umurSemOptions}
@@ -259,16 +262,16 @@ function KurikulumTab() {
                       }
                     }
                   }}
-                  placeholder="cth: 5 th · Sem 1"
+                  placeholder={t('achievement.fromPh')}
                 />
               </Field>
-              <Field label="Umur sampai" htmlFor="p-to-key">
+              <Field label={t('achievement.toLabel')} htmlFor="p-to-key">
                 <UmurSemCombo
                   id="p-to-key"
                   options={umurSemOptions}
                   value={toKey}
                   onChange={setToKey}
-                  placeholder={fromKey || 'sama dengan dari'}
+                  placeholder={fromKey || t('achievement.toPh')}
                 />
               </Field>
             </div>
@@ -277,15 +280,15 @@ function KurikulumTab() {
 
         {!muridUserId ? (
           <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
-            Pilih murid untuk melihat pencapaian.
+            {t('achievement.pickMuridFirst')}
           </div>
         ) : isPending ? (
           <div className="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
-            Memuat pencapaian…
+            {t('achievement.loading')}
           </div>
         ) : rows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
-            Belum ada materi pada filter ini.
+            {t('achievement.emptyFilter')}
           </div>
         ) : (
           <PencapaianTree rows={rows} canEdit={canEdit} muridUserId={muridUserId} />
@@ -305,6 +308,7 @@ function MuridPicker({
   value: string
   onChange: (v: string) => void
 }) {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const picked = students.find((s) => s.id === value)
   const filtered = useMemo(() => {
@@ -332,7 +336,7 @@ function MuridPicker({
             setSearch(e.target.value)
             if (!open) setOpen(true)
           }}
-          placeholder="Cari murid…"
+          placeholder={t('achievement.muridSearchPh')}
           className="pl-8 pr-8"
         />
         {picked ? (
@@ -344,7 +348,7 @@ function MuridPicker({
               setOpen(false)
             }}
             className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Hapus pilihan murid"
+            aria-label={t('achievement.muridRemoveAria')}
           >
             <X size={12} />
           </button>
@@ -356,7 +360,7 @@ function MuridPicker({
           onMouseLeave={() => setOpen(false)}
         >
           {filtered.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-slate-500">Tidak ada murid yang cocok.</p>
+            <p className="px-3 py-2 text-xs text-slate-500">{t('achievement.noMuridMatch')}</p>
           ) : (
             filtered.map((s) => (
               <button
@@ -400,10 +404,13 @@ function UmurSemCombo({
   onChange: (v: string) => void
   placeholder?: string
 }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const picked = options.find((o) => o.key === value)
-  const display = picked ? `${picked.umur} th · Sem ${picked.sem}` : ''
+  const display = picked
+    ? `${picked.umur} ${t('achievement.umurUnit')} · ${t('achievement.semUnit', { n: picked.sem })}`
+    : ''
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return options
@@ -444,7 +451,7 @@ function UmurSemCombo({
               setOpen(false)
             }}
             className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Hapus"
+            aria-label={t('achievement.umurClearAria')}
           >
             <X size={12} />
           </button>
@@ -456,7 +463,7 @@ function UmurSemCombo({
           onMouseLeave={() => setOpen(false)}
         >
           {filtered.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-slate-500">Tidak ditemukan.</p>
+            <p className="px-3 py-2 text-xs text-slate-500">{t('achievement.notFound')}</p>
           ) : (
             filtered.map((o) => (
               <button
@@ -472,8 +479,8 @@ function UmurSemCombo({
                   (o.key === value ? 'bg-sky-50' : 'hover:bg-slate-50')
                 }
               >
-                <span className="font-medium tabular-nums">{o.umur} th</span>
-                <span className="text-xs text-slate-500">Sem {o.sem}</span>
+                <span className="font-medium tabular-nums">{o.umur} {t('achievement.umurUnit')}</span>
+                <span className="text-xs text-slate-500">{t('achievement.semUnit', { n: o.sem })}</span>
                 <span className="ml-auto text-[10px] text-slate-500">{o.tingkat}</span>
               </button>
             ))
@@ -506,6 +513,7 @@ function PencapaianTree({
   canEdit: boolean
   muridUserId: string
 }) {
+  const { t } = useTranslation()
   const grouped = useMemo(() => groupRows(rows), [rows])
 
   const [openTemas, setOpenTemas] = useState<Set<string>>(new Set())
@@ -521,7 +529,7 @@ function PencapaianTree({
     <div className="space-y-3">
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-          Progress keseluruhan
+          {t('achievement.progressOverall')}
         </div>
         <ProgressRow stats={overall} />
       </div>
@@ -694,6 +702,7 @@ function stats(rows: PencapaianRow[]): Stats {
 }
 
 function MiniBar({ stats: s }: { stats: Stats }) {
+  const { t } = useTranslation()
   if (s.total === 0) {
     return <div className="h-2 w-full rounded-full bg-slate-100" />
   }
@@ -702,7 +711,7 @@ function MiniBar({ stats: s }: { stats: Stats }) {
   return (
     <div
       className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100"
-      title={`${s.tuntas}/${s.total} tuntas, ${s.proses} proses`}
+      title={t('achievement.miniBarTitle', { tuntas: s.tuntas, total: s.total, proses: s.proses })}
     >
       <div className="bg-emerald-500" style={{ width: `${tuntasPct}%` }} />
       <div className="bg-amber-400" style={{ width: `${prosesPct}%` }} />
@@ -711,19 +720,20 @@ function MiniBar({ stats: s }: { stats: Stats }) {
 }
 
 function ProgressRow({ stats: s }: { stats: Stats }) {
+  const { t } = useTranslation()
   return (
     <div className="mt-1">
       <div className="text-2xl font-semibold text-emerald-900">
         {s.tuntas}{' '}
         <span className="text-base font-normal text-emerald-700">
-          / {s.total} tuntas · {s.pct}%
+          {t('achievement.tuntasOf', { total: s.total, pct: s.pct })}
         </span>
       </div>
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-emerald-200">
         <div className="h-full bg-emerald-600" style={{ width: `${s.pct}%` }} />
       </div>
       {s.proses > 0 ? (
-        <div className="mt-1 text-xs text-amber-700">{s.proses} dalam proses</div>
+        <div className="mt-1 text-xs text-amber-700">{t('achievement.prosesCount', { count: s.proses })}</div>
       ) : null}
     </div>
   )
@@ -740,6 +750,7 @@ function MateriRow({
   canEdit: boolean
   muridUserId: string
 }) {
+  const { t } = useTranslation()
   const m: MateriAjar = row.materi
   const status: PencapaianStatus = row.pencapaian?.status ?? 'belum'
   const toast = useToast()
@@ -755,7 +766,7 @@ function MateriRow({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pencapaian', muridUserId] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal simpan', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('achievement.saveFailed'), 'error'),
   })
 
   const cycle = () => {
@@ -780,8 +791,8 @@ function MateriRow({
             canEdit && 'hover:border-emerald-400',
             !canEdit && 'cursor-default opacity-70',
           )}
-          aria-label={`Status: ${status}`}
-          title={`Status: ${status} — klik untuk ubah`}
+          aria-label={t('achievement.statusLabel', { status })}
+          title={t('achievement.statusLabelTitle', { status })}
         >
           {status === 'tuntas' ? (
             <Check size={14} />
@@ -791,8 +802,8 @@ function MateriRow({
         </button>
         <div className="min-w-0 flex-1">
           <div className="text-[10px] text-slate-500">
-            Sem {m.semester} · {m.kodeMateri}
-            {row.umur != null ? ` · ${row.umur} th` : ''}
+            {t('achievement.rowSemKode', { sem: m.semester, kode: m.kodeMateri })}
+            {row.umur != null ? t('achievement.rowUmur', { umur: row.umur }) : ''}
           </div>
           <div className={status === 'tuntas' ? 'font-medium text-slate-900' : 'text-slate-800'}>
             {m.detailMateri}
@@ -811,6 +822,7 @@ function MateriRow({
 type RangePreset = '1m' | '3m' | 's1' | 's2' | '1y'
 
 function LibraryTab() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const isMurid = user?.role === 'murid'
   const [muridUserId, setMuridUserId] = useState<string>(isMurid ? user!.id : '')
@@ -852,7 +864,7 @@ function LibraryTab() {
     <div className="space-y-4">
       <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
         <div className="space-y-3">
-          <Field label="Murid" htmlFor="lib-murid">
+          <Field label={t('achievement.muridLabel')} htmlFor="lib-murid">
             {isMurid ? (
               <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm">
                 {user?.name}
@@ -866,7 +878,7 @@ function LibraryTab() {
             )}
           </Field>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Field label="Dari" htmlFor="lib-from">
+            <Field label={t('achievement.libFromLabel')} htmlFor="lib-from">
               <Input
                 id="lib-from"
                 type="date"
@@ -875,7 +887,7 @@ function LibraryTab() {
                 onChange={(e) => setFromDate(e.target.value)}
               />
             </Field>
-            <Field label="Sampai" htmlFor="lib-to">
+            <Field label={t('achievement.libToLabel')} htmlFor="lib-to">
               <Input
                 id="lib-to"
                 type="date"
@@ -887,11 +899,11 @@ function LibraryTab() {
           </div>
           <div className="flex flex-wrap gap-1.5">
             {([
-              ['1m', '1 bulan'],
-              ['3m', '3 bulan'],
-              ['s1', 'Sem 1'],
-              ['s2', 'Sem 2'],
-              ['1y', '1 tahun'],
+              ['1m', t('achievement.preset1m')],
+              ['3m', t('achievement.preset3m')],
+              ['s1', t('achievement.presetS1')],
+              ['s2', t('achievement.presetS2')],
+              ['1y', t('achievement.preset1y')],
             ] as [RangePreset, string][]).map(([p, lbl]) => (
               <button
                 key={p}
@@ -908,7 +920,7 @@ function LibraryTab() {
 
       {!muridUserId ? (
         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
-          Pilih murid untuk melihat library tracker.
+          {t('achievement.libPickMurid')}
         </div>
       ) : (
         <LibraryTrackerGrid muridUserId={muridUserId} fromDate={fromDate} toDate={toDate} />
@@ -985,6 +997,7 @@ function LibraryTrackerGrid({
   fromDate: string
   toDate: string
 }) {
+  const { t, i18n } = useTranslation()
   // Pull all bacaan_log rows for the murid in the date range. From this we
   // derive Quran reciting/manqul/hafalan via source/aspect proxy.
   useQuery({
@@ -1115,17 +1128,17 @@ function LibraryTrackerGrid({
     unit: string
   }
   const ASPECT_LABEL_ID: Record<string, string> = {
-    reciting: 'Bacaan',
-    memorizing: 'Hafalan',
-    review: 'Mengulang',
-    manqul: 'Manqul',
-    '': 'Lainnya',
+    reciting: t('achievement.aspectReciting'),
+    memorizing: t('achievement.aspectMemorizing'),
+    review: t('achievement.aspectReview'),
+    manqul: t('achievement.aspectManqul'),
+    '': t('achievement.aspectOther'),
   }
   const KIND_LABEL_ID: Record<MainTile['kind'], string> = {
-    quran: "Al-Qur'an",
-    hadits: 'Hadits',
-    tilawati: 'Tilawati',
-    doa: 'Doa-doa',
+    quran: t('achievement.kindQuran'),
+    hadits: t('achievement.kindHadits'),
+    tilawati: t('achievement.kindTilawati'),
+    doa: t('achievement.kindDoa'),
   }
   const KIND_ICON: Record<MainTile['kind'], string> = {
     quran: '📖',
@@ -1154,7 +1167,7 @@ function LibraryTrackerGrid({
         icon: KIND_ICON.quran,
         done: covered,
         total: QURAN_TOTAL_AYAT,
-        unit: 'ayat',
+        unit: t('achievement.unitAyat'),
       })
     }
     // HADITS per aspect
@@ -1175,7 +1188,7 @@ function LibraryTrackerGrid({
         icon: KIND_ICON.hadits,
         done: Math.min(halaman, haditsTotalPages),
         total: haditsTotalPages,
-        unit: 'halaman',
+        unit: t('achievement.unitHalaman'),
       })
     }
     // TILAWATI per aspect
@@ -1189,7 +1202,7 @@ function LibraryTrackerGrid({
         icon: KIND_ICON.tilawati,
         done: Math.min(pages, TILAWATI_TOTAL_PAGES),
         total: TILAWATI_TOTAL_PAGES,
-        unit: 'halaman',
+        unit: t('achievement.unitHalaman'),
       })
     }
     // DOA per aspect
@@ -1201,7 +1214,7 @@ function LibraryTrackerGrid({
         icon: KIND_ICON.doa,
         done: set.size,
         total: doaList.length || set.size || 1,
-        unit: 'doa',
+        unit: t('achievement.unitDoa'),
       })
     }
     return out.sort((a, b) =>
@@ -1232,7 +1245,7 @@ function LibraryTrackerGrid({
       const out: ItemTile[] = []
       for (const [surah, b] of byAspect) {
         const total = surahById[surah]?.jumlahAyat ?? 0
-        const nama = surahById[surah]?.nama ?? `Surat ${surah}`
+        const nama = surahById[surah]?.nama ?? `${t('pustaka.refLabel.surahFallback')} ${surah}`
         out.push({
           key: `quran-${surah}`,
           label: `${surah}. ${nama}`,
@@ -1270,7 +1283,7 @@ function LibraryTrackerGrid({
         const total = TILAWATI_PAGES_BY_JILID[jilid] ?? 46
         out.push({
           key: `tilawati-${jilid}`,
-          label: `Jilid ${jilid}`,
+          label: `${t('pustaka.refLabel.jilid')} ${jilid}`,
           done: b.covered.size,
           total,
           sortBy: Number(jilid) || 99,
@@ -1314,8 +1327,7 @@ function LibraryTrackerGrid({
   if (mainTiles.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
-        Belum ada pencapaian library untuk murid ini. Setiap sesi yang
-        diakhiri otomatis menambahkan progress di sini.
+        {t('achievement.libEmpty')}
       </div>
     )
   }
@@ -1325,25 +1337,25 @@ function LibraryTrackerGrid({
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-900">
-            Pencapaian Library — Per Aspek
+            {t('achievement.libHeading')}
           </h3>
           <p className="text-[11px] text-slate-500">
-            Klik salah satu pie untuk lihat rincian per item + riwayat sesi.
+            {t('achievement.libHint')}
           </p>
         </div>
         <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
-          {mainTiles.map((t) => {
+          {mainTiles.map((tile) => {
             const selected =
-              pickedTile?.kind === t.kind && pickedTile?.aspect === t.aspect
+              pickedTile?.kind === tile.kind && pickedTile?.aspect === tile.aspect
             return (
               <button
-                key={`${t.kind}-${t.aspect}`}
+                key={`${tile.kind}-${tile.aspect}`}
                 type="button"
                 onClick={() =>
                   setPickedTile((cur) =>
-                    cur && cur.kind === t.kind && cur.aspect === t.aspect
+                    cur && cur.kind === tile.kind && cur.aspect === tile.aspect
                       ? null
-                      : { kind: t.kind, aspect: t.aspect },
+                      : { kind: tile.kind, aspect: tile.aspect },
                   )
                 }
                 className={cn(
@@ -1354,15 +1366,15 @@ function LibraryTrackerGrid({
                 )}
               >
                 <DonutChart
-                  pct={t.total > 0 ? Math.min(100, Math.round((t.done / t.total) * 100)) : 0}
-                  centerLabel={`${t.total > 0 ? Math.min(100, Math.round((t.done / t.total) * 100)) : 0}%`}
+                  pct={tile.total > 0 ? Math.min(100, Math.round((tile.done / tile.total) * 100)) : 0}
+                  centerLabel={`${tile.total > 0 ? Math.min(100, Math.round((tile.done / tile.total) * 100)) : 0}%`}
                 />
                 <div className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-slate-800">
-                  <span className="text-sm">{t.icon}</span>
-                  <span className="line-clamp-2">{t.label}</span>
+                  <span className="text-sm">{tile.icon}</span>
+                  <span className="line-clamp-2">{tile.label}</span>
                 </div>
                 <div className="text-[10px] text-slate-500">
-                  {t.done.toLocaleString('id-ID')} / {t.total.toLocaleString('id-ID')} {t.unit}
+                  {tile.done.toLocaleString(i18n.language === 'en' ? 'en-US' : 'id-ID')} / {tile.total.toLocaleString(i18n.language === 'en' ? 'en-US' : 'id-ID')} {tile.unit}
                 </div>
               </button>
             )
@@ -1372,22 +1384,22 @@ function LibraryTrackerGrid({
         {pickedTile && itemTiles.length > 0 ? (
           <div className="mt-4 border-t border-slate-200 pt-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Per Item ({itemTiles.length})
+              {t('achievement.libPerItem', { count: itemTiles.length })}
             </div>
             <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
-              {itemTiles.map((t) => {
-                const pct = t.total > 0 ? Math.min(100, Math.round((t.done / t.total) * 100)) : 0
+              {itemTiles.map((tile) => {
+                const pct = tile.total > 0 ? Math.min(100, Math.round((tile.done / tile.total) * 100)) : 0
                 return (
                   <div
-                    key={t.key}
+                    key={tile.key}
                     className="flex w-28 flex-shrink-0 flex-col items-center rounded-lg border border-slate-200 bg-white p-2 text-center"
                   >
                     <DonutChart pct={pct} centerLabel={`${pct}%`} />
                     <div className="mt-1 line-clamp-2 text-[11px] font-medium text-slate-800">
-                      {t.label}
+                      {tile.label}
                     </div>
                     <div className="text-[10px] text-slate-500">
-                      {t.done}/{t.total}
+                      {tile.done}/{tile.total}
                     </div>
                   </div>
                 )
@@ -1401,16 +1413,19 @@ function LibraryTrackerGrid({
         <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-lg border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur">
             <h3 className="text-sm font-semibold text-slate-900">
-              Riwayat Sesi — {KIND_LABEL_ID[pickedTile.kind]} · {ASPECT_LABEL_ID[pickedTile.aspect] ?? 'Lainnya'}
+              {t('achievement.libRiwayatHeading', {
+                kind: KIND_LABEL_ID[pickedTile.kind],
+                aspect: ASPECT_LABEL_ID[pickedTile.aspect] ?? t('achievement.aspectOther'),
+              })}
               <span className="ml-2 text-xs font-normal text-slate-500">
-                {riwayat.length} entri
+                {t('achievement.libRiwayatEntries', { count: riwayat.length })}
               </span>
             </h3>
             <button
               type="button"
               onClick={() => setPickedTile(null)}
               className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-              aria-label="Tutup"
+              aria-label={t('achievement.libCloseAria')}
             >
               <X size={16} />
             </button>
@@ -1418,7 +1433,7 @@ function LibraryTrackerGrid({
           <div className="max-h-[60vh] overflow-y-auto px-4 py-2">
             {riwayat.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-500">
-                Belum ada riwayat untuk aspek ini.
+                {t('achievement.libRiwayatEmpty')}
               </p>
             ) : (
               <ul className="divide-y divide-slate-100 text-sm">

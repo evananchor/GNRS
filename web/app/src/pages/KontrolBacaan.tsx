@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Plus, Trash2 } from 'lucide-react'
 
 import {
@@ -42,6 +43,7 @@ function localDate(d: Date) {
 }
 
 export function KontrolBacaanPage() {
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [picked, setPicked] = useState<BacaanSummary | null>(null)
   const [creating, setCreating] = useState(false)
@@ -54,6 +56,7 @@ export function KontrolBacaanPage() {
 
   const totalAyat = summary?.totalQuranAyat ?? 6236
   const items = summary?.items ?? []
+  const numLocale = i18n.language === 'en' ? 'en-US' : 'id-ID'
 
   const myEntry = items.find((x) => x.userId === user?.id) ?? null
 
@@ -68,12 +71,12 @@ export function KontrolBacaanPage() {
     <PageShell
       header={
         <PageHeader
-          eyebrow="Kontrol Bacaan"
-          title="Tracker bacaan Al-Qur'an"
-          subtitle={`Progress dihitung dari total ${totalAyat.toLocaleString('id-ID')} ayat di seluruh Al-Qur'an.`}
+          eyebrow={t('bacaan.eyebrow')}
+          title={t('bacaan.title')}
+          subtitle={t('bacaan.subtitle', { count: totalAyat, countFmt: totalAyat.toLocaleString(numLocale) })}
           actions={
             <Button size="sm" onClick={() => setCreating(true)}>
-              <Plus size={14} className="mr-1" /> Catat Bacaan
+              <Plus size={14} className="mr-1" /> {t('bacaan.catatBacaan')}
             </Button>
           }
         />
@@ -91,11 +94,11 @@ export function KontrolBacaanPage() {
 
         <div>
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Daftar progress ({items.length})
+            {t('bacaan.daftarProgress', { count: items.length })}
           </div>
           {items.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
-              Belum ada data bacaan.
+              {t('bacaan.emptyBacaan')}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -154,6 +157,8 @@ function BacaanProgressPanel({
   surahs: QuranSurah[]
   highlight?: boolean
 }) {
+  const { t, i18n } = useTranslation()
+  const numLocale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   const allPct =
     totalAyat > 0 ? Math.min(100, Math.round((entry.totalAyat / totalAyat) * 100)) : 0
 
@@ -175,7 +180,7 @@ function BacaanProgressPanel({
       <div className="mb-3 flex items-center justify-between">
         <div className="text-lg font-semibold text-slate-900">{title}</div>
         <div className="text-xs text-slate-500">
-          {entry.sessions} catatan
+          {t('bacaan.sessionsCount', { count: entry.sessions })}
           {entry.lastRead ? ` · ${entry.lastRead}` : ''}
         </div>
       </div>
@@ -183,15 +188,15 @@ function BacaanProgressPanel({
       <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
         <DonutTile
           pct={allPct}
-          label="Total"
-          sub={`${entry.totalAyat.toLocaleString('id-ID')} / ${totalAyat.toLocaleString('id-ID')}`}
+          label={t('bacaan.donutTotal')}
+          sub={`${entry.totalAyat.toLocaleString(numLocale)} / ${totalAyat.toLocaleString(numLocale)}`}
         />
         {perSurah.map((sp) => (
           <SurahDonutTile key={sp.surah} sp={sp} surah={surahs.find((s) => s.id === sp.surah)} />
         ))}
         {perSurah.length === 0 ? (
           <div className="flex items-center px-3 text-xs text-slate-500">
-            Belum ada surat yang dimulai. Catat bacaan untuk mulai melihat progress per surat.
+            {t('bacaan.noSurahStarted')}
           </div>
         ) : null}
       </div>
@@ -202,12 +207,13 @@ function BacaanProgressPanel({
 // SurahDonutTile — pct per surah, capped at jumlahAyat. Shows surah name +
 // "X/Y" below the donut, "x%" inside.
 function SurahDonutTile({ sp, surah }: { sp: SurahProgress; surah: QuranSurah | undefined }) {
+  const { t } = useTranslation()
   const total = surah?.jumlahAyat ?? sp.ayatRead
   const pct = total > 0 ? Math.min(100, Math.round((sp.ayatRead / total) * 100)) : 0
   return (
     <DonutTile
       pct={pct}
-      label={surah ? `${surah.id}. ${surah.nama}` : `Surah ${sp.surah}`}
+      label={surah ? `${surah.id}. ${surah.nama}` : t('bacaan.surahFallback', { n: sp.surah })}
       sub={`${sp.ayatRead}/${total}`}
     />
   )
@@ -271,6 +277,8 @@ function UserBacaanTile({
   highlight: boolean
   onClick: () => void
 }) {
+  const { t, i18n } = useTranslation()
+  const numLocale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   const pct = totalAyat > 0 ? Math.min(100, Math.round((item.totalAyat / totalAyat) * 100)) : 0
   return (
     <button
@@ -309,7 +317,7 @@ function UserBacaanTile({
         <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
       </div>
       <div className="flex items-center justify-between text-[11px] text-slate-500">
-        <span>{item.totalAyat.toLocaleString('id-ID')} ayat</span>
+        <span>{item.totalAyat.toLocaleString(numLocale)} {t('bacaan.ayatUnit')}</span>
         <span>{item.lastRead ?? '—'}</span>
       </div>
     </button>
@@ -333,6 +341,7 @@ function UserBacaanDetail({
   canCreate: boolean
   onCreate: () => void
 }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
   const { data: logs = [] } = useQuery({
@@ -342,12 +351,12 @@ function UserBacaanDetail({
   const delMut = useMutation({
     mutationFn: deleteBacaan,
     onSuccess: () => {
-      toast('Log dihapus', 'success')
+      toast(t('bacaan.logDeleted'), 'success')
       qc.invalidateQueries({ queryKey: ['bacaan', u.userId] })
       qc.invalidateQueries({ queryKey: ['bacaan-summary'] })
       qc.invalidateQueries({ queryKey: ['bacaan-per-surah', u.userId] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal hapus', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('bacaan.deleteFailed'), 'error'),
   })
   return (
     <Dialog title={u.userName} onClose={onClose} size="lg">
@@ -357,61 +366,65 @@ function UserBacaanDetail({
         {canCreate ? (
           <div className="flex justify-end">
             <Button size="sm" onClick={onCreate}>
-              <Plus size={14} className="mr-1" /> Tambah catatan
+              <Plus size={14} className="mr-1" /> {t('bacaan.addCatatan')}
             </Button>
           </div>
         ) : null}
 
         <div>
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Riwayat catatan ({logs.length})
+            {t('bacaan.riwayatCatatan', { count: logs.length })}
           </div>
           {logs.length === 0 ? (
             <p className="rounded-md bg-slate-50 px-3 py-3 text-sm text-slate-500">
-              Belum ada catatan.
+              {t('bacaan.emptyCatatan')}
             </p>
           ) : (
             <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
-              {logs.map((l) => (
-                <li key={l.id} className="flex items-start gap-3 px-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
-                      Surah {l.surah} · ayat {l.ayatFrom}
-                      {l.ayatTo !== l.ayatFrom ? `–${l.ayatTo}` : ''}
-                      <span
-                        className={
-                          'rounded-full px-2 py-0.5 text-[10px] font-medium ' +
-                          (l.source === 'pengajian'
-                            ? 'bg-violet-100 text-violet-700'
-                            : 'bg-slate-100 text-slate-600')
-                        }
-                      >
-                        {l.source}
-                      </span>
+              {logs.map((l) => {
+                const ayatRange = l.ayatTo !== l.ayatFrom ? `${l.ayatFrom}–${l.ayatTo}` : String(l.ayatFrom)
+                const sourceLabel =
+                  l.source === 'pengajian' ? t('bacaan.sourcePengajian') : t('bacaan.sourceMandiri')
+                return (
+                  <li key={l.id} className="flex items-start gap-3 px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                        {t('bacaan.logSurahAyat', { surah: l.surah, ayat: ayatRange })}
+                        <span
+                          className={
+                            'rounded-full px-2 py-0.5 text-[10px] font-medium ' +
+                            (l.source === 'pengajian'
+                              ? 'bg-violet-100 text-violet-700'
+                              : 'bg-slate-100 text-slate-600')
+                          }
+                        >
+                          {sourceLabel}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {l.tanggal}
+                        {l.recorderName && l.recorderName !== l.userName
+                          ? ` · ${t('bacaan.logByRecorder', { name: l.recorderName })}`
+                          : ''}
+                      </div>
+                      {l.catatan ? (
+                        <div className="mt-1 text-xs text-slate-600">{l.catatan}</div>
+                      ) : null}
                     </div>
-                    <div className="text-xs text-slate-500">
-                      {l.tanggal}
-                      {l.recorderName && l.recorderName !== l.userName
-                        ? ` · oleh ${l.recorderName}`
-                        : ''}
-                    </div>
-                    {l.catatan ? (
-                      <div className="mt-1 text-xs text-slate-600">{l.catatan}</div>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm('Hapus catatan ini?')) delMut.mutate(l.id)
-                    }}
-                    className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                    aria-label="Hapus"
-                    disabled={delMut.isPending}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </li>
-              ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(t('bacaan.confirmDelete'))) delMut.mutate(l.id)
+                      }}
+                      className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                      aria-label={t('bacaan.removeAria')}
+                      disabled={delMut.isPending}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
@@ -433,6 +446,7 @@ function BacaanCreateDialog({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
   // Form state — ayat fields stored as strings so they can start empty.
@@ -465,17 +479,17 @@ function BacaanCreateDialog({
   const mut = useMutation({
     mutationFn: createBacaan,
     onSuccess: () => {
-      toast('Catatan tersimpan', 'success')
+      toast(t('bacaan.catatanSaved'), 'success')
       qc.invalidateQueries({ queryKey: ['bacaan-summary'] })
       qc.invalidateQueries({ queryKey: ['bacaan'] })
       qc.invalidateQueries({ queryKey: ['bacaan-per-surah'] })
       onSaved()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal simpan', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('bacaan.saveFailed'), 'error'),
   })
 
   return (
-    <Dialog title="Catat Bacaan" onClose={onClose}>
+    <Dialog title={t('bacaan.dialogTitle')} onClose={onClose}>
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -483,7 +497,7 @@ function BacaanCreateDialog({
           const aFrom = Number(form.ayatFrom)
           const aTo = Number(form.ayatTo || form.ayatFrom)
           if (!Number.isFinite(aFrom) || aFrom < 1) {
-            toast('Isi ayat (dari) dengan angka', 'error')
+            toast(t('bacaan.errAyatFromInvalid'), 'error')
             return
           }
           mut.mutate({
@@ -497,7 +511,7 @@ function BacaanCreateDialog({
           })
         }}
       >
-        <Field label="Untuk pengguna" htmlFor="b-user">
+        <Field label={t('bacaan.fieldUser')} htmlFor="b-user">
           <select
             id="b-user"
             value={form.userId}
@@ -505,17 +519,17 @@ function BacaanCreateDialog({
             className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm"
             required
           >
-            <option value="">— pilih —</option>
+            <option value="">{t('common.selectPrompt')}</option>
             {summary.map((s) => (
               <option key={s.userId} value={s.userId}>
-                {s.userName} · {s.userRole}
+                {t('bacaan.userOption', { name: s.userName, role: s.userRole })}
               </option>
             ))}
           </select>
         </Field>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Tanggal" htmlFor="b-tanggal">
+          <Field label={t('bacaan.fieldTanggal')} htmlFor="b-tanggal">
             <Input
               id="b-tanggal"
               type="date"
@@ -523,7 +537,7 @@ function BacaanCreateDialog({
               onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
             />
           </Field>
-          <Field label="Sumber" htmlFor="b-source">
+          <Field label={t('bacaan.fieldSumber')} htmlFor="b-source">
             <div className="flex gap-2">
               {(['pengajian', 'mandiri'] as BacaanSource[]).map((s) => (
                 <button
@@ -537,14 +551,14 @@ function BacaanCreateDialog({
                       : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100')
                   }
                 >
-                  {s}
+                  {s === 'pengajian' ? t('bacaan.sourcePengajian') : t('bacaan.sourceMandiri')}
                 </button>
               ))}
             </div>
           </Field>
         </div>
 
-        <Field label="Surah" htmlFor="b-surah">
+        <Field label={t('bacaan.fieldSurah')} htmlFor="b-surah">
           <select
             id="b-surah"
             value={form.surah}
@@ -555,14 +569,14 @@ function BacaanCreateDialog({
           >
             {surahs.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.id}. {s.nama} · {s.jumlahAyat} ayat
+                {t('bacaan.surahOption', { id: s.id, nama: s.nama, count: s.jumlahAyat })}
               </option>
             ))}
           </select>
         </Field>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Dari ayat" htmlFor="b-from">
+          <Field label={t('bacaan.fieldAyatFrom')} htmlFor="b-from">
             <Input
               id="b-from"
               type="text"
@@ -574,7 +588,7 @@ function BacaanCreateDialog({
               placeholder=""
             />
           </Field>
-          <Field label="Sampai ayat" htmlFor="b-to">
+          <Field label={t('bacaan.fieldAyatTo')} htmlFor="b-to">
             <Input
               id="b-to"
               type="text"
@@ -586,7 +600,7 @@ function BacaanCreateDialog({
               placeholder=""
             />
           </Field>
-          <Field label="Seluruh surah" htmlFor="b-all" className="self-end">
+          <Field label={t('bacaan.fieldSeluruh')} htmlFor="b-all" className="self-end">
             <button
               id="b-all"
               type="button"
@@ -599,12 +613,12 @@ function BacaanCreateDialog({
               }
               className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100"
             >
-              1 – akhir
+              {t('bacaan.btnFromEnd')}
             </button>
           </Field>
         </div>
 
-        <Field label="Catatan (opsional)" htmlFor="b-note">
+        <Field label={t('bacaan.fieldCatatan')} htmlFor="b-note">
           <textarea
             id="b-note"
             rows={2}
@@ -616,10 +630,10 @@ function BacaanCreateDialog({
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} disabled={mut.isPending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={mut.isPending || !form.userId}>
-            {mut.isPending ? 'Menyimpan…' : 'Simpan'}
+            {mut.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

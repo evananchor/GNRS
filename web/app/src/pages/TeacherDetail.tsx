@@ -1,6 +1,7 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { deleteTeacher, getTeacher, updateTeacher } from '@/api/teachers'
 import { useAuth } from '@/lib/auth'
@@ -13,6 +14,7 @@ export function TeacherDetailPage() {
   const [params] = useSearchParams()
   const editFlag = params.get('edit') === '1'
   const { user } = useAuth()
+  const { t } = useTranslation()
   const isAdmin = user?.role === 'admin'
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -43,37 +45,37 @@ export function TeacherDetailPage() {
   if (teacherQuery.isPending)
     return (
       <PageShell>
-        <p className="text-slate-500">Memuat…</p>
+        <p className="text-slate-500">{t('common.loading')}</p>
       </PageShell>
     )
   if (teacherQuery.isError || !teacherQuery.data)
     return (
       <PageShell>
-        <p className="text-red-600">Gagal memuat data.</p>
+        <p className="text-red-600">{t('common.loadFailed')}</p>
       </PageShell>
     )
 
-  const t = teacherQuery.data
-  const statusLabel = t.status === 'active' ? 'Aktif' : 'Purna'
+  const tch = teacherQuery.data
+  const statusLabel = tch.status === 'active' ? t('teachers.statusActive') : t('teachers.statusRetired')
 
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h1 className="text-2xl font-semibold break-words">{t.name}</h1>
+      <h1 className="text-2xl font-semibold break-words">{tch.name}</h1>
       {isAdmin && !editing ? (
         <div className="flex gap-2 self-start sm:self-auto">
           <Button variant="secondary" onClick={() => setEditing(true)}>
-            Ubah
+            {t('common.edit')}
           </Button>
           <Button
             variant="danger"
             onClick={() => {
-              if (confirm(`Hapus ${t.name}? Tindakan ini tidak dapat dibatalkan.`)) {
+              if (confirm(t('common.deleteConfirm', { name: tch.name }))) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
-            Hapus
+            {t('common.delete')}
           </Button>
         </div>
       ) : null}
@@ -85,8 +87,8 @@ export function TeacherDetailPage() {
       <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         {editing ? (
           <TeacherForm
-            initial={t}
-            submitLabel="Simpan"
+            initial={tch}
+            submitLabel={t('common.save')}
             pending={updateMutation.isPending}
             error={updateMutation.error}
             onSubmit={(input) => updateMutation.mutate(input)}
@@ -94,15 +96,15 @@ export function TeacherDetailPage() {
           />
         ) : (
           <dl className="grid gap-4 sm:grid-cols-2 text-sm">
-            <Row label="Nama Pengajar" value={t.name} />
-            <Row label="Nama Panggilan" value={t.nickname ?? '—'} />
-            <Row label="Kelompok" value={t.kelompok} />
-            <Row label="Desa" value={t.desa} />
-            <Row label="Daerah" value={t.daerah} className="sm:col-span-2" />
-            <Row label="Tanggal Masuk" value={t.joinedAt?.slice(0, 10) ?? '—'} />
-            <Row label="Tanggal Purna" value={t.retiredAt?.slice(0, 10) ?? '—'} />
-            <Row label="Status" value={statusLabel} />
-            <Row label="Keterangan" value={t.notes ?? '—'} className="sm:col-span-2" />
+            <Row label={t('teachers.row.name')} value={tch.name} />
+            <Row label={t('teachers.row.nickname')} value={tch.nickname ?? '—'} />
+            <Row label={t('teachers.row.kelompok')} value={tch.kelompok} />
+            <Row label={t('teachers.row.desa')} value={tch.desa} />
+            <Row label={t('teachers.row.daerah')} value={tch.daerah} className="sm:col-span-2" />
+            <Row label={t('teachers.row.joinedAt')} value={tch.joinedAt?.slice(0, 10) ?? '—'} />
+            <Row label={t('teachers.row.retiredAt')} value={tch.retiredAt?.slice(0, 10) ?? '—'} />
+            <Row label={t('teachers.row.status')} value={statusLabel} />
+            <Row label={t('teachers.row.notes')} value={tch.notes ?? '—'} className="sm:col-span-2" />
           </dl>
         )}
       </div>

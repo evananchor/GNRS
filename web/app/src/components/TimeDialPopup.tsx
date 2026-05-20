@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react'
 
 import { Dialog } from './Dialog'
@@ -37,6 +38,7 @@ export function TimeDialPopup({
   onClose: () => void
   initialSlot?: Slot
 }) {
+  const { t } = useTranslation()
   // Working state — defaults if the slot is empty.
   // End defaults to start hour + 1 so it inherits AM/PM (and matches the
   // common pattern of "1-hour sessions").
@@ -73,7 +75,7 @@ export function TimeDialPopup({
   }
 
   return (
-    <Dialog title="Dial Clock" onClose={onClose} size="sm">
+    <Dialog title={t('timePicker.dial.title')} onClose={onClose} size="sm">
       <div className="flex flex-col items-center gap-3">
         {/* Slot toggle: Mulai / Selesai */}
         <div className="inline-flex w-full overflow-hidden rounded-full border border-slate-300 text-xs">
@@ -88,7 +90,10 @@ export function TimeDialPopup({
               activeSlot === 'start' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700',
             )}
           >
-            Mulai · {pad2(startBits.h)}:{pad2(startBits.m)} {startBits.period}
+            {t('timePicker.dial.slotStart', {
+              time: `${pad2(startBits.h)}:${pad2(startBits.m)}`,
+              period: startBits.period,
+            })}
           </button>
           <button
             type="button"
@@ -101,7 +106,10 @@ export function TimeDialPopup({
               activeSlot === 'end' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700',
             )}
           >
-            Selesai · {pad2(endBits.h)}:{pad2(endBits.m)} {endBits.period}
+            {t('timePicker.dial.slotEnd', {
+              time: `${pad2(endBits.h)}:${pad2(endBits.m)}`,
+              period: endBits.period,
+            })}
           </button>
         </div>
 
@@ -115,7 +123,7 @@ export function TimeDialPopup({
               unit === 'hour' ? 'bg-sky-100 text-sky-800' : 'bg-white text-slate-600',
             )}
           >
-            Jam
+            {t('timePicker.dial.unitHour')}
           </button>
           <button
             type="button"
@@ -125,7 +133,7 @@ export function TimeDialPopup({
               unit === 'min' ? 'bg-sky-100 text-sky-800' : 'bg-white text-slate-600',
             )}
           >
-            Menit
+            {t('timePicker.dial.unitMinute')}
           </button>
         </div>
 
@@ -166,7 +174,7 @@ export function TimeDialPopup({
           onClick={onClose}
           className="mt-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-700"
         >
-          <Check size={14} /> Selesai
+          <Check size={14} /> {t('timePicker.dial.done')}
         </button>
       </div>
     </Dialog>
@@ -191,6 +199,7 @@ function Dial({
   onChange: (val: number) => void
   onCommit: (val: number) => void
 }) {
+  const { t } = useTranslation()
   const svgRef = useRef<SVGSVGElement>(null)
   const lastSnap = useRef<number | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -323,7 +332,7 @@ function Dial({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       role="slider"
-      aria-label={unit === 'hour' ? 'Pilih jam' : 'Pilih menit'}
+      aria-label={unit === 'hour' ? t('timePicker.dial.ariaPickHour') : t('timePicker.dial.ariaPickMinute')}
       aria-valuemin={unit === 'hour' ? 1 : 0}
       aria-valuemax={unit === 'hour' ? 12 : 59}
       aria-valuenow={value}

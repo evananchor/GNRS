@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Pencil, Plus, Trash2, X } from 'lucide-react'
 
 import {
@@ -43,6 +44,7 @@ type DialogMode =
   | null
 
 export function KurikulumSection() {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
   const [tingkat, setTingkat] = useState('')
@@ -65,54 +67,54 @@ export function KurikulumSection() {
   const createMut = useMutation({
     mutationFn: (input: MateriAjarInput) => createMateriAjar(input),
     onSuccess: () => {
-      toast('Materi ajar ditambahkan', 'success')
+      toast(t('kurikulum.addedMateri'), 'success')
       setDialog(null)
       invalidate()
     },
-    onError: (err) => toast(apiMessage(err, 'Gagal menambah materi'), 'error'),
+    onError: (err) => toast(apiMessage(err, t('kurikulum.addMateriFailed')), 'error'),
   })
 
   const updateMut = useMutation({
     mutationFn: ({ id, input }: { id: string; input: MateriAjarInput }) =>
       updateMateriAjar(id, input),
     onSuccess: () => {
-      toast('Materi ajar diperbarui', 'success')
+      toast(t('kurikulum.updatedMateri'), 'success')
       setDialog(null)
       invalidate()
     },
-    onError: (err) => toast(apiMessage(err, 'Gagal memperbarui materi'), 'error'),
+    onError: (err) => toast(apiMessage(err, t('kurikulum.updateMateriFailed')), 'error'),
   })
 
   const deleteMut = useMutation({
     mutationFn: deleteMateriAjar,
     onSuccess: () => {
-      toast('Materi ajar dihapus', 'success')
+      toast(t('kurikulum.deletedMateri'), 'success')
       invalidate()
     },
-    onError: (err) => toast(apiMessage(err, 'Gagal menghapus materi'), 'error'),
+    onError: (err) => toast(apiMessage(err, t('kurikulum.deleteMateriFailed')), 'error'),
   })
 
   const deleteTemaMut = useMutation({
     mutationFn: deleteMateriByTema,
     onSuccess: (r) => {
-      toast(`Tema dihapus (${r.deleted} materi)`, 'success')
+      toast(t('kurikulum.temaToast', { count: r.deleted }), 'success')
       invalidate()
     },
-    onError: (err) => toast(apiMessage(err, 'Gagal menghapus tema'), 'error'),
+    onError: (err) => toast(apiMessage(err, t('kurikulum.deleteTemaFailed')), 'error'),
   })
 
   const deleteSubTemaMut = useMutation({
     mutationFn: ({ tema, subTema }: { tema: string; subTema: string }) =>
       deleteMateriBySubTema(tema, subTema),
     onSuccess: (r) => {
-      toast(`Sub-tema dihapus (${r.deleted} materi)`, 'success')
+      toast(t('kurikulum.subTemaToast', { count: r.deleted }), 'success')
       invalidate()
     },
-    onError: (err) => toast(apiMessage(err, 'Gagal menghapus sub-tema'), 'error'),
+    onError: (err) => toast(apiMessage(err, t('kurikulum.deleteSubTemaFailed')), 'error'),
   })
 
   const handleDelete = (m: MateriAjar) => {
-    if (confirm(`Hapus materi "${m.kodeMateri}"?\n${m.detailMateri}`)) {
+    if (confirm(t('kurikulum.deleteMateriConfirm', { kode: m.kodeMateri, detail: m.detailMateri }))) {
       deleteMut.mutate(m.id)
     }
   }
@@ -218,10 +220,10 @@ export function KurikulumSection() {
   const header = (
     <div className="flex items-center justify-between">
       <div>
-        <h2 className="text-lg font-semibold">Kurikulum</h2>
+        <h2 className="text-lg font-semibold">{t('kurikulum.title')}</h2>
         <p className="text-sm text-slate-500">
-          Daftar materi kurikulum per tingkat, tema, sub tema, dan semester.
-          {editMode ? ' Mode edit aktif — tombol tambah / ubah / hapus muncul.' : ''}
+          {t('kurikulum.subtitle')}
+          {editMode ? t('kurikulum.editModeSuffix') : ''}
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -229,14 +231,14 @@ export function KurikulumSection() {
           size="sm"
           variant={editMode ? 'primary' : 'secondary'}
           onClick={() => setEditMode((v) => !v)}
-          title={editMode ? 'Kunci kembali ke mode lihat' : 'Buka mode edit'}
+          title={editMode ? t('kurikulum.lockTitle') : t('kurikulum.editTitle')}
         >
           <Pencil size={14} className="mr-1" />
-          {editMode ? 'Kunci' : 'Edit'}
+          {editMode ? t('kurikulum.lock') : t('kurikulum.edit')}
         </Button>
         {editMode ? (
           <Button size="sm" onClick={() => setDialog({ kind: 'create' })}>
-            <Plus size={16} className="mr-1" /> Tambah Materi
+            <Plus size={16} className="mr-1" /> {t('kurikulum.addMateri')}
           </Button>
         ) : null}
       </div>
@@ -251,23 +253,23 @@ export function KurikulumSection() {
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Tingkat
+              {t('kurikulum.filter.tingkat')}
             </label>
             <select
               className="h-10 min-w-[160px] rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               value={tingkat}
               onChange={(e) => setTingkat(e.target.value)}
             >
-              {tingkatList.map((t) => (
-                <option key={t.id} value={t.nama}>
-                  {t.nama}
+              {tingkatList.map((tk) => (
+                <option key={tk.id} value={tk.nama}>
+                  {tk.nama}
                 </option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Semester
+              {t('kurikulum.filter.semester')}
             </label>
             <div className="flex gap-1">
               {(['1', '2'] as const).map((v) => (
@@ -289,12 +291,12 @@ export function KurikulumSection() {
           </div>
           <div className="flex flex-1 flex-col gap-1 sm:min-w-[200px]">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Cari
+              {t('kurikulum.filter.search')}
             </label>
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="tema / sub-tema / detail…"
+              placeholder={t('kurikulum.filter.searchPh')}
             />
           </div>
           <label className="inline-flex h-10 items-center gap-2 text-sm">
@@ -304,18 +306,18 @@ export function KurikulumSection() {
               onChange={(e) => setHideRefs(e.target.checked)}
               className="h-4 w-4 rounded border-slate-300"
             />
-            Sembunyikan placeholder
+            {t('kurikulum.filter.hideRefs')}
           </label>
         </div>
         <div className="mt-3 text-xs text-slate-500">
-          {filtered.length} materi · {grouped.length} tema · semester {semFilter}
+          {t('kurikulum.filter.summary', { count: filtered.length, temaCount: grouped.length, sem: semFilter })}
         </div>
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500">Memuat kurikulum…</p>
+        <p className="text-slate-500">{t('kurikulum.loading')}</p>
       ) : grouped.length === 0 ? (
-        <p className="text-slate-500">Tidak ada materi yang cocok dengan filter.</p>
+        <p className="text-slate-500">{t('kurikulum.noMatch')}</p>
       ) : (
         <div className="space-y-3">
           {grouped.map((g) => {
@@ -341,9 +343,9 @@ export function KurikulumSection() {
                       className="rounded-full px-2 py-0.5 text-xs font-medium"
                       style={{ background: color + '22', color }}
                     >
-                      {g.items.length} materi
+                      {t('kurikulum.materiCount', { count: g.items.length })}
                     </span>
-                    <span className="text-xs text-slate-500">· {g.subs.length} sub-tema</span>
+                    <span className="text-xs text-slate-500">{t('kurikulum.subTemaCount', { count: g.subs.length })}</span>
                   </button>
                   {editMode ? (
                     <div className="flex items-center gap-1">
@@ -361,16 +363,16 @@ export function KurikulumSection() {
                           })
                         }
                         className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                        title="Tambah sub-tema (membuka form materi baru di tema ini)"
+                        title={t('kurikulum.addSubTemaTitle')}
                       >
-                        <Plus size={12} /> sub-tema
+                        <Plus size={12} /> {t('kurikulum.addSubTema')}
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           if (
                             confirm(
-                              `Hapus seluruh tema "${g.tema}" beserta ${g.items.length} materi di dalamnya?`,
+                              t('kurikulum.deleteTemaConfirm', { tema: g.tema, count: g.items.length }),
                             )
                           ) {
                             deleteTemaMut.mutate(g.tema)
@@ -378,8 +380,8 @@ export function KurikulumSection() {
                         }}
                         disabled={deleteTemaMut.isPending}
                         className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                        aria-label="Hapus tema"
-                        title="Hapus tema beserta semua materinya"
+                        aria-label={t('kurikulum.deleteTemaAria')}
+                        title={t('kurikulum.deleteTemaTitle')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -406,7 +408,7 @@ export function KurikulumSection() {
                               </span>
                               {sub.kelompoks.length > 0 && (
                                 <span className="text-xs text-slate-500">
-                                  · {sub.kelompoks.length} kelompok
+                                  {t('kurikulum.kelompokCount', { count: sub.kelompoks.length })}
                                 </span>
                               )}
                             </button>
@@ -427,16 +429,16 @@ export function KurikulumSection() {
                                     })
                                   }
                                   className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700 transition hover:bg-slate-50"
-                                  title="Tambah grup materi (membuka form materi baru di sub-tema ini)"
+                                  title={t('kurikulum.addGrupMateriTitle')}
                                 >
-                                  <Plus size={11} /> grup materi
+                                  <Plus size={11} /> {t('kurikulum.addGrupMateri')}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
                                     if (
                                       confirm(
-                                        `Hapus sub-tema "${sub.subTema}" di "${g.tema}" beserta ${sub.items.length} materi?`,
+                                        t('kurikulum.deleteSubTemaConfirm', { subTema: sub.subTema, tema: g.tema, count: sub.items.length }),
                                       )
                                     ) {
                                       deleteSubTemaMut.mutate({ tema: g.tema, subTema: sub.subTema })
@@ -444,8 +446,8 @@ export function KurikulumSection() {
                                   }}
                                   disabled={deleteSubTemaMut.isPending}
                                   className="rounded-md p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                                  aria-label="Hapus sub-tema"
-                                  title="Hapus sub-tema beserta materinya"
+                                  aria-label={t('kurikulum.deleteSubTemaAria')}
+                                  title={t('kurikulum.deleteSubTemaTitle')}
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -512,14 +514,14 @@ export function KurikulumSection() {
 
       {dialog ? (
         <Dialog
-          title={dialog.kind === 'create' ? 'Tambah Materi Kurikulum' : 'Ubah Materi Kurikulum'}
+          title={dialog.kind === 'create' ? t('kurikulum.dialogAdd') : t('kurikulum.dialogEdit')}
           onClose={() => setDialog(null)}
         >
           <MateriAjarForm
             initial={dialog.kind === 'edit' ? dialog.materi : undefined}
             defaults={dialog.kind === 'create' ? dialog.defaults : undefined}
             tingkatOptions={tingkatList}
-            submitLabel={dialog.kind === 'create' ? 'Tambah' : 'Simpan'}
+            submitLabel={dialog.kind === 'create' ? t('kurikulum.submitAdd') : t('kurikulum.submitSave')}
             pending={createMut.isPending || updateMut.isPending}
             error={dialog.kind === 'create' ? createMut.error : updateMut.error}
             onSubmit={(input) => {
@@ -545,6 +547,7 @@ type MateriListProps = {
 }
 
 function MateriList({ items, pad, editable, onEdit, onDelete, deleting }: MateriListProps) {
+  const { t } = useTranslation()
   return (
     <ul className="divide-y divide-slate-100">
       {items.map((m, i) => (
@@ -558,7 +561,7 @@ function MateriList({ items, pad, editable, onEdit, onDelete, deleting }: Materi
               <div className="mt-0.5 text-sm text-slate-900">{m.detailMateri}</div>
               <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
-                  Sem {m.semester}
+                  {t('kurikulum.semShort', { n: m.semester })}
                 </span>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
                   {m.kategori}
@@ -571,8 +574,8 @@ function MateriList({ items, pad, editable, onEdit, onDelete, deleting }: Materi
                 type="button"
                 onClick={() => onEdit(m)}
                 className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
-                aria-label="Ubah"
-                title="Ubah"
+                aria-label={t('kurikulum.editAria')}
+                title={t('kurikulum.editAria')}
               >
                 <Pencil size={14} />
               </button>
@@ -581,8 +584,8 @@ function MateriList({ items, pad, editable, onEdit, onDelete, deleting }: Materi
                 onClick={() => onDelete(m)}
                 disabled={deleting}
                 className="rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Hapus"
-                title="Hapus"
+                aria-label={t('kurikulum.deleteAria')}
+                title={t('kurikulum.deleteAria')}
               >
                 <Trash2 size={14} />
               </button>
@@ -604,6 +607,7 @@ function Dialog({
   onClose: () => void
   children: React.ReactNode
 }) {
+  const { t } = useTranslation()
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4"
@@ -619,7 +623,7 @@ function Dialog({
             type="button"
             onClick={onClose}
             className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            aria-label="Tutup"
+            aria-label={t('kurikulum.closeAria')}
           >
             <X size={18} />
           </button>

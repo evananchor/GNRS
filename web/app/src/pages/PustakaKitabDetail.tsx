@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { BookOpenText, Pencil, Save } from 'lucide-react'
 
 import { getKitab, updateKitabJumlahHalaman } from '@/api/hadits'
@@ -21,6 +22,7 @@ import { useToast } from '@/lib/toast'
  *     used for raport / pencapaian coverage), mirroring sitrac's setting.
  */
 export function PustakaKitabDetailPage() {
+  const { t } = useTranslation()
   const { slug = '' } = useParams<{ slug: string }>()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
@@ -39,33 +41,33 @@ export function PustakaKitabDetailPage() {
   const updateMut = useMutation({
     mutationFn: (jumlah: number) => updateKitabJumlahHalaman(slug, jumlah),
     onSuccess: () => {
-      toast('Target halaman diperbarui', 'success')
+      toast(t('pustaka.kitab.targetUpdated'), 'success')
       qc.invalidateQueries({ queryKey: ['hadits-kitab', slug] })
       qc.invalidateQueries({ queryKey: ['hadits-kitab-all'] })
       setEditing(false)
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menyimpan', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('pustaka.kitab.saveFailed'), 'error'),
   })
 
   return (
     <LibraryShell
       backTo="/pustaka/hadits-himpunan"
-      backLabel="Hadits Himpunan"
+      backLabel={t('pustaka.hadits.title')}
       bgClassName="bg-slate-50"
       contentClassName="px-4 pt-14 pb-6 md:px-8"
     >
       <div className="mx-auto max-w-3xl">
         {isPending ? (
-          <p className="text-sm text-slate-500">Memuat…</p>
+          <p className="text-sm text-slate-500">{t('pustaka.kitab.loading')}</p>
         ) : !kitab ? (
           <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            Kitab tidak ditemukan.
+            {t('pustaka.kitab.notFound')}
           </p>
         ) : (
           <>
             <div className="mb-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                {kitab.perawi ?? 'Kitab Himpunan'}
+                {kitab.perawi ?? t('pustaka.kitab.fallbackPerawi')}
               </p>
               <h1 className="mt-1 text-2xl font-semibold">{kitab.nama}</h1>
               {kitab.namaArab ? (
@@ -78,7 +80,7 @@ export function PustakaKitabDetailPage() {
                 </p>
               ) : null}
               <p className="mt-2 text-sm text-slate-500">
-                {kitab.babCount} bab · {kitab.haditsCount} hadits
+                {t('pustaka.kitab.metaBabHadits', { bab: kitab.babCount, hadits: kitab.haditsCount })}
               </p>
               {kitab.deskripsi ? (
                 <p className="mt-2 text-sm text-slate-600">{kitab.deskripsi}</p>
@@ -89,10 +91,9 @@ export function PustakaKitabDetailPage() {
             <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-900">Setting Page</h2>
+                  <h2 className="text-sm font-semibold text-slate-900">{t('pustaka.kitab.settingTitle')}</h2>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    Jumlah halaman target dalam kitab himpunan ini yang harus diselesaikan.
-                    Digunakan oleh raport / pencapaian.
+                    {t('pustaka.kitab.settingDesc')}
                   </p>
                 </div>
                 {isAdmin && !editing ? (
@@ -104,7 +105,7 @@ export function PustakaKitabDetailPage() {
                       setEditing(true)
                     }}
                   >
-                    <Pencil size={14} className="mr-1" /> Ubah
+                    <Pencil size={14} className="mr-1" /> {t('pustaka.kitab.btnEdit')}
                   </Button>
                 ) : null}
               </div>
@@ -120,7 +121,7 @@ export function PustakaKitabDetailPage() {
                       className="w-32"
                       autoFocus
                     />
-                    <span className="text-sm text-slate-500">halaman</span>
+                    <span className="text-sm text-slate-500">{t('pustaka.kitab.pagesUnit')}</span>
                     <Button
                       size="sm"
                       onClick={() => {
@@ -130,7 +131,7 @@ export function PustakaKitabDetailPage() {
                       disabled={updateMut.isPending}
                     >
                       <Save size={14} className="mr-1" />
-                      {updateMut.isPending ? 'Menyimpan…' : 'Simpan'}
+                      {updateMut.isPending ? t('pustaka.kitab.btnSaving') : t('common.save')}
                     </Button>
                     <Button
                       size="sm"
@@ -138,22 +139,21 @@ export function PustakaKitabDetailPage() {
                       onClick={() => setEditing(false)}
                       disabled={updateMut.isPending}
                     >
-                      Batal
+                      {t('common.cancel')}
                     </Button>
                   </>
                 ) : (
                   <p className="flex items-center gap-2 text-2xl font-semibold text-slate-900">
                     <BookOpenText size={20} className="text-emerald-600" />
                     {kitab.jumlahHalaman ?? 0}
-                    <span className="text-sm font-normal text-slate-500">halaman</span>
+                    <span className="text-sm font-normal text-slate-500">{t('pustaka.kitab.pagesUnit')}</span>
                   </p>
                 )}
               </div>
             </div>
 
             <p className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs text-slate-500">
-              Konten hadits (teks Arab + terjemahan) disembunyikan sementara. Hanya
-              metadata kitab dan setting target halaman yang ditampilkan.
+              {t('pustaka.kitab.hiddenNote')}
             </p>
           </>
         )}

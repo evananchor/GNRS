@@ -1,6 +1,7 @@
 import { useId, useMemo } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
 
@@ -18,21 +19,19 @@ const DEFAULT_TEMA = ['ALIM', 'FAQIH', 'AKHLAQUL KARIMAH', 'KEMANDIRIAN']
 
 const KATEGORI = ['baru', 'lanjutan', 'mengulang'] as const
 
-const schema = z.object({
-  kodeMateri: z.string().min(1, 'Wajib diisi').max(100),
-  tingkat: z.string().min(1, 'Wajib diisi').max(100),
-  tema: z.string().min(1, 'Wajib diisi').max(200),
-  subTema: z.string().min(1, 'Wajib diisi').max(500),
-  kelompokMateri: z.string().max(200).optional().or(z.literal('')),
-  detailMateri: z.string().min(1, 'Wajib diisi'),
-  semester: z.coerce.number().int().refine((v) => v === 1 || v === 2, 'Pilih 1 atau 2'),
-  kategori: z.enum(KATEGORI),
-  refRaportId: z.string().max(100).optional().or(z.literal('')),
-  perluReviewOrtu: z.boolean(),
-  progresif: z.boolean(),
-})
-
-type FormValues = z.input<typeof schema>
+type FormValues = {
+  kodeMateri: string
+  tingkat: string
+  tema: string
+  subTema: string
+  kelompokMateri?: string
+  detailMateri: string
+  semester: number
+  kategori: (typeof KATEGORI)[number]
+  refRaportId?: string
+  perluReviewOrtu: boolean
+  progresif: boolean
+}
 
 type Props = {
   initial?: MateriAjar
@@ -58,9 +57,30 @@ export function MateriAjarForm({
   onSubmit,
   onCancel,
 }: Props) {
+  const { t } = useTranslation()
   const temaListId = useId()
   const subTemaListId = useId()
   const kelompokListId = useId()
+
+  // Build the validation schema fresh per locale so error messages
+  // localize when the user flips the language switch.
+  const schema = useMemo(
+    () =>
+      z.object({
+        kodeMateri: z.string().min(1, t('materiComp.form.errRequired')).max(100),
+        tingkat: z.string().min(1, t('materiComp.form.errRequired')).max(100),
+        tema: z.string().min(1, t('materiComp.form.errRequired')).max(200),
+        subTema: z.string().min(1, t('materiComp.form.errRequired')).max(500),
+        kelompokMateri: z.string().max(200).optional().or(z.literal('')),
+        detailMateri: z.string().min(1, t('materiComp.form.errRequired')),
+        semester: z.coerce.number().int().refine((v) => v === 1 || v === 2, t('materiComp.form.errSemester')),
+        kategori: z.enum(KATEGORI),
+        refRaportId: z.string().max(100).optional().or(z.literal('')),
+        perluReviewOrtu: z.boolean(),
+        progresif: z.boolean(),
+      }),
+    [t],
+  )
 
   // Pull the full materi list once so we can derive existing tema / subTema /
   // kelompokMateri values for the datalist suggestions. Cached for 5 min so
@@ -115,24 +135,24 @@ export function MateriAjarForm({
       className="space-y-4"
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Kode Materi" htmlFor="kodeMateri" error={errors.kodeMateri?.message}>
+        <Field label={t('materiComp.form.kodeMateri')} htmlFor="kodeMateri" error={errors.kodeMateri?.message}>
           <Input id="kodeMateri" {...register('kodeMateri')} />
         </Field>
-        <Field label="Tingkat" htmlFor="tingkat" error={errors.tingkat?.message}>
+        <Field label={t('materiComp.form.tingkat')} htmlFor="tingkat" error={errors.tingkat?.message}>
           <Select id="tingkat" {...register('tingkat')}>
             {tingkatOptions.length === 0 ? <option value="">—</option> : null}
-            {tingkatOptions.map((t) => (
-              <option key={t.id} value={t.nama}>
-                {t.umur != null ? `${t.nama} (umur ${t.umur})` : t.nama}
+            {tingkatOptions.map((tk) => (
+              <option key={tk.id} value={tk.nama}>
+                {tk.umur != null ? t('materiComp.form.tingkatUmur', { nama: tk.nama, umur: tk.umur }) : tk.nama}
               </option>
             ))}
           </Select>
         </Field>
-        <Field label="Tema" htmlFor="tema" error={errors.tema?.message} hint="Ketik untuk menambah tema baru, atau pilih dari saran.">
-          <Input id="tema" list={temaListId} placeholder="cth: ALIM, FAQIH, …" {...register('tema')} />
+        <Field label={t('materiComp.form.tema')} htmlFor="tema" error={errors.tema?.message} hint={t('materiComp.form.temaHint')}>
+          <Input id="tema" list={temaListId} placeholder={t('materiComp.form.temaPh')} {...register('tema')} />
           <TemaSuggestions id={temaListId} allMateri={allMateri} />
         </Field>
-        <Field label="Sub Tema" htmlFor="subTema" error={errors.subTema?.message} hint="Ketik untuk menambah sub-tema baru, atau pilih dari saran.">
+        <Field label={t('materiComp.form.subTema')} htmlFor="subTema" error={errors.subTema?.message} hint={t('materiComp.form.subTemaHint')}>
           <Input id="subTema" list={subTemaListId} {...register('subTema')} />
           <SubTemaSuggestions
             id={subTemaListId}
@@ -140,7 +160,7 @@ export function MateriAjarForm({
             control={control}
           />
         </Field>
-        <Field label="Kelompok Materi" htmlFor="kelompokMateri" error={errors.kelompokMateri?.message}>
+        <Field label={t('materiComp.form.kelompokMateri')} htmlFor="kelompokMateri" error={errors.kelompokMateri?.message}>
           <Input id="kelompokMateri" list={kelompokListId} {...register('kelompokMateri')} />
           <KelompokSuggestions
             id={kelompokListId}
@@ -148,14 +168,14 @@ export function MateriAjarForm({
             control={control}
           />
         </Field>
-        <Field label="Semester" htmlFor="semester" error={errors.semester?.message}>
+        <Field label={t('materiComp.form.semester')} htmlFor="semester" error={errors.semester?.message}>
           <Select id="semester" {...register('semester')}>
             <option value="1">1</option>
             <option value="2">2</option>
           </Select>
         </Field>
         <Field
-          label="Detail Materi"
+          label={t('materiComp.form.detailMateri')}
           htmlFor="detailMateri"
           error={errors.detailMateri?.message}
           className="sm:col-span-2"
@@ -167,14 +187,14 @@ export function MateriAjarForm({
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
           />
         </Field>
-        <Field label="Kategori" htmlFor="kategori" error={errors.kategori?.message}>
+        <Field label={t('materiComp.form.kategori')} htmlFor="kategori" error={errors.kategori?.message}>
           <Select id="kategori" {...register('kategori')}>
-            <option value="baru">Baru</option>
-            <option value="lanjutan">Lanjutan</option>
-            <option value="mengulang">Mengulang</option>
+            <option value="baru">{t('materiComp.form.kategoriBaru')}</option>
+            <option value="lanjutan">{t('materiComp.form.kategoriLanjutan')}</option>
+            <option value="mengulang">{t('materiComp.form.kategoriMengulang')}</option>
           </Select>
         </Field>
-        <Field label="Ref. Raport ID" htmlFor="refRaportId" error={errors.refRaportId?.message}>
+        <Field label={t('materiComp.form.refRaportId')} htmlFor="refRaportId" error={errors.refRaportId?.message}>
           <Input id="refRaportId" {...register('refRaportId')} />
         </Field>
       </div>
@@ -185,17 +205,17 @@ export function MateriAjarForm({
         <MateriRelationsPanel materiId={initial.id} />
       ) : (
         <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-          Simpan materi dulu untuk menambahkan relasi library / kurikulum.
+          {t('materiComp.form.saveRelationsHint')}
         </p>
       )}
 
       {apiError ? <p className="text-sm text-red-600">{apiError}</p> : null}
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? 'Menyimpan…' : submitLabel}
+          {pending ? t('common.saving') : submitLabel}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Batal
+          {t('common.cancel')}
         </Button>
       </div>
     </form>

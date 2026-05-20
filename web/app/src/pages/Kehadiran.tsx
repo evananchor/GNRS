@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { CalendarDays, Clock, Sparkles, Users } from 'lucide-react'
 import {
   CartesianGrid,
@@ -15,7 +16,6 @@ import {
 } from 'recharts'
 
 import {
-  ATTENDANCE_STATUS_LABEL,
   getAttendanceStats,
   listAttendances,
   type AttendanceStatus,
@@ -25,33 +25,39 @@ import { PageShell, PageHeader } from '@/components/PageShell'
 import { cn } from '@/lib/cn'
 
 /**
- * Kehadiran — punya 2 tab. "Analitik" merangkum stats (KPI + chart + tabel
- * agregat per generus/pengajar). "Daftar Absen" menyajikan log raw paginasi
- * baik dari data import historis maupun row attendance baru yang dibuat
- * setiap sesi live diakhiri.
+ * Kehadiran — punya 2 tab. "Analitik" merangkum stats (KpiCard + chart +
+ * tabel agregat per generus/pengajar). "Daftar Absen" menyajikan log raw
+ * paginasi baik dari data import historis maupun row attendance baru yang
+ * dibuat setiap sesi live diakhiri.
  */
 
 type Tab = 'analitik' | 'daftar'
 
+const STATUS_KEYS: AttendanceStatus[] = ['hadir', 'izin_murid', 'izin_guru', 'by_vn', 'alfa']
+function statusLabelKey(s: AttendanceStatus) {
+  return `kehadiran.status.${s}` as const
+}
+
 export function KehadiranPage() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>('analitik')
 
   return (
     <PageShell
       header={
         <PageHeader
-          eyebrow="Kehadiran"
-          title="Kehadiran"
-          subtitle="Ringkasan dan analitik dari seluruh data Pengajian."
+          eyebrow={t('kehadiran.eyebrow')}
+          title={t('kehadiran.title')}
+          subtitle={t('kehadiran.subtitle')}
         />
       }
     >
       <div className="mb-4 flex gap-1 rounded-md border border-slate-200 bg-slate-50 p-1">
         <TabBtn active={tab === 'analitik'} onClick={() => setTab('analitik')}>
-          Analitik
+          {t('kehadiran.tabAnalitik')}
         </TabBtn>
         <TabBtn active={tab === 'daftar'} onClick={() => setTab('daftar')}>
-          Daftar Absen
+          {t('kehadiran.tabDaftar')}
         </TabBtn>
       </div>
 
@@ -99,11 +105,12 @@ const STATUS_COLOR: Record<AttendanceStatus, string> = {
 }
 
 function AnalitikTab() {
+  const { t, i18n } = useTranslation()
   const today = new Date()
   const [preset, setPreset] = useState<RangePreset>('all')
 
   const { dateFrom, dateTo, label } = useMemo(() => {
-    if (preset === 'all') return { dateFrom: undefined, dateTo: undefined, label: 'Semua tahun' }
+    if (preset === 'all') return { dateFrom: undefined, dateTo: undefined, label: t('kehadiran.allYears') }
     if (preset === 'thisYear') {
       const y = today.getFullYear()
       return { dateFrom: `${y}-01-01`, dateTo: `${y}-12-31`, label: String(y) }
@@ -124,7 +131,7 @@ function AnalitikTab() {
       label: String(preset),
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preset])
+  }, [preset, i18n.language])
 
   const { data: stats } = useQuery({
     queryKey: ['attendance-stats', dateFrom, dateTo],
@@ -145,16 +152,16 @@ function AnalitikTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          RENTANG WAKTU
+          {t('kehadiran.rangeLabel')}
         </span>
         <FilterChip active={preset === 'all'} onClick={() => setPreset('all')}>
-          Semua
+          {t('kehadiran.allShort')}
         </FilterChip>
         <FilterChip active={preset === 'thisYear'} onClick={() => setPreset('thisYear')}>
-          Tahun Ini
+          {t('kehadiran.thisYear')}
         </FilterChip>
         <FilterChip active={preset === 'thisMonth'} onClick={() => setPreset('thisMonth')}>
-          Bulan Ini
+          {t('kehadiran.thisMonth')}
         </FilterChip>
         {years.map((y) => (
           <FilterChip key={y} active={preset === y} onClick={() => setPreset(y)}>
@@ -166,33 +173,33 @@ function AnalitikTab() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           icon={<CalendarDays size={18} />}
-          label="Total Sesi"
-          value={fmt(stats?.total.sessions ?? 0)}
+          label={t('kehadiran.kpiTotalSesi')}
+          value={fmt(stats?.total.sessions ?? 0, i18n.language)}
           sub={label}
         />
         <KpiCard
           icon={<Clock size={18} />}
-          label="Total Jam Ngaji"
-          value={`${Math.round(stats?.total.hours ?? 0).toLocaleString('id-ID')} jam`}
+          label={t('kehadiran.kpiTotalJam')}
+          value={t('kehadiran.hoursValue', { count: Math.round(stats?.total.hours ?? 0) })}
           sub={label}
         />
         <KpiCard
           icon={<Sparkles size={18} />}
-          label="Sesi 30 Hari Terakhir"
-          value={fmt(stats?.total.last30Days ?? 0)}
-          sub="Tidak terpengaruh filter"
+          label={t('kehadiran.kpi30Days')}
+          value={fmt(stats?.total.last30Days ?? 0, i18n.language)}
+          sub={t('kehadiran.kpi30DaysSub')}
         />
         <KpiCard
           icon={<Users size={18} />}
-          label="Pasangan Aktif (30hr)"
-          value={fmt(stats?.total.activePairs ?? 0)}
-          sub="Generus × Pengajar"
+          label={t('kehadiran.kpiActivePairs')}
+          value={fmt(stats?.total.activePairs ?? 0, i18n.language)}
+          sub={t('kehadiran.kpiActivePairsSub')}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
-          <div className="mb-2 text-sm font-semibold text-slate-800">Sesi per Bulan</div>
+          <div className="mb-2 text-sm font-semibold text-slate-800">{t('kehadiran.sesiPerBulan')}</div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
@@ -220,7 +227,7 @@ function AnalitikTab() {
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-2 text-sm font-semibold text-slate-800">Distribusi Status</div>
+          <div className="mb-2 text-sm font-semibold text-slate-800">{t('kehadiran.distStatus')}</div>
           <StatusDonut buckets={stats?.byStatus ?? []} />
         </div>
       </div>
@@ -228,17 +235,17 @@ function AnalitikTab() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800">
-            Per Generus
+            {t('kehadiran.perGenerus')}
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-3 py-2">Nama</th>
-                  <th className="px-3 py-2 text-right">Sesi ▼</th>
-                  <th className="px-3 py-2 text-right">% Hadir</th>
-                  <th className="px-3 py-2 text-right">Jam</th>
-                  <th className="px-3 py-2 text-right">Sesi Terakhir</th>
+                  <th className="px-3 py-2">{t('kehadiran.col.nama')}</th>
+                  <th className="px-3 py-2 text-right">{t('kehadiran.col.sesi')}</th>
+                  <th className="px-3 py-2 text-right">{t('kehadiran.col.pctHadir')}</th>
+                  <th className="px-3 py-2 text-right">{t('kehadiran.col.jam')}</th>
+                  <th className="px-3 py-2 text-right">{t('kehadiran.col.lastSesi')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -256,7 +263,7 @@ function AnalitikTab() {
                 {(stats?.byStudent ?? []).length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-3 py-6 text-center text-xs text-slate-500">
-                      Belum ada data.
+                      {t('common.noData')}
                     </td>
                   </tr>
                 ) : null}
@@ -267,35 +274,35 @@ function AnalitikTab() {
 
         <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800">
-            Per Pengajar
+            {t('kehadiran.perPengajar')}
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-3 py-2">Nama</th>
-                  <th className="px-3 py-2 text-right">Sesi ▼</th>
-                  <th className="px-3 py-2 text-right">Jam</th>
-                  <th className="px-3 py-2 text-right"># Generus</th>
-                  <th className="px-3 py-2 text-right">Sesi Terakhir</th>
+                  <th className="px-3 py-2">{t('kehadiran.col.nama')}</th>
+                  <th className="px-3 py-2 text-right">{t('kehadiran.col.sesi')}</th>
+                  <th className="px-3 py-2 text-right">{t('kehadiran.col.jam')}</th>
+                  <th className="px-3 py-2 text-right">{t('kehadiran.col.numGenerus')}</th>
+                  <th className="px-3 py-2 text-right">{t('kehadiran.col.lastSesi')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {(stats?.byTeacher ?? []).slice(0, 30).map((t) => (
-                  <tr key={t.teacherId} className="hover:bg-slate-50">
-                    <td className="truncate px-3 py-2 font-medium text-slate-900">{t.teacherName}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{t.totalSessions}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{t.totalHours.toFixed(1)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{t.uniqueStudents}</td>
+                {(stats?.byTeacher ?? []).slice(0, 30).map((tch) => (
+                  <tr key={tch.teacherId} className="hover:bg-slate-50">
+                    <td className="truncate px-3 py-2 font-medium text-slate-900">{tch.teacherName}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{tch.totalSessions}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{tch.totalHours.toFixed(1)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{tch.uniqueStudents}</td>
                     <td className="px-3 py-2 text-right text-xs tabular-nums text-slate-500">
-                      {t.lastDate?.slice(0, 10) ?? '—'}
+                      {tch.lastDate?.slice(0, 10) ?? '—'}
                     </td>
                   </tr>
                 ))}
                 {(stats?.byTeacher ?? []).length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-3 py-6 text-center text-xs text-slate-500">
-                      Belum ada data.
+                      {t('common.noData')}
                     </td>
                   </tr>
                 ) : null}
@@ -322,6 +329,7 @@ const STATUS_BADGE: Record<AttendanceStatus, string> = {
 const PAGE_SIZE = 50
 
 function DaftarAbsenTab() {
+  const { t, i18n } = useTranslation()
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [status, setStatus] = useState<AttendanceStatus | ''>('')
@@ -363,7 +371,7 @@ function DaftarAbsenTab() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Dari tanggal
+              {t('kehadiran.dateFrom')}
             </label>
             <Input
               type="date"
@@ -376,7 +384,7 @@ function DaftarAbsenTab() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Sampai
+              {t('kehadiran.dateTo')}
             </label>
             <Input
               type="date"
@@ -389,7 +397,7 @@ function DaftarAbsenTab() {
           </div>
           <div className="flex flex-col gap-1" style={{ minWidth: 180 }}>
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Status
+              {t('kehadiran.statusLabel')}
             </label>
             <select
               value={status}
@@ -399,20 +407,20 @@ function DaftarAbsenTab() {
               }}
               className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             >
-              <option value="">Semua status</option>
-              {(['hadir', 'izin_murid', 'izin_guru', 'by_vn', 'alfa'] as AttendanceStatus[]).map((s) => (
+              <option value="">{t('kehadiran.allStatus')}</option>
+              {STATUS_KEYS.map((s) => (
                 <option key={s} value={s}>
-                  {ATTENDANCE_STATUS_LABEL[s]}
+                  {t(statusLabelKey(s))}
                 </option>
               ))}
             </select>
           </div>
           <div className="flex flex-1 flex-col gap-1" style={{ minWidth: 200 }}>
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Cari nama/materi
+              {t('kehadiran.searchLabel')}
             </label>
             <Input
-              placeholder="Ketik nama generus, pengajar, atau materi…"
+              placeholder={t('kehadiran.searchPh')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -420,8 +428,14 @@ function DaftarAbsenTab() {
         </div>
         <p className="mt-3 text-xs text-slate-500">
           {isPending
-            ? 'Memuat…'
-            : `${fmt(total)} record · halaman ${page + 1} dari ${fmt(totalPages)}`}
+            ? t('common.loading')
+            : t('kehadiran.recordsPage', {
+                count: total,
+                page: page + 1,
+                total: totalPages,
+                countFmt: fmt(total, i18n.language),
+                totalFmt: fmt(totalPages, i18n.language),
+              })}
         </p>
       </div>
 
@@ -430,12 +444,12 @@ function DaftarAbsenTab() {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-3 py-2">Tanggal</th>
-                <th className="px-3 py-2">Generus</th>
-                <th className="px-3 py-2">Pengajar</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Durasi</th>
-                <th className="px-3 py-2">Materi</th>
+                <th className="px-3 py-2">{t('kehadiran.col.date')}</th>
+                <th className="px-3 py-2">{t('nav.students')}</th>
+                <th className="px-3 py-2">{t('nav.teachers')}</th>
+                <th className="px-3 py-2">{t('kehadiran.statusLabel')}</th>
+                <th className="px-3 py-2 text-right">{t('kehadiran.col.duration')}</th>
+                <th className="px-3 py-2">{t('kehadiran.col.materi')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -453,7 +467,7 @@ function DaftarAbsenTab() {
                         STATUS_BADGE[it.status],
                       )}
                     >
-                      {ATTENDANCE_STATUS_LABEL[it.status]}
+                      {t(statusLabelKey(it.status))}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-slate-600">
@@ -467,7 +481,7 @@ function DaftarAbsenTab() {
               {!isPending && filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">
-                    Tidak ada record untuk filter ini.
+                    {t('kehadiran.noRecords')}
                   </td>
                 </tr>
               ) : null}
@@ -477,7 +491,8 @@ function DaftarAbsenTab() {
         {totalPages > 1 ? (
           <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2 text-xs">
             <span className="text-slate-500">
-              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} dari {fmt(total)}
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}{' '}
+              {t('kehadiran.outOf', { total: fmt(total, i18n.language) })}
             </span>
             <div className="flex gap-1">
               <button
@@ -485,14 +500,14 @@ function DaftarAbsenTab() {
                 disabled={page === 0}
                 className="rounded-md border border-slate-300 px-2 py-1 text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
               >
-                ← Sebelumnya
+                ← {t('common.previous')}
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page + 1 >= totalPages}
                 className="rounded-md border border-slate-300 px-2 py-1 text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
               >
-                Berikutnya →
+                {t('common.next')} →
               </button>
             </div>
           </div>
@@ -554,16 +569,19 @@ function KpiCard({
 }
 
 function StatusDonut({ buckets }: { buckets: { label: string; count: number }[] }) {
+  const { t } = useTranslation()
   const data = buckets
     .filter((b) => b.count > 0)
     .map((b) => ({
-      name: ATTENDANCE_STATUS_LABEL[b.label as AttendanceStatus] ?? b.label,
+      name: STATUS_KEYS.includes(b.label as AttendanceStatus)
+        ? t(statusLabelKey(b.label as AttendanceStatus))
+        : b.label,
       key: b.label,
       value: b.count,
     }))
   const total = data.reduce((a, b) => a + b.value, 0)
   if (total === 0) {
-    return <p className="py-12 text-center text-xs text-slate-500">Belum ada data pada rentang ini.</p>
+    return <p className="py-12 text-center text-xs text-slate-500">{t('kehadiran.noDataRange')}</p>
   }
   return (
     <div className="flex items-center gap-4">
@@ -591,7 +609,7 @@ function StatusDonut({ buckets }: { buckets: { label: string; count: number }[] 
         </ResponsiveContainer>
       </div>
       <ul className="grid flex-1 grid-cols-1 gap-y-1.5 text-xs">
-        {(['hadir', 'izin_murid', 'izin_guru', 'by_vn', 'alfa'] as AttendanceStatus[]).map((s) => {
+        {STATUS_KEYS.map((s) => {
           const b = buckets.find((x) => x.label === s)
           return (
             <li key={s} className="flex items-center gap-2">
@@ -599,7 +617,7 @@ function StatusDonut({ buckets }: { buckets: { label: string; count: number }[] 
                 className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: STATUS_COLOR[s] }}
               />
-              <span className="flex-1 text-slate-700">{ATTENDANCE_STATUS_LABEL[s]}</span>
+              <span className="flex-1 text-slate-700">{t(statusLabelKey(s))}</span>
               <span className="tabular-nums font-medium text-slate-900">{b?.count ?? 0}</span>
             </li>
           )
@@ -609,6 +627,6 @@ function StatusDonut({ buckets }: { buckets: { label: string; count: number }[] 
   )
 }
 
-function fmt(n: number): string {
-  return n.toLocaleString('id-ID')
+function fmt(n: number, lang: string): string {
+  return n.toLocaleString(lang === 'en' ? 'en-US' : 'id-ID')
 }

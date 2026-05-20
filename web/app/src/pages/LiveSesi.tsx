@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   CheckCircle2,
   ChevronLeft,
@@ -43,11 +44,16 @@ function formatElapsed(startedAt: string | null | undefined, now: number) {
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`
 }
 
+function kindLabelKey(k: DiajarkanKind) {
+  return `live.kind.${k}` as const
+}
+
 export function LiveSesiPage() {
   const { sesiId } = useParams<{ kelasId: string; sesiId: string }>()
   const navigate = useNavigate()
   const toast = useToast()
   const qc = useQueryClient()
+  const { t } = useTranslation()
 
   const sesiQ = useQuery({
     queryKey: ['sesi', sesiId],
@@ -67,8 +73,8 @@ export function LiveSesiPage() {
 
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(t)
+    const tm = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(tm)
   }, [])
 
   const displayMode: DisplayMode = (sesi?.liveDisplayMode as DisplayMode | null) ?? 'full'
@@ -76,20 +82,20 @@ export function LiveSesiPage() {
   const setMode = useMutation({
     mutationFn: (mode: DisplayMode) => setSesiLive(sesiId!, { liveDisplayMode: mode }),
     onSuccess: (data) => qc.setQueryData(['sesi', sesiId], data),
-    onError: (e: any) => toast(e?.message ?? 'Gagal mengubah mode', 'error'),
+    onError: (e: any) => toast(e?.message ?? t('live.changeModeFailed'), 'error'),
   })
 
   const add = useMutation({
     mutationFn: (input: MateriDiajarkanInput) => addDiajarkan(sesiId!, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['diajarkan', sesiId] }),
-    onError: (e: any) => toast(e?.message ?? 'Gagal menambah materi', 'error'),
+    onError: (e: any) => toast(e?.message ?? t('live.addMateriFailed'), 'error'),
   })
 
   const markComplete = useMutation({
     mutationFn: (itemId: string) =>
       updateDiajarkan(sesiId!, itemId, { completed: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['diajarkan', sesiId] }),
-    onError: (e: any) => toast(e?.message ?? 'Gagal menandai selesai', 'error'),
+    onError: (e: any) => toast(e?.message ?? t('live.markCompleteFailed'), 'error'),
   })
 
   // Fullscreen
@@ -125,7 +131,7 @@ export function LiveSesiPage() {
   if (sesiQ.isLoading || !sesi) {
     return (
       <div className="fixed inset-0 z-50 grid place-items-center bg-neutral-950 text-neutral-200">
-        Memuat sesi…
+        {t('live.loadingSesi')}
       </div>
     )
   }
@@ -133,12 +139,12 @@ export function LiveSesiPage() {
     return (
       <div className="fixed inset-0 z-50 grid place-items-center bg-neutral-950 text-neutral-200">
         <div className="space-y-3 text-center">
-          <p>Gagal memuat sesi.</p>
+          <p>{t('live.loadFailed')}</p>
           <button
             onClick={() => navigate(-1)}
             className="rounded-lg border border-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-800"
           >
-            Kembali
+            {t('common.back')}
           </button>
         </div>
       </div>
@@ -152,7 +158,7 @@ export function LiveSesiPage() {
         <button
           onClick={() => navigate(-1)}
           className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
-          aria-label="Kembali"
+          aria-label={t('common.back')}
         >
           <ChevronLeft size={18} />
         </button>
@@ -162,15 +168,15 @@ export function LiveSesiPage() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
             </span>
-            Live
+            {t('live.statusLive')}
           </span>
         ) : liveStatus === 'done' ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-700/40 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-300">
-            <CheckCircle2 size={12} /> Selesai
+            <CheckCircle2 size={12} /> {t('live.statusDone')}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-400">
-            Belum dimulai
+            {t('live.statusPre')}
           </span>
         )}
         <div className="min-w-0 flex-1">
@@ -187,7 +193,7 @@ export function LiveSesiPage() {
             onClick={() => setEndOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
           >
-            <Square size={14} fill="currentColor" /> Akhiri
+            <Square size={14} fill="currentColor" /> {t('live.endSesi')}
           </button>
         )}
       </header>
@@ -209,28 +215,28 @@ export function LiveSesiPage() {
           disabled={liveStatus !== 'live'}
           className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium hover:bg-neutral-800 disabled:opacity-50"
         >
-          {current ? 'Ganti Materi' : 'Pilih Materi'}
+          {current ? t('live.replaceMateri') : t('live.pickMateri')}
         </button>
         <div className="flex items-center gap-0.5 rounded-lg border border-neutral-700 p-0.5">
           <ModeBtn
             active={displayMode === 'full'}
             onClick={() => setMode.mutate('full')}
             disabled={liveStatus !== 'live'}
-            label="Penuh"
+            label={t('live.modeFull')}
             icon={<LayoutPanelTop size={14} />}
           />
           <ModeBtn
             active={displayMode === 'title'}
             onClick={() => setMode.mutate('title')}
             disabled={liveStatus !== 'live'}
-            label="Judul"
+            label={t('live.modeTitle')}
             icon={<Type size={14} />}
           />
           <ModeBtn
             active={displayMode === 'hidden'}
             onClick={() => setMode.mutate('hidden')}
             disabled={liveStatus !== 'live'}
-            label="Sembunyi"
+            label={t('live.modeHidden')}
             icon={<EyeOff size={14} />}
           />
         </div>
@@ -241,13 +247,13 @@ export function LiveSesiPage() {
               className="rounded-lg border border-neutral-700 px-2.5 py-1 text-[11px] text-neutral-300 hover:bg-neutral-800"
               aria-expanded={historyOpen}
             >
-              Riwayat ({diajarkan.length})
+              {t('live.history', { count: diajarkan.length })}
             </button>
           ) : null}
           <button
             onClick={toggleFs}
             className="rounded-lg border border-neutral-700 p-1.5 text-neutral-300 hover:bg-neutral-800"
-            aria-label="Layar penuh"
+            aria-label={t('live.fullscreen')}
           >
             {isFs ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
@@ -343,18 +349,19 @@ function Stage({
   onPick: () => void
   canEdit: boolean
 }) {
+  const { t } = useTranslation()
   if (!current) {
     return (
       <div className="grid h-full place-items-center px-6 text-center">
         <div className="space-y-4">
           <Radio size={48} className="mx-auto text-neutral-700" />
-          <p className="text-neutral-400">Belum ada materi yang ditampilkan untuk kelas.</p>
+          <p className="text-neutral-400">{t('live.noMateriYet')}</p>
           {canEdit && (
             <button
               onClick={onPick}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
             >
-              Pilih Materi untuk Ditampilkan
+              {t('live.pickMateriCta')}
             </button>
           )}
         </div>
@@ -373,10 +380,10 @@ function Stage({
       <div className="grid h-full place-items-center px-8 text-center">
         <div>
           <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">
-            {kindLabel(current.kind)}
+            {t(kindLabelKey(current.kind))}
           </div>
           <h1 className="mt-3 text-4xl font-bold leading-tight md:text-6xl">
-            {current.label ?? '(tanpa judul)'}
+            {current.label ?? t('live.untitled')}
           </h1>
         </div>
       </div>
@@ -399,31 +406,23 @@ function Stage({
   }
 }
 
-function kindLabel(k: DiajarkanKind) {
-  switch (k) {
-    case 'kurikulum': return 'Kurikulum'
-    case 'quran': return "Al-Qur'an"
-    case 'hadits': return 'Hadits'
-    case 'tilawati': return 'Tilawati'
-    case 'doa': return "Do'a"
-  }
-}
-
 function KurikulumStage({ item }: { item: MateriDiajarkan }) {
+  const { t } = useTranslation()
   const q = useQuery({
     queryKey: ['materi-ajar', item.materiAjarId],
     queryFn: () => getMateriAjar(item.materiAjarId!),
     enabled: !!item.materiAjarId,
   })
-  if (q.isLoading) return <Centered>Memuat materi…</Centered>
-  if (!q.data) return <Centered>Materi tidak ditemukan.</Centered>
+  if (q.isLoading) return <Centered>{t('live.loadingMateri')}</Centered>
+  if (!q.data) return <Centered>{t('live.materiNotFound')}</Centered>
   const m = q.data
   return (
     <div className="h-full overflow-auto px-8 py-10 md:px-16 md:py-14">
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <div className="text-xs uppercase tracking-[0.3em] text-neutral-500">
-            {m.tingkat} · Semester {m.semester} · <span className="text-emerald-400">{m.kategori}</span>
+            {m.tingkat} · {t('live.semesterShort', { n: m.semester })} ·{' '}
+            <span className="text-emerald-400">{m.kategori}</span>
           </div>
           <h1 className="mt-3 text-3xl font-bold md:text-5xl">{m.tema}</h1>
           {m.subTema && <h2 className="mt-2 text-xl text-neutral-300 md:text-2xl">{m.subTema}</h2>}
@@ -438,13 +437,14 @@ function KurikulumStage({ item }: { item: MateriDiajarkan }) {
 }
 
 function QuranStage({ item }: { item: MateriDiajarkan }) {
+  const { t } = useTranslation()
   const surahs = useQuery({ queryKey: ['quran-surahs'], queryFn: listQuranSurahs })
   const surahId = Number(item.ref?.split(':')[0])
   const s = (surahs.data ?? []).find((x) => x.id === surahId)
   return (
     <div className="grid h-full place-items-center px-8 text-center">
       <div className="space-y-6">
-        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">Al-Qur'an</div>
+        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">{t('live.kind.quran')}</div>
         <div className="font-arabic text-6xl text-neutral-100 md:text-8xl" dir="rtl">
           {s?.namaArab ?? '...'}
         </div>
@@ -452,7 +452,7 @@ function QuranStage({ item }: { item: MateriDiajarkan }) {
           QS. {s?.nama ?? ''} ({surahId || '?'})
         </div>
         {item.ref && item.ref.includes(':') && (
-          <div className="text-lg text-neutral-400">Ayat {item.ref.split(':')[1]}</div>
+          <div className="text-lg text-neutral-400">{t('live.ayatLabel', { ayat: item.ref.split(':')[1] })}</div>
         )}
       </div>
     </div>
@@ -460,13 +460,13 @@ function QuranStage({ item }: { item: MateriDiajarkan }) {
 }
 
 function HaditsStage({ item }: { item: MateriDiajarkan }) {
-  // Judul saja — kitab + bab dari label
+  const { t } = useTranslation()
   return (
     <div className="grid h-full place-items-center px-8 text-center">
       <div className="space-y-4">
-        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">Hadits</div>
+        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">{t('live.kind.hadits')}</div>
         <h1 className="text-3xl font-bold text-neutral-100 md:text-5xl">
-          {item.label ?? item.ref ?? '(judul kosong)'}
+          {item.label ?? item.ref ?? t('live.emptyTitle')}
         </h1>
       </div>
     </div>
@@ -474,12 +474,13 @@ function HaditsStage({ item }: { item: MateriDiajarkan }) {
 }
 
 function TilawatiStage({ item }: { item: MateriDiajarkan }) {
+  const { t } = useTranslation()
   return (
     <div className="grid h-full place-items-center px-8 text-center">
       <div className="space-y-4">
-        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">Tilawati</div>
+        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">{t('live.kind.tilawati')}</div>
         <h1 className="text-4xl font-bold text-neutral-100 md:text-6xl">
-          {item.label ?? item.ref ?? '(tanpa judul)'}
+          {item.label ?? item.ref ?? t('live.untitled')}
         </h1>
       </div>
     </div>
@@ -487,18 +488,19 @@ function TilawatiStage({ item }: { item: MateriDiajarkan }) {
 }
 
 function DoaStage({ item }: { item: MateriDiajarkan }) {
+  const { t } = useTranslation()
   const q = useQuery({
     queryKey: ['doa', item.ref],
     queryFn: () => getDoa(item.ref!),
     enabled: !!item.ref,
   })
-  if (q.isLoading) return <Centered>Memuat do'a…</Centered>
-  if (!q.data) return <Centered>Do'a tidak ditemukan.</Centered>
+  if (q.isLoading) return <Centered>{t('live.loadingDoa')}</Centered>
+  if (!q.data) return <Centered>{t('live.doaNotFound')}</Centered>
   const d = q.data
   return (
     <div className="h-full overflow-auto px-8 py-10 md:px-16 md:py-14">
       <div className="mx-auto max-w-3xl space-y-6 text-center">
-        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">Do'a</div>
+        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">{t('live.kind.doa')}</div>
         <h1 className="text-2xl font-bold md:text-4xl">{d.nama}</h1>
         {d.teksArab && (
           <div className="font-arabic text-3xl leading-loose text-neutral-100 md:text-5xl" dir="rtl">
@@ -534,40 +536,38 @@ function ReplaceConfirmDialog({
   onGantiSaja: () => void
   onSelesai: () => void
 }) {
+  const { t } = useTranslation()
   const title =
     current.label ??
     current.ref ??
-    (current.kind === 'kurikulum' ? 'materi kurikulum' : current.kind)
+    (current.kind === 'kurikulum' ? t('live.kurikulumMateri') : current.kind)
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 px-4">
       <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-5 text-neutral-100 shadow-2xl">
-        <h2 className="text-base font-semibold">Ganti materi?</h2>
+        <h2 className="text-base font-semibold">{t('live.replaceTitle')}</h2>
         <p className="mt-2 text-sm text-neutral-400">
-          Materi saat ini:{' '}
+          {t('live.replaceCurrent')}{' '}
           <span className="font-medium text-neutral-200">{title}</span>
         </p>
-        <p className="mt-1 text-xs text-neutral-500">
-          Tandai sebagai selesai sebelum lanjut, atau ganti saja tanpa menandai
-          selesai.
-        </p>
+        <p className="mt-1 text-xs text-neutral-500">{t('live.replaceHint')}</p>
         <div className="mt-5 flex flex-col gap-2">
           <button
             onClick={onSelesai}
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
           >
-            <CheckCircle2 size={16} /> Materi selesai &amp; ganti
+            <CheckCircle2 size={16} /> {t('live.completeAndReplace')}
           </button>
           <button
             onClick={onGantiSaja}
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-sm font-medium text-neutral-100 hover:bg-neutral-800"
           >
-            Ganti saja (belum selesai)
+            {t('live.replaceWithoutComplete')}
           </button>
           <button
             onClick={onCancel}
             className="inline-flex w-full items-center justify-center rounded-lg px-3 py-2 text-xs text-neutral-400 hover:bg-neutral-800"
           >
-            Batal
+            {t('common.cancel')}
           </button>
         </div>
       </div>
@@ -584,16 +584,17 @@ function HistoryPanel({
   currentId: string | null
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="absolute inset-x-0 bottom-12 z-50 mx-3 mb-1 max-h-[40vh] overflow-y-auto rounded-xl border border-neutral-700 bg-neutral-900/95 p-3 shadow-2xl backdrop-blur">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-          Riwayat materi diajarkan
+          {t('live.historyTitle')}
         </h3>
         <button
           onClick={onClose}
           className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
-          aria-label="Tutup riwayat"
+          aria-label={t('live.closeHistory')}
         >
           ×
         </button>
@@ -601,7 +602,7 @@ function HistoryPanel({
       <ul className="space-y-1">
         {items.map((it, i) => {
           const isCurrent = it.id === currentId
-          const title = it.label ?? it.ref ?? '(tanpa judul)'
+          const title = it.label ?? it.ref ?? t('live.untitled')
           return (
             <li
               key={it.id}
@@ -614,18 +615,18 @@ function HistoryPanel({
               <span className="w-5 text-right text-xs text-neutral-500">{i + 1}.</span>
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] uppercase tracking-wider text-emerald-400">
-                  {kindLabel(it.kind)}
-                  {isCurrent ? ' · sedang tampil' : ''}
+                  {t(kindLabelKey(it.kind))}
+                  {isCurrent ? ` · ${t('live.onStage')}` : ''}
                 </div>
                 <div className="truncate text-neutral-100">{title}</div>
               </div>
               {it.completed ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                  <CheckCircle2 size={10} /> Selesai
+                  <CheckCircle2 size={10} /> {t('live.itemDone')}
                 </span>
               ) : isCurrent ? null : (
                 <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                  Belum selesai
+                  {t('live.itemNotDone')}
                 </span>
               )}
             </li>

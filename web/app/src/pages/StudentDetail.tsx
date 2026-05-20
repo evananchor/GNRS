@@ -1,6 +1,7 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { deleteStudent, getStudent, updateStudent } from '@/api/students'
 import { useAuth } from '@/lib/auth'
@@ -14,6 +15,7 @@ export function StudentDetailPage() {
   const [params] = useSearchParams()
   const editFlag = params.get('edit') === '1'
   const { user } = useAuth()
+  const { t } = useTranslation()
   const isAdmin = user?.role === 'admin'
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -44,18 +46,18 @@ export function StudentDetailPage() {
   if (studentQuery.isPending)
     return (
       <PageShell>
-        <p className="text-slate-500">Memuat…</p>
+        <p className="text-slate-500">{t('common.loading')}</p>
       </PageShell>
     )
   if (studentQuery.isError || !studentQuery.data)
     return (
       <PageShell>
-        <p className="text-red-600">Gagal memuat data.</p>
+        <p className="text-red-600">{t('common.loadFailed')}</p>
       </PageShell>
     )
 
   const s = studentQuery.data
-  const statusLabel = s.status === 'active' ? 'Aktif' : 'Keluar'
+  const statusLabel = s.status === 'active' ? t('students.statusActive') : t('students.statusLeft')
 
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -63,18 +65,18 @@ export function StudentDetailPage() {
       {isAdmin && !editing ? (
         <div className="flex gap-2 self-start sm:self-auto">
           <Button variant="secondary" onClick={() => setEditing(true)}>
-            Ubah
+            {t('common.edit')}
           </Button>
           <Button
             variant="danger"
             onClick={() => {
-              if (confirm(`Hapus ${s.name}? Tindakan ini tidak dapat dibatalkan.`)) {
+              if (confirm(t('common.deleteConfirm', { name: s.name }))) {
                 deleteMutation.mutate()
               }
             }}
             disabled={deleteMutation.isPending}
           >
-            Hapus
+            {t('common.delete')}
           </Button>
         </div>
       ) : null}
@@ -87,7 +89,7 @@ export function StudentDetailPage() {
         {editing ? (
           <StudentForm
             initial={s}
-            submitLabel="Simpan"
+            submitLabel={t('common.save')}
             pending={updateMutation.isPending}
             error={updateMutation.error}
             onSubmit={(input) => updateMutation.mutate(input)}
@@ -95,36 +97,41 @@ export function StudentDetailPage() {
           />
         ) : (
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <Row label="Nama" value={s.name} />
-            <Row label="Nama Panggilan" value={s.nickname ?? '—'} />
+            <Row label={t('students.row.name')} value={s.name} />
+            <Row label={t('students.row.nickname')} value={s.nickname ?? '—'} />
             <Row
-              label="Tanggal Lahir"
+              label={t('students.row.birthDate')}
               value={
                 s.dateOfBirth
                   ? `${s.dateOfBirth.slice(0, 10)}${
-                      ageInYears(s.dateOfBirth) !== null ? ` (${ageInYears(s.dateOfBirth)} tahun)` : ''
+                      ageInYears(s.dateOfBirth) !== null
+                        ? ` (${t('students.ageYears', { count: ageInYears(s.dateOfBirth) ?? 0 })})`
+                        : ''
                     }`
                   : '—'
               }
             />
-            <Row label="Jenis Kelamin" value={s.gender === 'male' ? 'Laki-laki' : 'Perempuan'} />
-            <Row label="Jenjang" value={s.level ?? '—'} />
-            <Row label="Kelompok" value={s.kelompok ?? '—'} className="sm:col-span-2" />
-            <Row label="Tanggal Masuk" value={s.joinedAt?.slice(0, 10) ?? '—'} />
-            <Row label="Status" value={statusLabel} />
-            <Row label="Tanggal Keluar" value={s.leftAt?.slice(0, 10) ?? '—'} />
-            <Row label="Keterangan Keluar" value={s.leaveReason ?? '—'} />
-            <Row label="Sebutan Orang Tua" value={s.parentTitle ?? '—'} />
-            <Row label="Nama Orang Tua" value={s.parentName ?? '—'} />
             <Row
-              label="WhatsApp Orang Tua"
+              label={t('students.row.gender')}
+              value={s.gender === 'male' ? t('students.form.male') : t('students.form.female')}
+            />
+            <Row label={t('students.row.level')} value={s.level ?? '—'} />
+            <Row label={t('students.row.kelompok')} value={s.kelompok ?? '—'} className="sm:col-span-2" />
+            <Row label={t('students.row.joinedAt')} value={s.joinedAt?.slice(0, 10) ?? '—'} />
+            <Row label={t('students.row.status')} value={statusLabel} />
+            <Row label={t('students.row.leftAt')} value={s.leftAt?.slice(0, 10) ?? '—'} />
+            <Row label={t('students.row.leaveReason')} value={s.leaveReason ?? '—'} />
+            <Row label={t('students.row.parentTitle')} value={s.parentTitle ?? '—'} />
+            <Row label={t('students.row.parentName')} value={s.parentName ?? '—'} />
+            <Row
+              label={t('students.row.parentPhone')}
               value={
                 s.parentPhone
                   ? `+${({ ID: '62', SG: '65', US: '1', CA: '1' } as any)[s.parentPhoneRegion ?? 'ID'] ?? '62'}${s.parentPhone.replace(/^0+/, '')}`
                   : '—'
               }
             />
-            <Row label="Email Orang Tua" value={s.parentEmail ?? '—'} className="sm:col-span-2" />
+            <Row label={t('students.row.parentEmail')} value={s.parentEmail ?? '—'} className="sm:col-span-2" />
           </dl>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Upload, X } from 'lucide-react'
 
 import { getSettings, updateSettings } from '@/api/settings'
@@ -17,6 +18,7 @@ import { useToast } from '@/lib/toast'
  *     the same settings table for simplicity)
  */
 export function InstansiSection() {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
   const { data: settings = {} } = useQuery({
@@ -37,15 +39,15 @@ export function InstansiSection() {
   const mut = useMutation({
     mutationFn: (updates: Record<string, string>) => updateSettings(updates),
     onSuccess: () => {
-      toast('Pengaturan instansi tersimpan', 'success')
+      toast(t('instansi.saved'), 'success')
       qc.invalidateQueries({ queryKey: ['settings'] })
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal simpan', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('instansi.saveFailed'), 'error'),
   })
 
   const handlePickFile = (file: File) => {
     if (file.size > 1024 * 1024) {
-      toast('Logo maksimal 1 MB', 'error')
+      toast(t('instansi.logoMaxToast'), 'error')
       return
     }
     const reader = new FileReader()
@@ -68,20 +70,20 @@ export function InstansiSection() {
     <PageShell>
       <div className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold">Instansi</h2>
+          <h2 className="text-lg font-semibold">{t('instansi.title')}</h2>
           <p className="text-sm text-slate-500">
-            Logo akan tampil di kiri kata "GNRS" di header, lalu nama instansi muncul setelahnya.
+            {t('instansi.subtitle')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="max-w-xl space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <Field label="Logo instansi" htmlFor="instansi-logo" hint="PNG/JPG. Maksimal 1 MB.">
+          <Field label={t('instansi.logoLabel')} htmlFor="instansi-logo" hint={t('instansi.logoHint')}>
             <div className="flex items-center gap-3">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                 {logoData ? (
                   <img src={logoData} alt="" className="h-full w-full object-contain" />
                 ) : (
-                  <span className="text-[10px] text-slate-400">tidak ada</span>
+                  <span className="text-[10px] text-slate-400">{t('instansi.noLogo')}</span>
                 )}
               </div>
               <div className="flex flex-col gap-1">
@@ -102,7 +104,7 @@ export function InstansiSection() {
                   variant="secondary"
                   onClick={() => fileRef.current?.click()}
                 >
-                  <Upload size={14} className="mr-1" /> Unggah
+                  <Upload size={14} className="mr-1" /> {t('instansi.uploadBtn')}
                 </Button>
                 {logoData ? (
                   <button
@@ -110,27 +112,27 @@ export function InstansiSection() {
                     onClick={() => setLogoData('')}
                     className="inline-flex items-center gap-1 text-xs text-rose-600 hover:underline"
                   >
-                    <X size={12} /> Hapus
+                    <X size={12} /> {t('instansi.removeBtn')}
                   </button>
                 ) : null}
               </div>
             </div>
           </Field>
           <Field
-            label="Nama instansi"
+            label={t('instansi.namaLabel')}
             htmlFor="instansi-nama"
-            hint="Muncul setelah kata GNRS — contoh: US, PPG Surabaya, dst."
+            hint={t('instansi.namaHint')}
           >
             <Input
               id="instansi-nama"
               value={nama}
               onChange={(e) => setNama(e.target.value)}
-              placeholder="US"
+              placeholder={t('instansi.namaPh')}
               maxLength={100}
             />
           </Field>
           <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-slate-500">Preview header</div>
+            <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('instansi.previewLabel')}</div>
             <div className="mt-1 flex items-center gap-2 text-base font-semibold text-slate-900">
               {logoData ? (
                 <img src={logoData} alt="" className="h-6 w-6 object-contain" />
@@ -140,7 +142,7 @@ export function InstansiSection() {
           </div>
           <div className="flex justify-end">
             <Button type="submit" disabled={mut.isPending}>
-              {mut.isPending ? 'Menyimpan…' : 'Simpan'}
+              {mut.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </div>
         </form>

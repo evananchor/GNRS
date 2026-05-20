@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Plus, X } from 'lucide-react'
 
 import { endSesi, updateSesi, type Sesi } from '@/api/sesi'
@@ -44,6 +45,7 @@ export function SesiEndDialog({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const qc = useQueryClient()
 
@@ -196,31 +198,31 @@ export function SesiEndDialog({
       return ended
     },
     onSuccess: () => {
-      toast('Sesi diakhiri', 'success')
+      toast(t('sesiDialog.end.savedToast'), 'success')
       qc.invalidateQueries({ queryKey: ['sesi'] })
       qc.invalidateQueries({ queryKey: ['kelas-sesi'] })
       qc.invalidateQueries({ queryKey: ['rencana'] })
       qc.invalidateQueries({ queryKey: ['rencana-full'] })
       onSaved()
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : 'Gagal menyimpan', 'error'),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('sesiDialog.end.saveFailed'), 'error'),
   })
 
   return (
-    <Dialog title="Akhiri sesi" onClose={onClose} size="lg">
+    <Dialog title={t('sesiDialog.end.title')} onClose={onClose} size="lg">
       <div className="space-y-4">
         <p className="text-sm text-slate-600">
-          Konfirmasi waktu sebenarnya lalu pilih materi yang sudah diajarkan.
+          {t('sesiDialog.end.intro')}
         </p>
 
         {/* Step 1: time + durasi. Editing mulai/selesai updates durasi;
             editing durasi shifts selesai (mulai stays). */}
         <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Waktu aktual
+            {t('sesiDialog.end.waktuAktual')}
           </div>
           <div className="mt-2 grid gap-3 sm:grid-cols-3">
-            <Field label="Mulai (HH:MM)" htmlFor="end-mulai">
+            <Field label={t('sesiDialog.end.mulaiLabel')} htmlFor="end-mulai">
               <Input
                 id="end-mulai"
                 type="time"
@@ -228,7 +230,7 @@ export function SesiEndDialog({
                 onChange={(e) => onChangeMulai(e.target.value)}
               />
             </Field>
-            <Field label="Selesai (HH:MM)" htmlFor="end-selesai">
+            <Field label={t('sesiDialog.end.selesaiLabel')} htmlFor="end-selesai">
               <Input
                 id="end-selesai"
                 type="time"
@@ -236,7 +238,7 @@ export function SesiEndDialog({
                 onChange={(e) => onChangeSelesai(e.target.value)}
               />
             </Field>
-            <Field label="Durasi (menit)" htmlFor="end-durasi">
+            <Field label={t('sesiDialog.end.durasiLabel')} htmlFor="end-durasi">
               <Input
                 id="end-durasi"
                 type="text"
@@ -255,27 +257,25 @@ export function SesiEndDialog({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Materi yang diajarkan
+                {t('sesiDialog.end.materiHeading')}
               </div>
               <p className="text-xs text-slate-500">
-                Tandai materi dari rencana bulan ini. Klik "+ Library" untuk
-                tambah materi di luar rencana (otomatis masuk rencana sebagai
-                selesai).
+                {t('sesiDialog.end.materiHint')}
               </p>
             </div>
             <div className="flex flex-col gap-1">
               <Button size="sm" variant="secondary" onClick={() => setPickingLibrary(true)}>
-                <Plus size={14} className="mr-1" /> Library
+                <Plus size={14} className="mr-1" /> {t('sesiDialog.end.btnLibrary')}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => setPickingKurikulum(true)}>
-                <Plus size={14} className="mr-1" /> Kurikulum
+                <Plus size={14} className="mr-1" /> {t('sesiDialog.end.btnKurikulum')}
               </Button>
             </div>
           </div>
 
           {rencanaMateri.length === 0 ? (
             <p className="mt-2 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              Rencana bulan ini kosong.
+              {t('sesiDialog.end.rencanaEmpty')}
             </p>
           ) : (
             <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
@@ -310,7 +310,7 @@ export function SesiEndDialog({
 
           {extraLibrary.length > 0 ? (
             <div className="mt-2 space-y-1">
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">Library tambahan</div>
+              <div className="text-[10px] uppercase tracking-wide text-slate-500">{t('sesiDialog.end.libraryExtraHeading')}</div>
               {extraLibrary.map((v, i) => (
                 <div
                   key={i}
@@ -327,7 +327,7 @@ export function SesiEndDialog({
                     type="button"
                     onClick={() => setExtraLibrary((cur) => cur.filter((_, j) => j !== i))}
                     className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                    aria-label="Hapus"
+                    aria-label={t('sesiDialog.end.removeAria')}
                   >
                     <X size={12} />
                   </button>
@@ -339,10 +339,10 @@ export function SesiEndDialog({
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
           <Button variant="secondary" onClick={onClose} disabled={mutSave.isPending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button onClick={() => mutSave.mutate()} disabled={mutSave.isPending}>
-            {mutSave.isPending ? 'Menyimpan…' : 'Akhiri & Simpan'}
+            {mutSave.isPending ? t('common.saving') : t('sesiDialog.end.saveBtn')}
           </Button>
         </div>
       </div>
@@ -425,6 +425,7 @@ function LibraryAddDialog({
   onSave: (v: MateriSourceValue) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [value, setValue] = useState<MateriSourceValue>(() => {
     const v = emptyMateriSourceValue()
     v.libraryKind = 'quran'
@@ -433,7 +434,7 @@ function LibraryAddDialog({
   })
   const ready = value.libraryKind !== 'kurikulum' && (value.libraryRef ?? '').trim() !== ''
   return (
-    <Dialog title="Tambah dari Library" onClose={onClose} size="lg">
+    <Dialog title={t('sesiDialog.end.libDialogTitle')} onClose={onClose} size="lg">
       <div className="space-y-4">
         <MateriSourcePicker
           value={value}
@@ -442,10 +443,10 @@ function LibraryAddDialog({
         />
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button type="button" onClick={() => onSave(value)} disabled={!ready}>
-            Tambah
+            {t('sesiDialog.end.libDialogAdd')}
           </Button>
         </div>
       </div>

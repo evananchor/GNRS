@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search } from 'lucide-react'
 
 import { ASMAUL_HUSNA } from '@/lib/pustakaData'
@@ -9,6 +10,7 @@ import { LibraryShell } from '@/components/LibraryShell'
  * with the SPA bundle.
  */
 export function PustakaAsmaulPage() {
+  const { t } = useTranslation()
   const [q, setQ] = useState('')
   const list = useMemo(() => {
     const lq = q.trim().toLowerCase()
@@ -24,16 +26,16 @@ export function PustakaAsmaulPage() {
   }, [q])
 
   return (
-    <LibraryShell backTo="/pustaka" backLabel="Pustaka" bgClassName="bg-slate-50" contentClassName="px-4 pt-14 pb-6 md:px-8">
+    <LibraryShell backTo="/pustaka" bgClassName="bg-slate-50" contentClassName="px-4 pt-14 pb-6 md:px-8">
       <div className="mx-auto max-w-5xl">
-      <h1 className="mb-1 text-2xl font-semibold">Asmaul Husna</h1>
-      <p className="mb-4 text-sm text-slate-500">99 nama Allah yang Maha Indah.</p>
+      <h1 className="mb-1 text-2xl font-semibold">{t('pustaka.asmaul.title')}</h1>
+      <p className="mb-4 text-sm text-slate-500">{t('pustaka.asmaul.subtitle')}</p>
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
         <Search size={16} className="text-slate-400" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Cari nama (latin / arti / Arab / nomor)…"
+          placeholder={t('pustaka.asmaul.searchPh')}
           className="flex-1 bg-transparent text-sm focus:outline-none"
         />
         {q ? (
@@ -42,12 +44,12 @@ export function PustakaAsmaulPage() {
             onClick={() => setQ('')}
             className="text-xs text-slate-400 hover:text-slate-600"
           >
-            Hapus
+            {t('pustaka.asmaul.clear')}
           </button>
         ) : null}
       </div>
 
-      <p className="mb-3 text-xs text-slate-500">{list.length} dari 99 nama</p>
+      <p className="mb-3 text-xs text-slate-500">{t('pustaka.asmaul.countOf', { count: list.length })}</p>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((a) => (
@@ -74,7 +76,7 @@ export function PustakaAsmaulPage() {
         ))}
         {list.length === 0 ? (
           <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-8 text-center text-sm text-slate-500 sm:col-span-2 lg:col-span-3">
-            Tidak ada nama yang cocok dengan "{q}".
+            {t('pustaka.asmaul.noMatch', { q })}
           </p>
         ) : null}
       </div>
