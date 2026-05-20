@@ -25,12 +25,14 @@ import { Input } from '@/components/Input'
 import { LibraryShell } from '@/components/LibraryShell'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 export function PustakaKarakterPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
 
   const { data: items = [], isPending } = useQuery({
@@ -151,14 +153,15 @@ export function PustakaKarakterPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (
-                          confirm(
-                            t('pustaka.karakter.confirmDeleteGroup', {
+                          await confirm({
+                            message: t('pustaka.karakter.confirmDeleteGroup', {
                               name: g.parent,
                               count: g.items.length,
                             }),
-                          )
+                            danger: true,
+                          })
                         ) {
                           deleteGroupMut.mutate(g.parent)
                         }
@@ -215,8 +218,8 @@ export function PustakaKarakterPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (confirm(t('pustaka.karakter.confirmDeleteItem', { name: k.labelId }))) {
+                          onClick={async () => {
+                            if (await confirm({ message: t('pustaka.karakter.confirmDeleteItem', { name: k.labelId }), danger: true })) {
                               deleteMut.mutate(k.id)
                             }
                           }}

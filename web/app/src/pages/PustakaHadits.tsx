@@ -16,6 +16,7 @@ import { LibraryShell } from '@/components/LibraryShell'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { useAuth } from '@/lib/auth'
+import { useConfirm } from '@/lib/confirm'
 
 const fieldCx =
   'flex w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50'
@@ -29,6 +30,7 @@ export function PustakaHaditsPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const qc = useQueryClient()
+  const confirm = useConfirm()
   const [editing, setEditing] = useState<HaditsKitab | 'new' | null>(null)
 
   const { data: list = [], isPending, isError } = useQuery({
@@ -43,8 +45,8 @@ export function PustakaHaditsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hadits-kitab-all'] }),
   })
 
-  const onDelete = (k: HaditsKitab) => {
-    if (!window.confirm(t('pustaka.hadits.confirmDelete', { name: k.nama }))) return
+  const onDelete = async (k: HaditsKitab) => {
+    if (!(await confirm({ message: t('pustaka.hadits.confirmDelete', { name: k.nama }), danger: true }))) return
     removeMut.mutate(k.slug)
   }
 

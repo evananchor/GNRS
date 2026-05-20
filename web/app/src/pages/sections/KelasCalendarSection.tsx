@@ -20,6 +20,7 @@ import { EndSesiSummaryDialog } from '@/components/EndSesiSummaryDialog'
 import { SesiFormDialog } from '@/components/SesiFormDialog'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 // Calendar utilities --------------------------------------------------------
 
@@ -78,6 +79,7 @@ export function KelasCalendarSection() {
   const { user } = useAuth()
   const canManage = user?.role === 'admin' || user?.role === 'staff' || user?.role === 'pengurus' || user?.role === 'guru'
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const { t, i18n } = useTranslation()
   const STATUS_LABEL: Record<Status, string> = {
@@ -288,8 +290,8 @@ export function KelasCalendarSection() {
   const todayIso = localDate(today)
   const dayList = pickedDate ? byDate[pickedDate] || [] : []
 
-  const handleDelete = (s: Sesi) => {
-    if (confirm(t('kelasSection.calendar.confirmDelete', { topik: s.topik }))) {
+  const handleDelete = async (s: Sesi) => {
+    if (await confirm({ message: t('kelasSection.calendar.confirmDelete', { topik: s.topik }), danger: true })) {
       deleteMut.mutate(s.id)
     }
   }

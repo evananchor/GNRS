@@ -4,6 +4,7 @@ import { ImagePlus, Loader2, Trash2, User } from 'lucide-react'
 
 import { apiFetch, ApiError } from '@/api/client'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 type Props = {
   /** Target user id. Required unless self=true. */
@@ -28,6 +29,7 @@ export function PhotoUploader({
     ? '/api/auth/me/photo'
     : `/api/users/${encodeURIComponent(userId ?? '')}/photo`
   const toast = useToast()
+  const confirm = useConfirm()
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState<'upload' | 'delete' | null>(null)
@@ -64,7 +66,7 @@ export function PhotoUploader({
 
   const handleDelete = async () => {
     if (!photoUrl || busy) return
-    if (!confirm(t('photoUploader.confirmDelete'))) return
+    if (!(await confirm({ message: t('photoUploader.confirmDelete'), danger: true }))) return
     setBusy('delete')
     try {
       const updated = await apiFetch<{ photoUrl?: string }>(endpoint, {

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from './App'
 import { AuthProvider } from './lib/auth'
 import { ToastProvider } from './lib/toast'
+import { ConfirmProvider } from './lib/confirm'
 import './lib/i18n'
 import './index.css'
 import 'leaflet/dist/leaflet.css'
@@ -28,9 +29,11 @@ createRoot(rootEl).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </ConfirmProvider>
         </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -30,6 +30,8 @@
     "dataNotFound": "Data not found",
     "loadFailed": "Failed to load data.",
     "deleteConfirm": "Delete {{name}}? This action cannot be undone.",
+    "confirm": "Confirm",
+    "confirmTitle": "Confirm",
     "pagination": "Page {{page}} of {{total}} · {{count}} total",
     "fmtOf": "of {{count}} total"
   },

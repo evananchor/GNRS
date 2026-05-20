@@ -22,6 +22,7 @@ import { Input } from '@/components/Input'
 import { PageShell, PageHeader } from '@/components/PageShell'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 /**
  * KontrolBacaan — track each user's progress reading the entire Qur'an. A
@@ -343,6 +344,7 @@ function UserBacaanDetail({
 }) {
   const { t } = useTranslation()
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const { data: logs = [] } = useQuery({
     queryKey: ['bacaan', u.userId],
@@ -413,8 +415,8 @@ function UserBacaanDetail({
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm(t('bacaan.confirmDelete'))) delMut.mutate(l.id)
+                      onClick={async () => {
+                        if (await confirm({ message: t('bacaan.confirmDelete'), danger: true })) delMut.mutate(l.id)
                       }}
                       className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                       aria-label={t('bacaan.removeAria')}

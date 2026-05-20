@@ -22,6 +22,7 @@ import {
 import { ApiError } from '@/api/client'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 import { Button } from '@/components/Button'
 import { Dialog } from '@/components/Dialog'
 import { Field } from '@/components/Field'
@@ -68,6 +69,7 @@ export function UsersPage() {
 
   const { user: me } = useAuth()
   const toast = useToast()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<DialogMode>(null)
 
   const { data, isPending } = useQuery({
@@ -110,8 +112,8 @@ export function UsersPage() {
     onError: (e) => toast(apiMsg(e, t('users.updateFailed')), 'error'),
   })
 
-  const handleDelete = (u: ManagedUser) => {
-    if (confirm(t('users.deleteConfirm', { name: u.name }))) {
+  const handleDelete = async (u: ManagedUser) => {
+    if (await confirm({ message: t('users.deleteConfirm', { name: u.name }), danger: true })) {
       deleteMutation.mutate(u.id)
     }
   }

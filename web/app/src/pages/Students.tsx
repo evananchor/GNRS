@@ -20,6 +20,7 @@ import {
 import { ApiError } from '@/api/client'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { RowActions } from '@/components/RowActions'
@@ -49,6 +50,7 @@ export function StudentsPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<DialogMode>(null)
   // View mode: 'grid' (thumbnail cards) or 'list' (table). Persisted in
   // localStorage. Default 'grid' per user request.
@@ -102,8 +104,8 @@ export function StudentsPage() {
     onError: (e) => toast(apiMsg(e, t('students.updateFailed')), 'error'),
   })
 
-  const handleDelete = (s: Student) => {
-    if (confirm(t('common.deleteConfirm', { name: s.name }))) {
+  const handleDelete = async (s: Student) => {
+    if (await confirm({ message: t('common.deleteConfirm', { name: s.name }), danger: true })) {
       deleteMutation.mutate(s.id)
     }
   }

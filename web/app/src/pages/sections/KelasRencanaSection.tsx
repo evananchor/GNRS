@@ -28,6 +28,7 @@ import { PageShell } from '@/components/PageShell'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 /**
  * KelasRencanaSection — Rencana Ajar Bulanan (Monthly Teaching Plan), ported
@@ -63,6 +64,7 @@ export function KelasRencanaSection() {
   const isAdmin = user?.role === 'admin'
   const qc = useQueryClient()
   const toast = useToast()
+  const confirm = useConfirm()
   const { t, i18n } = useTranslation()
   const BULAN = useMemo(() => {
     const fmt = new Intl.DateTimeFormat(i18n.language, { month: 'long' })
@@ -475,8 +477,8 @@ export function KelasRencanaSection() {
                           {isAdmin ? (
                             <button
                               type="button"
-                              onClick={() => {
-                                if (confirm(t('kelasSection.rencana.confirmRemove'))) removeMut.mutate(it.id)
+                              onClick={async () => {
+                                if (await confirm({ message: t('kelasSection.rencana.confirmRemove'), danger: true })) removeMut.mutate(it.id)
                               }}
                               className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                               aria-label={t('kelasSection.rencana.removeItem')}

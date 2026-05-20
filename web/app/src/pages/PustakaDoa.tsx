@@ -20,6 +20,7 @@ import { LibraryShell } from '@/components/LibraryShell'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 /**
  * PustakaDoa — sitrac-style accordion list. The header (title + search +
@@ -35,6 +36,7 @@ export function PustakaDoaPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -73,8 +75,8 @@ export function PustakaDoaPage() {
     onError: (e) => toast(e instanceof ApiError ? e.message : t('pustaka.doa.deleteFailed'), 'error'),
   })
 
-  const handleDelete = (d: Doa) => {
-    if (confirm(t('pustaka.doa.confirmDelete', { name: d.nama }))) delMut.mutate(d.id)
+  const handleDelete = async (d: Doa) => {
+    if (await confirm({ message: t('pustaka.doa.confirmDelete', { name: d.nama }), danger: true })) delMut.mutate(d.id)
   }
 
   return (

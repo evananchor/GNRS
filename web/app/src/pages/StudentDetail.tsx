@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { deleteStudent, getStudent, updateStudent } from '@/api/students'
 import { useAuth } from '@/lib/auth'
+import { useConfirm } from '@/lib/confirm'
 import { ageInYears } from '@/lib/age'
 import { Button } from '@/components/Button'
 import { PageShell } from '@/components/PageShell'
@@ -19,6 +20,7 @@ export function StudentDetailPage() {
   const isAdmin = user?.role === 'admin'
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const confirm = useConfirm()
   const [editing, setEditing] = useState(isAdmin && editFlag)
 
   const studentQuery = useQuery({
@@ -69,8 +71,8 @@ export function StudentDetailPage() {
           </Button>
           <Button
             variant="danger"
-            onClick={() => {
-              if (confirm(t('common.deleteConfirm', { name: s.name }))) {
+            onClick={async () => {
+              if (await confirm({ message: t('common.deleteConfirm', { name: s.name }), danger: true })) {
                 deleteMutation.mutate()
               }
             }}

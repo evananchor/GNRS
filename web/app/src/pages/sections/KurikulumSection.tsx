@@ -20,6 +20,7 @@ import { Input } from '@/components/Input'
 import { MateriAjarForm } from '@/components/MateriAjarForm'
 import { PageShell } from '@/components/PageShell'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 // Ported from sitrac-v3's KurikulumEditorSection — read-only viewer subset.
 // Same 3-level grouping: tema → subTema → kelompokMateri.
@@ -46,6 +47,7 @@ type DialogMode =
 export function KurikulumSection() {
   const { t } = useTranslation()
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [tingkat, setTingkat] = useState('')
   const [semFilter, setSemFilter] = useState<'1' | '2'>('1')
@@ -113,8 +115,8 @@ export function KurikulumSection() {
     onError: (err) => toast(apiMessage(err, t('kurikulum.deleteSubTemaFailed')), 'error'),
   })
 
-  const handleDelete = (m: MateriAjar) => {
-    if (confirm(t('kurikulum.deleteMateriConfirm', { kode: m.kodeMateri, detail: m.detailMateri }))) {
+  const handleDelete = async (m: MateriAjar) => {
+    if (await confirm({ message: t('kurikulum.deleteMateriConfirm', { kode: m.kodeMateri, detail: m.detailMateri }), danger: true })) {
       deleteMut.mutate(m.id)
     }
   }
@@ -369,11 +371,12 @@ export function KurikulumSection() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           if (
-                            confirm(
-                              t('kurikulum.deleteTemaConfirm', { tema: g.tema, count: g.items.length }),
-                            )
+                            await confirm({
+                              message: t('kurikulum.deleteTemaConfirm', { tema: g.tema, count: g.items.length }),
+                              danger: true,
+                            })
                           ) {
                             deleteTemaMut.mutate(g.tema)
                           }
@@ -435,11 +438,12 @@ export function KurikulumSection() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (
-                                      confirm(
-                                        t('kurikulum.deleteSubTemaConfirm', { subTema: sub.subTema, tema: g.tema, count: sub.items.length }),
-                                      )
+                                      await confirm({
+                                        message: t('kurikulum.deleteSubTemaConfirm', { subTema: sub.subTema, tema: g.tema, count: sub.items.length }),
+                                        danger: true,
+                                      })
                                     ) {
                                       deleteSubTemaMut.mutate({ tema: g.tema, subTema: sub.subTema })
                                     }

@@ -19,6 +19,8 @@ import {
 } from '@/api/users'
 import { useAuth } from '@/lib/auth'
 import { ApiError } from '@/lib/api'
+import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { Field } from '@/components/Field'
@@ -33,6 +35,8 @@ export function UserDetailPage() {
   const { user: me } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const toast = useToast()
+  const confirm = useConfirm()
   const [editing, setEditing] = useState(editFlag)
   const roleLabel = useRoleLabel()
 
@@ -80,15 +84,15 @@ export function UserDetailPage() {
               variant="danger"
               disabled={isSelf}
               title={isSelf ? t('users.selfDeleteBlock') : undefined}
-              onClick={() => {
+              onClick={async () => {
                 if (isSelf) return
-                if (confirm(t('users.deleteConfirm', { name: u.name }))) {
+                if (await confirm({ message: t('users.deleteConfirm', { name: u.name }), danger: true })) {
                   deleteUser(u.id).then(
                     async () => {
                       await qc.invalidateQueries({ queryKey: ['users'] })
                       navigate('/pengaturan/pengguna')
                     },
-                    (err) => alert(err instanceof ApiError ? err.message : t('users.deleteFailed')),
+                    (err) => toast(err instanceof ApiError ? err.message : t('users.deleteFailed'), 'error'),
                   )
                 }
               }}

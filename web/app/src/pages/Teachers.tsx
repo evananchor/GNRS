@@ -15,6 +15,7 @@ import type { Teacher, TeacherInput } from '@/api/types'
 import { ApiError } from '@/api/client'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { RowActions } from '@/components/RowActions'
@@ -39,6 +40,7 @@ export function TeachersPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<DialogMode>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     try {
@@ -90,8 +92,8 @@ export function TeachersPage() {
     onError: (e) => toast(apiMsg(e, t('teachers.updateFailed')), 'error'),
   })
 
-  const handleDelete = (tch: Teacher) => {
-    if (confirm(t('common.deleteConfirm', { name: tch.name }))) {
+  const handleDelete = async (tch: Teacher) => {
+    if (await confirm({ message: t('common.deleteConfirm', { name: tch.name }), danger: true })) {
       deleteMutation.mutate(tch.id)
     }
   }

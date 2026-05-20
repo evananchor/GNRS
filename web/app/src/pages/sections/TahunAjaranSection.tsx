@@ -19,6 +19,7 @@ import { Field } from '@/components/Field'
 import { Input } from '@/components/Input'
 import { PageShell } from '@/components/PageShell'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 /**
  * TahunAjaranSection — admin manages academic years (tahun_ajaran). Only one
@@ -29,6 +30,7 @@ export function TahunAjaranSection() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<
     | { kind: 'create' }
     | { kind: 'edit'; item: TahunAjaran }
@@ -137,8 +139,8 @@ export function TahunAjaranSection() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm(t('tahunAjaran.deleteConfirm', { nama: row.nama }))) {
+                  onClick={async () => {
+                    if (await confirm({ message: t('tahunAjaran.deleteConfirm', { nama: row.nama }), danger: true })) {
                       deleteMut.mutate(row.id)
                     }
                   }}

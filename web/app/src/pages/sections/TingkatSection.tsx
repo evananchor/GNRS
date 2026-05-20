@@ -20,10 +20,12 @@ import { Field } from '@/components/Field'
 import { Input } from '@/components/Input'
 import { PageShell } from '@/components/PageShell'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 export function TingkatSection() {
   const { t } = useTranslation()
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [editing, setEditing] = useState<Tingkat | null>(null)
   const [creating, setCreating] = useState(false)
@@ -67,8 +69,8 @@ export function TingkatSection() {
     onError: (err) => toast(apiMessage(err, t('tingkat.deleteFailed')), 'error'),
   })
 
-  const handleDelete = (tk: Tingkat) => {
-    if (confirm(t('tingkat.deleteConfirm', { nama: tk.nama }))) {
+  const handleDelete = async (tk: Tingkat) => {
+    if (await confirm({ message: t('tingkat.deleteConfirm', { nama: tk.nama }), danger: true })) {
       deleteMut.mutate(tk.id)
     }
   }

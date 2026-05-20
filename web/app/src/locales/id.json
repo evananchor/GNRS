@@ -30,6 +30,8 @@
     "dataNotFound": "Data tidak ditemukan",
     "loadFailed": "Gagal memuat data.",
     "deleteConfirm": "Hapus {{name}}? Tindakan ini tidak dapat dibatalkan.",
+    "confirm": "Konfirmasi",
+    "confirmTitle": "Konfirmasi",
     "pagination": "Halaman {{page}} dari {{total}} · {{count}} total",
     "fmtOf": "dari {{count}} total"
   },

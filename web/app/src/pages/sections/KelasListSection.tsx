@@ -33,6 +33,7 @@ import { SesiFormDialog } from '@/components/SesiFormDialog'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 /**
  * KelasListSection — porting sitrac-v3's `Kelas.tsx` accordion layout. Each
@@ -70,6 +71,7 @@ export function KelasListSection() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const { t } = useTranslation()
   const [dialog, setDialog] = useState<
@@ -102,8 +104,8 @@ export function KelasListSection() {
     onError: (e) => toast(e instanceof ApiError ? e.message : t('kelasSection.list.kelasDeleteFailed'), 'error'),
   })
 
-  const handleDelete = (k: Kelas) => {
-    if (confirm(t('kelasSection.list.confirmDelete', { nama: k.nama }))) {
+  const handleDelete = async (k: Kelas) => {
+    if (await confirm({ message: t('kelasSection.list.confirmDelete', { nama: k.nama }), danger: true })) {
       deleteMut.mutate(k.id)
     }
   }
@@ -244,6 +246,7 @@ function KelasCard({
   const [addingSesi, setAddingSesi] = useState(false)
   const qc = useQueryClient()
   const toast = useToast()
+  const confirm = useConfirm()
   const { t } = useTranslation()
   const STATUS_LABEL: Record<Status, string> = {
     upcoming: t('kelasSection.status.upcoming'),
@@ -480,8 +483,8 @@ function KelasCard({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    if (confirm(t('kelasSection.list.confirmDeleteSesi', { topik: s.topik }))) delMut.mutate(s.id)
+                                  onClick={async () => {
+                                    if (await confirm({ message: t('kelasSection.list.confirmDeleteSesi', { topik: s.topik }), danger: true })) delMut.mutate(s.id)
                                   }}
                                   disabled={delMut.isPending}
                                   className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"

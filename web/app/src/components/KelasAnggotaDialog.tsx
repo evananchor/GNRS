@@ -19,6 +19,7 @@ import { Dialog } from '@/components/Dialog'
 import { Input } from '@/components/Input'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/lib/toast'
+import { useConfirm } from '@/lib/confirm'
 
 type Tab = 'murid' | 'guru'
 
@@ -93,6 +94,7 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
+  const confirm = useConfirm()
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<Set<string>>(new Set())
 
@@ -162,8 +164,8 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
                 <span className="truncate text-sm">{a.muridName}</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm(t('sesiDialog.kelasAnggota.muridConfirmRemove', { name: a.muridName }))) {
+                  onClick={async () => {
+                    if (await confirm({ message: t('sesiDialog.kelasAnggota.muridConfirmRemove', { name: a.muridName }), danger: true })) {
                       removeMut.mutate(a.muridUserId)
                     }
                   }}
@@ -248,6 +250,7 @@ function GuruSection({ kelasId }: { kelasId: string }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
+  const confirm = useConfirm()
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<Set<string>>(new Set())
 
@@ -333,11 +336,11 @@ function GuruSection({ kelasId }: { kelasId: string }) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const msg = g.isPrimary
                       ? t('sesiDialog.kelasAnggota.guruConfirmRemovePrimary', { name: g.guruName })
                       : t('sesiDialog.kelasAnggota.guruConfirmRemove', { name: g.guruName })
-                    if (confirm(msg)) removeMut.mutate(g.guruUserId)
+                    if (await confirm({ message: msg, danger: true })) removeMut.mutate(g.guruUserId)
                   }}
                   disabled={removeMut.isPending}
                   className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
