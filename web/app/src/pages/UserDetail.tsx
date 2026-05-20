@@ -16,7 +16,7 @@ import {
   type UserUpdateInput,
 } from '@/api/users'
 import { useAuth } from '@/lib/auth'
-import { ApiError } from '@/lib/api'
+import { ApiError } from '@/api/client'
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 import { Button } from '@/components/Button'

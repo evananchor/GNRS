@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 
 import { createUser, USER_ROLES, type UserRole } from '@/api/users'
-import { ApiError } from '@/lib/api'
+import { ApiError } from '@/api/client'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { Field } from '@/components/Field'
