@@ -59,3 +59,4 @@ web/app/src/routeTree.gen.ts
 *.tsbuildinfo
 web/app/vite.config.d.ts
 web/app/vite.config.js
+.gstack/
