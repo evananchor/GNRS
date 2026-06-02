@@ -32,9 +32,16 @@ func main() {
 				os.Exit(1)
 			}
 			return
+		case "backfill-emails":
+			if err := runBackfillEmails(); err != nil {
+				fmt.Fprintln(os.Stderr, "backfill-emails:", err)
+				os.Exit(1)
+			}
+			return
 		case "-h", "--help", "help":
-			fmt.Println("usage: server                       (start the HTTP server)")
-			fmt.Println("       server import-teachers FILE  (import teachers CSV)")
+			fmt.Println("usage: server                        (start the HTTP server)")
+			fmt.Println("       server import-teachers FILE   (import teachers CSV)")
+			fmt.Println("       server backfill-emails         (reset every user's email to <nickname>@gnrs.com)")
 			return
 		}
 	}
@@ -79,6 +86,32 @@ func runImportTeachers(args []string) error {
 	for _, e := range res.Errors {
 		fmt.Printf("  line %d: %v\n", e.Line, e.Err)
 	}
+	return nil
+}
+
+// runBackfillEmails resets every user's email to a slug of their nickname
+// (falling back to name) at the default domain, deduplicated with a numeric
+// suffix. Idempotent — safe to re-run. See store.Users.BackfillEmails.
+func runBackfillEmails() error {
+	dbPath := os.Getenv("DATABASE_PATH")
+	if dbPath == "" {
+		dbPath = "./data/app.db"
+	}
+
+	db, err := store.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open db at %s: %w", dbPath, err)
+	}
+	defer db.Close()
+	if err := store.Migrate(db); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+
+	n, err := store.NewUsers(db).BackfillEmails(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Printf("backfilled emails for %d users (domain: @%s)\n", n, store.DefaultEmailDomain)
 	return nil
 }
 
@@ -151,6 +184,7 @@ func run() error {
 	settings := store.NewSettings(db)
 	attendances := store.NewAttendances(db)
 	diajarkan := store.NewDiajarkan(db)
+	wilayah := store.NewWilayah(db)
 
 	if err := store.SeedKarakter(context.Background(), db); err != nil {
 		return fmt.Errorf("seed karakter: %w", err)
@@ -266,7 +300,7 @@ func run() error {
 			p.Get("/kelas", kelasH.List)
 			p.Get("/kelas/{id}", kelasH.Get)
 			p.Get("/kelas/{id}/anggota", kelasH.ListAnggota)
-				p.Get("/kelas/{id}/guru", kelasH.ListGuruAnggota)
+			p.Get("/kelas/{id}/guru", kelasH.ListGuruAnggota)
 
 			rencanaH := handler.NewRencana(rencana)
 			p.Get("/rencana-bulanan", rencanaH.List)
@@ -299,6 +333,9 @@ func run() error {
 			p.Get("/tahun-ajaran", tahunAjaranH.List)
 			p.Get("/tahun-ajaran/active", tahunAjaranH.Active)
 
+			wilayahH := handler.NewWilayah(wilayah)
+			p.Get("/wilayah", wilayahH.Tree)
+
 			usersH := handler.NewUsers(users)
 			photosH := handler.NewPhotos(users, cfg.PhotosDir)
 			p.Get("/files/photos/{filename}", photosH.Serve)
@@ -314,6 +351,16 @@ func run() error {
 				adm.Post("/teachers", teachersH.Create)
 				adm.Patch("/teachers/{id}", teachersH.Update)
 				adm.Delete("/teachers/{id}", teachersH.Delete)
+
+				adm.Post("/wilayah/daerah", wilayahH.CreateDaerah)
+				adm.Patch("/wilayah/daerah/{id}", wilayahH.RenameDaerah)
+				adm.Delete("/wilayah/daerah/{id}", wilayahH.DeleteDaerah)
+				adm.Post("/wilayah/daerah/{daerahId}/desa", wilayahH.CreateDesa)
+				adm.Patch("/wilayah/desa/{id}", wilayahH.RenameDesa)
+				adm.Delete("/wilayah/desa/{id}", wilayahH.DeleteDesa)
+				adm.Post("/wilayah/desa/{desaId}/kelompok", wilayahH.CreateKelompok)
+				adm.Patch("/wilayah/kelompok/{id}", wilayahH.RenameKelompok)
+				adm.Delete("/wilayah/kelompok/{id}", wilayahH.DeleteKelompok)
 
 				adm.Post("/tingkat", kurikulumH.CreateTingkat)
 				adm.Patch("/tingkat/{id}", kurikulumH.UpdateTingkat)
