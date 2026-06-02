@@ -154,6 +154,9 @@ type meUpdateBody struct {
 	Timezone *string `json:"timezone,omitempty"`
 	NoHP     *string `json:"noHp,omitempty"`
 	Alamat   *string `json:"alamat,omitempty"`
+	Desa     *string `json:"desa,omitempty"`
+	Daerah   *string `json:"daerah,omitempty"`
+	Kelompok *string `json:"kelompok,omitempty"`
 
 	// Taaruf-style self-editable biodata.
 	TempatLahir *string `json:"tempatLahir,omitempty"`
@@ -180,6 +183,9 @@ func (a *Auth) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		Nickname:    b.Nickname,
 		NoHP:        b.NoHP,
 		Alamat:      b.Alamat,
+		Desa:        b.Desa,
+		Daerah:      b.Daerah,
+		Kelompok:    b.Kelompok,
 		TempatLahir: b.TempatLahir,
 		Pendidikan:  b.Pendidikan,
 		Pekerjaan:   b.Pekerjaan,

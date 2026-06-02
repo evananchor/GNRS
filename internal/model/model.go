@@ -137,9 +137,10 @@ type User struct {
 // (matches the original ppg.fadhil.id contract) so the frontend Generus and
 // Pengajar pages keep working unchanged.
 //
-// They are deliberately structural duplicates of the relevant subset of User
-// fields rather than aliases — the JSON tag naming differs (e.g., teacher
-// uses RetiredAt instead of LeftAt + retired status).
+// Per the unified-user mechanism both views carry the *same* shared profile
+// field set — neither role exposes more data than the other. The only
+// deliberate differences are the role-flavoured Status enum (left vs retired)
+// and Kelompok/Desa/Daerah being non-pointer on Teacher for back-compat.
 
 type StudentStatus string
 
@@ -149,13 +150,13 @@ const (
 )
 
 type Student struct {
-	ID                string        `json:"id"`
-	Name              string        `json:"name"`
-	Nickname          *string       `json:"nickname,omitempty"`
-	DateOfBirth       *time.Time    `json:"dateOfBirth,omitempty"`
-	Gender            string        `json:"gender"`
-	Level             *StudentLevel `json:"level,omitempty"`
-	Kelompok          *string       `json:"kelompok,omitempty"`
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	Nickname    *string       `json:"nickname,omitempty"`
+	DateOfBirth *time.Time    `json:"dateOfBirth,omitempty"`
+	Gender      string        `json:"gender"`
+	Level       *StudentLevel `json:"level,omitempty"`
+	Kelompok    *string       `json:"kelompok,omitempty"`
 	// Status is synthesised from User.Active after migration 041 dropped
 	// the membership_status column — active=1 → "active", active=0 → "left".
 	Status            StudentStatus `json:"status"`
@@ -164,9 +165,24 @@ type Student struct {
 	ParentPhone       *string       `json:"parentPhone,omitempty"`
 	ParentPhoneRegion *string       `json:"parentPhoneRegion,omitempty"`
 	ParentEmail       *string       `json:"parentEmail,omitempty"`
-	PhotoURL          *string       `json:"photoUrl,omitempty"`
-	CreatedAt         time.Time     `json:"createdAt"`
-	UpdatedAt         time.Time     `json:"updatedAt"`
+	// Shared profile fields (same set as Teacher per the unified-user
+	// mechanism — these were previously guru-only).
+	NoHP   *string `json:"noHp,omitempty"`
+	Alamat *string `json:"alamat,omitempty"`
+	Desa   *string `json:"desa,omitempty"`
+	Daerah *string `json:"daerah,omitempty"`
+	Notes  *string `json:"notes,omitempty"`
+	// Taaruf-style biodata (shared by every role).
+	UserCode    *string    `json:"userCode,omitempty"`
+	TempatLahir *string    `json:"tempatLahir,omitempty"`
+	Pendidikan  *string    `json:"pendidikan,omitempty"`
+	Pekerjaan   *string    `json:"pekerjaan,omitempty"`
+	Urutan      int        `json:"urutan"`
+	HideDob     bool       `json:"hideDob"`
+	TglDaftar   *time.Time `json:"tglDaftar,omitempty"`
+	PhotoURL    *string    `json:"photoUrl,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 type TeacherStatus string
@@ -186,9 +202,28 @@ type Teacher struct {
 	Daerah   string  `json:"daerah"`
 	// Status is synthesised from User.Active after migration 041 dropped
 	// the membership_status column — active=1 → "active", active=0 → "retired".
-	Status    TeacherStatus `json:"status"`
-	Notes     *string       `json:"notes,omitempty"`
-	PhotoURL  *string       `json:"photoUrl,omitempty"`
-	CreatedAt time.Time     `json:"createdAt"`
-	UpdatedAt time.Time     `json:"updatedAt"`
+	Status TeacherStatus `json:"status"`
+	Notes  *string       `json:"notes,omitempty"`
+	// Shared profile fields (same set as Student per the unified-user
+	// mechanism — these were previously murid-only).
+	DateOfBirth       *time.Time    `json:"dateOfBirth,omitempty"`
+	NoHP              *string       `json:"noHp,omitempty"`
+	Alamat            *string       `json:"alamat,omitempty"`
+	Level             *StudentLevel `json:"level,omitempty"`
+	ParentName        *string       `json:"parentName,omitempty"`
+	ParentTitle       *string       `json:"parentTitle,omitempty"`
+	ParentPhone       *string       `json:"parentPhone,omitempty"`
+	ParentPhoneRegion *string       `json:"parentPhoneRegion,omitempty"`
+	ParentEmail       *string       `json:"parentEmail,omitempty"`
+	// Taaruf-style biodata (shared by every role).
+	UserCode    *string    `json:"userCode,omitempty"`
+	TempatLahir *string    `json:"tempatLahir,omitempty"`
+	Pendidikan  *string    `json:"pendidikan,omitempty"`
+	Pekerjaan   *string    `json:"pekerjaan,omitempty"`
+	Urutan      int        `json:"urutan"`
+	HideDob     bool       `json:"hideDob"`
+	TglDaftar   *time.Time `json:"tglDaftar,omitempty"`
+	PhotoURL    *string    `json:"photoUrl,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }

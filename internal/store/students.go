@@ -27,12 +27,12 @@ func NewStudents(db *sql.DB) *Students {
 }
 
 type StudentInput struct {
-	Name              string
-	Nickname          *string
-	DateOfBirth       *time.Time
-	Gender            string
-	Level             *model.StudentLevel
-	Kelompok          *string
+	Name        string
+	Nickname    *string
+	DateOfBirth *time.Time
+	Gender      string
+	Level       *model.StudentLevel
+	Kelompok    *string
 	// Status maps to User.Active — "active" → 1, "left" → 0. Joined/left
 	// dates and leave_reason were dropped in migration 041.
 	Status            model.StudentStatus
@@ -41,6 +41,20 @@ type StudentInput struct {
 	ParentPhone       *string
 	ParentPhoneRegion *string
 	ParentEmail       *string
+	// Shared profile + biodata fields (same set as TeacherInput per the
+	// unified-user mechanism).
+	NoHP        *string
+	Alamat      *string
+	Desa        *string
+	Daerah      *string
+	Notes       *string
+	UserCode    *string
+	TempatLahir *string
+	Pendidikan  *string
+	Pekerjaan   *string
+	Urutan      int
+	HideDob     bool
+	TglDaftar   *time.Time
 }
 
 type ListParams struct {
@@ -57,7 +71,11 @@ type ListResult struct {
 }
 
 const selectStudentCols = `id, name, nickname, date_of_birth, gender, level, kelompok, active,
-	parent_name, parent_title, parent_phone, parent_phone_region, parent_email, photo_path, created_at, updated_at`
+	parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
+	no_hp, alamat, desa, daerah, notes,
+	user_code, tempat_lahir, pendidikan, pekerjaan,
+	urutan, hide_dob, tgl_daftar,
+	photo_path, created_at, updated_at`
 
 func (s *Students) Create(ctx context.Context, in StudentInput) (*model.Student, error) {
 	if in.Status == "" {
@@ -65,6 +83,15 @@ func (s *Students) Create(ctx context.Context, in StudentInput) (*model.Student,
 	}
 	id := ulid.Make().String()
 	now := time.Now().UTC()
+
+	nickname := ""
+	if in.Nickname != nil {
+		nickname = *in.Nickname
+	}
+	email, err := uniqueDefaultEmail(ctx, s.db, emailLocalPart(nickname, in.Name), id)
+	if err != nil {
+		return nil, fmt.Errorf("generate default email: %w", err)
+	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte("changeme"), bcrypt.DefaultCost)
 	if err != nil {
@@ -75,20 +102,33 @@ func (s *Students) Create(ctx context.Context, in StudentInput) (*model.Student,
 	if in.Status == model.StudentLeft {
 		active = 0
 	}
+	hideDobInt := 0
+	if in.HideDob {
+		hideDobInt = 1
+	}
 
 	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO users (
 		   id, email, password, name, role, active,
 		   nickname, date_of_birth, gender, kelompok,
 		   level, parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
+		   no_hp, alamat, desa, daerah, notes,
+		   user_code, tempat_lahir, pendidikan, pekerjaan,
+		   urutan, hide_dob, tgl_daftar,
 		   created_at, updated_at
 		 ) VALUES (?, ?, ?, ?, 'murid', ?,
 		           ?, ?, ?, ?,
 		           ?, ?, ?, ?, ?, ?,
+		           ?, ?, ?, ?, ?,
+		           ?, ?, ?, ?,
+		           ?, ?, ?,
 		           ?, ?)`,
-		id, id+"@stub.gnrs.local", string(hash), in.Name, active,
+		id, email, string(hash), in.Name, active,
 		in.Nickname, nullableDate(in.DateOfBirth), in.Gender, in.Kelompok,
 		nullableLevel(in.Level), in.ParentName, in.ParentTitle, in.ParentPhone, in.ParentPhoneRegion, in.ParentEmail,
+		in.NoHP, in.Alamat, in.Desa, in.Daerah, in.Notes,
+		in.UserCode, in.TempatLahir, in.Pendidikan, in.Pekerjaan,
+		in.Urutan, hideDobInt, nullableDate(in.TglDaftar),
 		now, now,
 	)
 	if err != nil {
@@ -112,16 +152,27 @@ func (s *Students) Update(ctx context.Context, id string, in StudentInput) (*mod
 		active = 0
 	}
 	now := time.Now().UTC()
+	hideDobInt := 0
+	if in.HideDob {
+		hideDobInt = 1
+	}
 	res, err := s.db.ExecContext(ctx,
 		`UPDATE users SET
 		   name = ?, nickname = ?, date_of_birth = ?, gender = ?, level = ?, kelompok = ?,
 		   active = ?,
-		   parent_name = ?, parent_title = ?, parent_phone = ?, parent_phone_region = ?, parent_email = ?, updated_at = ?
+		   parent_name = ?, parent_title = ?, parent_phone = ?, parent_phone_region = ?, parent_email = ?,
+		   no_hp = ?, alamat = ?, desa = ?, daerah = ?, notes = ?,
+		   user_code = ?, tempat_lahir = ?, pendidikan = ?, pekerjaan = ?,
+		   urutan = ?, hide_dob = ?, tgl_daftar = ?,
+		   updated_at = ?
 		 WHERE id = ? AND role = 'murid'`,
 		in.Name, in.Nickname,
 		nullableDate(in.DateOfBirth), in.Gender, nullableLevel(in.Level), in.Kelompok,
 		active,
 		in.ParentName, in.ParentTitle, in.ParentPhone, in.ParentPhoneRegion, in.ParentEmail,
+		in.NoHP, in.Alamat, in.Desa, in.Daerah, in.Notes,
+		in.UserCode, in.TempatLahir, in.Pendidikan, in.Pekerjaan,
+		in.Urutan, hideDobInt, nullableDate(in.TglDaftar),
 		now, id,
 	)
 	if err != nil {
@@ -343,15 +394,22 @@ func readStudent(s scanner) (*model.Student, error) {
 	var active int
 	var dob sql.NullTime
 	var level sql.NullString
+	var hideDob int
+	var tglDaftar sql.NullString
 	var photoPath *string
 	if err := s.Scan(
 		&st.ID, &st.Name, &st.Nickname, &dob, &st.Gender, &level, &st.Kelompok, &active,
 		&st.ParentName, &st.ParentTitle, &st.ParentPhone, &st.ParentPhoneRegion, &st.ParentEmail,
+		&st.NoHP, &st.Alamat, &st.Desa, &st.Daerah, &st.Notes,
+		&st.UserCode, &st.TempatLahir, &st.Pendidikan, &st.Pekerjaan,
+		&st.Urutan, &hideDob, &tglDaftar,
 		&photoPath, &st.CreatedAt, &st.UpdatedAt,
 	); err != nil {
 		return nil, err
 	}
 	st.PhotoURL = model.PhotoURL(photoPath)
+	st.HideDob = hideDob == 1
+	st.TglDaftar = parseStoredDate(tglDaftar)
 	// Status is synthesised from active per the unified-user mechanism.
 	if active == 1 {
 		st.Status = model.StudentActive
