@@ -22,12 +22,12 @@ import { PustakaTilawatiPage } from '@/pages/PustakaTilawati'
 import { AchievementPage } from '@/pages/Achievement'
 import { UsersPage } from '@/pages/Users'
 import { UserNewPage } from '@/pages/UserNew'
-import { UserDetailPage } from '@/pages/UserDetail'
 import { SettingsLayout } from '@/pages/Pengaturan'
 import { KurikulumSection } from '@/pages/sections/KurikulumSection'
 import { TahunAjaranSection } from '@/pages/sections/TahunAjaranSection'
 import { InstansiSection } from '@/pages/sections/InstansiSection'
 import { WhatsappSection } from '@/pages/sections/WhatsappSection'
+import { WilayahSection } from '@/pages/sections/WilayahSection'
 
 export function App() {
   const { user, loading } = useAuth()
@@ -88,13 +88,16 @@ export function App() {
           <Route path="kurikulum" element={<KurikulumSection />} />
           <Route path="tahun-ajaran" element={<TahunAjaranSection />} />
           <Route path="whatsapp" element={<WhatsappSection />} />
+          <Route path="wilayah" element={<WilayahSection />} />
           {/* Back-compat redirects from the old sub-tab URLs. */}
           <Route path="kurikulum/materi" element={<Navigate to="/pengaturan/kurikulum" replace />} />
           <Route path="kurikulum/tingkat" element={<Navigate to="/pengaturan/kurikulum" replace />} />
         </Route>
-        {/* Pengguna detail/new pages live outside the tab strip. */}
+        {/* Pengguna "new" page lives outside the tab strip. Editing is done
+            in a pop-up on the list, so a per-user detail URL just opens that
+            dialog via ?edit=<id> (no more standalone full edit page). */}
         <Route path="/pengaturan/pengguna/new" element={<AdminOnly><UserNewPage /></AdminOnly>} />
-        <Route path="/pengaturan/pengguna/:id" element={<AdminOnly><UserDetailPage /></AdminOnly>} />
+        <Route path="/pengaturan/pengguna/:id" element={<AdminOnly><RedirectPenggunaEdit /></AdminOnly>} />
 
         {/* Backwards-compat redirects from the old /users URLs. */}
         <Route path="/users" element={<Navigate to="/pengaturan/pengguna" replace />} />
@@ -128,6 +131,14 @@ function RedirectUserDetail() {
   // into nonexistent routes.
   const { id } = useParams<{ id: string }>()
   return <Navigate to={`/pengaturan/pengguna/${id ?? ''}${window.location.search}`} replace />
+}
+
+// The standalone user-detail page was removed — editing happens in a pop-up
+// on the Pengguna list. A per-user URL now just opens that dialog via
+// ?edit=<id>, so old links (and the post-create redirect) keep working.
+function RedirectPenggunaEdit() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/pengaturan/pengguna?edit=${id ?? ''}`} replace />
 }
 
 // Redirect /students/:id and /teachers/:id to the unified user-detail URL.
