@@ -353,7 +353,7 @@
       "filterKelasPick": "Filter kelas — pilih kelas",
       "pickKelasFilterTitle": "Pilih kelas (filter)",
       "allKelasFilter": "Kelas apa saja",
-      "monthTotal": "Total bulan ini",
+      "monthTotal": "Total",
       "loadingSub": "memuat…",
       "moreItems": "+{{count}} lagi",
       "todayHighlight": "kotak hari ini ditandai outline",
@@ -1332,7 +1332,7 @@
       "kurikulum": "Kurikulum",
       "tahunAjaran": "Tahun Ajaran",
       "whatsapp": "WhatsApp",
-      "wilayah": "Wilayah"
+      "wilayah": "Scope"
     },
     "kurikulumTabs": {
       "materi": "Materi Ajar",
@@ -1408,7 +1408,7 @@
     "deleteAria": "Hapus"
   },
   "wilayah": {
-    "title": "Manajemen Wilayah",
+    "title": "Scope",
     "subtitle": "Daftar master Daerah → Desa → Kelompok untuk dropdown bertingkat di editor pengguna & profil.",
     "add": "Tambah",
     "daerah": "Daerah",
