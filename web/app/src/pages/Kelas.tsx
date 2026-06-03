@@ -12,13 +12,12 @@ export function KelasLayout() {
   const { t } = useTranslation()
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex-shrink-0 px-4 pt-5 md:px-6 md:pt-6">
+      <div className="flex-shrink-0 px-4 pt-3 md:px-6 md:pt-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('kelas.eyebrow')}</p>
-          <h1 className="mt-1 text-2xl font-semibold">{t('kelas.title')}</h1>
-          <p className="mt-1 text-sm text-slate-500">{t('kelas.subtitle')}</p>
+          <h1 className="truncate text-lg font-semibold leading-tight">{t('kelas.title')}</h1>
+          <p className="truncate text-xs text-slate-500">{t('kelas.subtitle')}</p>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2 border-b border-slate-200">
+        <div className="mt-3 flex flex-wrap gap-2 border-b border-slate-200">
           <TabLink to="/kelas/list" icon={<List size={16} />} label={t('kelas.tabs.list')} />
           <TabLink to="/kelas/calendar" icon={<CalendarRange size={16} />} label={t('kelas.tabs.calendar')} />
           <TabLink to="/kelas/rencana" icon={<BookOpenCheck size={16} />} label={t('kelas.tabs.rencana')} />
