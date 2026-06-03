@@ -90,7 +90,7 @@ export function PustakaDoaPage() {
         <div className="mx-auto max-w-4xl">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h1 className="text-2xl font-semibold">{t('pustaka.doa.title')}</h1>
+              <h1 className="text-lg font-semibold">{t('pustaka.doa.title')}</h1>
               <p className="mb-3 mt-1 text-sm text-slate-500">
                 {editMode ? t('pustaka.doa.subtitleEdit') : t('pustaka.doa.subtitle')}
               </p>

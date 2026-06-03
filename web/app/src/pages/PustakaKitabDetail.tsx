@@ -69,7 +69,7 @@ export function PustakaKitabDetailPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 {kitab.perawi ?? t('pustaka.kitab.fallbackPerawi')}
               </p>
-              <h1 className="mt-1 text-2xl font-semibold">{kitab.nama}</h1>
+              <h1 className="mt-1 text-lg font-semibold">{kitab.nama}</h1>
               {kitab.namaArab ? (
                 <p
                   lang="ar"
