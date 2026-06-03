@@ -1,3 +1,0 @@
-DROP INDEX IF EXISTS idx_students_name;
-DROP TABLE IF EXISTS students;
-DROP TABLE IF EXISTS users;
