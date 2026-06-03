@@ -63,7 +63,6 @@ export function AchievementPage() {
     <PageShell
       header={
         <PageHeader
-          eyebrow={t('achievement.eyebrow')}
           title={t('achievement.title')}
           subtitle={t('achievement.subtitle')}
         />

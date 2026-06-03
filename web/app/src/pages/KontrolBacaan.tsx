@@ -72,7 +72,6 @@ export function KontrolBacaanPage() {
     <PageShell
       header={
         <PageHeader
-          eyebrow={t('bacaan.eyebrow')}
           title={t('bacaan.title')}
           subtitle={t('bacaan.subtitle', { count: totalAyat, countFmt: totalAyat.toLocaleString(numLocale) })}
           actions={

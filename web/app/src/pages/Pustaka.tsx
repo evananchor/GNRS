@@ -16,7 +16,6 @@ export function PustakaPage() {
     <PageShell
       header={
         <PageHeader
-          eyebrow={t('pustaka.hub.eyebrow')}
           title={t('pustaka.hub.title')}
           subtitle={t('pustaka.hub.subtitle')}
         />

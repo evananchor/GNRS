@@ -46,7 +46,6 @@ export function KehadiranPage() {
     <PageShell
       header={
         <PageHeader
-          eyebrow={t('kehadiran.eyebrow')}
           title={t('kehadiran.title')}
           subtitle={t('kehadiran.subtitle')}
         />
