@@ -41,6 +41,20 @@ export type Student = {
   parentPhone?: string
   parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
   parentEmail?: string
+  // Shared profile + biodata fields (same set as Teacher per the
+  // unified-user mechanism).
+  noHp?: string
+  alamat?: string
+  desa?: string
+  daerah?: string
+  notes?: string
+  userCode?: string
+  tempatLahir?: string
+  pendidikan?: string
+  pekerjaan?: string
+  urutan?: number
+  hideDob?: boolean
+  tglDaftar?: string
   photoUrl?: string
   createdAt: string
   updatedAt: string
@@ -67,6 +81,18 @@ export type StudentInput = {
   parentPhone?: string
   parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
   parentEmail?: string
+  noHp?: string
+  alamat?: string
+  desa?: string
+  daerah?: string
+  notes?: string
+  userCode?: string
+  tempatLahir?: string
+  pendidikan?: string
+  pekerjaan?: string
+  urutan?: number
+  hideDob?: boolean
+  tglDaftar?: string
 }
 
 export type TeacherStatus = 'active' | 'retired'
@@ -83,6 +109,24 @@ export type Teacher = {
   retiredAt?: string
   status: TeacherStatus
   notes?: string
+  // Shared profile + biodata fields (same set as Student per the
+  // unified-user mechanism).
+  dateOfBirth?: string
+  noHp?: string
+  alamat?: string
+  level?: StudentLevel
+  parentName?: string
+  parentTitle?: string
+  parentPhone?: string
+  parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
+  parentEmail?: string
+  userCode?: string
+  tempatLahir?: string
+  pendidikan?: string
+  pekerjaan?: string
+  urutan?: number
+  hideDob?: boolean
+  tglDaftar?: string
   photoUrl?: string
   createdAt: string
   updatedAt: string
@@ -104,4 +148,20 @@ export type TeacherInput = {
   retiredAt?: string
   status: TeacherStatus
   notes?: string
+  dateOfBirth?: string
+  noHp?: string
+  alamat?: string
+  level?: StudentLevel
+  parentName?: string
+  parentTitle?: string
+  parentPhone?: string
+  parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
+  parentEmail?: string
+  userCode?: string
+  tempatLahir?: string
+  pendidikan?: string
+  pekerjaan?: string
+  urutan?: number
+  hideDob?: boolean
+  tglDaftar?: string
 }

@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Building2, CalendarRange, GraduationCap, MessageCircle, ShieldCheck } from 'lucide-react'
+import { Building2, CalendarRange, GraduationCap, MapPin, MessageCircle, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 
@@ -30,6 +30,7 @@ export function SettingsLayout() {
             icon={<MessageCircle size={16} />}
             label={t('pengaturan.tabs.whatsapp')}
           />
+          <TabLink to="/pengaturan/wilayah" icon={<MapPin size={16} />} label={t('pengaturan.tabs.wilayah')} />
         </div>
       </div>
 

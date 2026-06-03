@@ -79,9 +79,14 @@ func copyStudents(ctx context.Context, db *sql.DB, users *Users, hash string) (i
 	// pinned to a single connection (SetMaxOpenConns=1), so holding `rows`
 	// open while issuing INSERTs would deadlock — the cursor pins the
 	// connection that createWithHash also needs.
+	// Note: the legacy students_legacy_008 table still has joined_at /
+	// left_at / leave_reason / status columns, but we deliberately omit
+	// them from the projection below — after migration 041 they no longer
+	// exist on the destination. The unified-user mechanism represents
+	// status as a single `active` boolean, set true here for every
+	// migrated row regardless of the source's membership_status.
 	rows, err := db.QueryContext(ctx,
 		`SELECT id, name, nickname, date_of_birth, gender, level, kelompok,
-		        joined_at, left_at, leave_reason, status,
 		        parent_name, parent_phone, parent_email
 		   FROM students_legacy_008`)
 	if err != nil {
@@ -89,43 +94,32 @@ func copyStudents(ctx context.Context, db *sql.DB, users *Users, hash string) (i
 	}
 	inputs := []UserCreateInput{}
 	for rows.Next() {
-		var id, name, gender, status string
-		var nickname, kelompok, leaveReason, parentName, parentPhone, parentEmail sql.NullString
+		var id, name, gender string
+		var nickname, kelompok, parentName, parentPhone, parentEmail sql.NullString
 		var level sql.NullString
-		var dob, joinedAt, leftAt sql.NullTime
+		var dob sql.NullTime
 		if err := rows.Scan(&id, &name, &nickname, &dob, &gender, &level, &kelompok,
-			&joinedAt, &leftAt, &leaveReason, &status,
 			&parentName, &parentPhone, &parentEmail); err != nil {
 			rows.Close()
 			return 0, err
 		}
 
 		in := UserCreateInput{
-			ID:               id,
-			Email:            id + "@stub.gnrs.local",
-			Name:             name,
-			Password:         "changeme", // ignored by createWithHash
-			Role:             model.RoleMurid,
-			Gender:           &gender,
-			MembershipStatus: model.MembershipStatus(status),
+			ID:       id,
+			Email:    id + "@stub.gnrs.local",
+			Name:     name,
+			Password: "changeme", // ignored by createWithHash
+			Role:     model.RoleMurid,
+			Gender:   &gender,
 		}
 		in.Nickname = nullPtr(nickname)
 		in.Kelompok = nullPtr(kelompok)
-		in.LeaveReason = nullPtr(leaveReason)
 		in.ParentName = nullPtr(parentName)
 		in.ParentPhone = nullPtr(parentPhone)
 		in.ParentEmail = nullPtr(parentEmail)
 		if dob.Valid {
 			v := dob.Time
 			in.DateOfBirth = &v
-		}
-		if joinedAt.Valid {
-			v := joinedAt.Time
-			in.JoinedAt = &v
-		}
-		if leftAt.Valid {
-			v := leftAt.Time
-			in.LeftAt = &v
 		}
 		if level.Valid {
 			v := model.StudentLevel(level.String)
@@ -150,45 +144,37 @@ func copyStudents(ctx context.Context, db *sql.DB, users *Users, hash string) (i
 func copyTeachers(ctx context.Context, db *sql.DB, users *Users, hash string) (int, error) {
 	// Drain first to avoid deadlocking on the single shared connection
 	// (see copyStudents for the same dance).
+	// teachers_legacy_008 still has joined_at / retired_at / status, but
+	// they are omitted from the projection below — see the comment in
+	// copyStudents for the rationale. Active=1 is set implicitly by
+	// createWithHash for every migrated row.
 	rows, err := db.QueryContext(ctx,
-		`SELECT id, name, nickname, kelompok, desa, daerah,
-		        joined_at, retired_at, status, notes
+		`SELECT id, name, nickname, kelompok, desa, daerah, notes
 		   FROM teachers_legacy_008`)
 	if err != nil {
 		return 0, err
 	}
 	inputs := []UserCreateInput{}
 	for rows.Next() {
-		var id, name, kelompok, desa, daerah, status string
+		var id, name, kelompok, desa, daerah string
 		var nickname, notes sql.NullString
-		var joinedAt, retiredAt sql.NullTime
-		if err := rows.Scan(&id, &name, &nickname, &kelompok, &desa, &daerah,
-			&joinedAt, &retiredAt, &status, &notes); err != nil {
+		if err := rows.Scan(&id, &name, &nickname, &kelompok, &desa, &daerah, &notes); err != nil {
 			rows.Close()
 			return 0, err
 		}
 
 		in := UserCreateInput{
-			ID:               id,
-			Email:            id + "@stub.gnrs.local",
-			Name:             name,
-			Password:         "changeme",
-			Role:             model.RoleGuru,
-			Kelompok:         &kelompok,
-			Desa:             &desa,
-			Daerah:           &daerah,
-			MembershipStatus: model.MembershipStatus(status),
+			ID:       id,
+			Email:    id + "@stub.gnrs.local",
+			Name:     name,
+			Password: "changeme",
+			Role:     model.RoleGuru,
+			Kelompok: &kelompok,
+			Desa:     &desa,
+			Daerah:   &daerah,
 		}
 		in.Nickname = nullPtr(nickname)
 		in.Notes = nullPtr(notes)
-		if joinedAt.Valid {
-			v := joinedAt.Time
-			in.JoinedAt = &v
-		}
-		if retiredAt.Valid {
-			v := retiredAt.Time
-			in.LeftAt = &v // teacher.retired_at → user.left_at (semantic: end of membership)
-		}
 		inputs = append(inputs, in)
 	}
 	if err := rows.Err(); err != nil {

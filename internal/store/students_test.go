@@ -58,11 +58,7 @@ func TestStudentsCRUD(t *testing.T) {
 	}
 
 	in := sampleInput("Alice Renamed")
-	leftAt := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	reason := "Pulang"
 	in.Status = model.StudentLeft
-	in.LeftAt = &leftAt
-	in.LeaveReason = &reason
 
 	updated, err := s.Update(ctx, created.ID, in)
 	if err != nil {
@@ -70,9 +66,6 @@ func TestStudentsCRUD(t *testing.T) {
 	}
 	if updated.Name != "Alice Renamed" || updated.Status != model.StudentLeft {
 		t.Errorf("after update: %+v", updated)
-	}
-	if updated.LeftAt == nil || !updated.LeftAt.Equal(leftAt) {
-		t.Errorf("LeftAt = %v, want %v", updated.LeftAt, leftAt)
 	}
 
 	if err := s.Delete(ctx, created.ID); err != nil {
@@ -122,6 +115,63 @@ func TestStudentsListSearchAndStatus(t *testing.T) {
 	// Alice and Charlie match.
 	if res.Total != 2 {
 		t.Errorf("query total = %d, want 2", res.Total)
+	}
+}
+
+// TestStudentsSharedFieldsRoundTrip verifies the formerly guru-only / taaruf
+// fields now persist and read back through the murid facade (unified-user
+// mechanism: a student carries the same field set as a teacher).
+func TestStudentsSharedFieldsRoundTrip(t *testing.T) {
+	s := newTestDB(t)
+	ctx := context.Background()
+
+	desa := "Sukamaju"
+	daerah := "Bandung"
+	notes := "rajin"
+	noHp := "08123"
+	alamat := "Jl. Mawar 1"
+	pekerjaan := "Pelajar"
+	tgl := time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)
+
+	in := sampleInput("Shared")
+	in.Desa = &desa
+	in.Daerah = &daerah
+	in.Notes = &notes
+	in.NoHP = &noHp
+	in.Alamat = &alamat
+	in.Pekerjaan = &pekerjaan
+	in.Urutan = 7
+	in.HideDob = true
+	in.TglDaftar = &tgl
+
+	created, err := s.Create(ctx, in)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	got, err := s.Get(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.Desa == nil || *got.Desa != desa {
+		t.Errorf("Desa = %v, want %q", got.Desa, desa)
+	}
+	if got.Notes == nil || *got.Notes != notes {
+		t.Errorf("Notes = %v, want %q", got.Notes, notes)
+	}
+	if got.NoHP == nil || *got.NoHP != noHp {
+		t.Errorf("NoHP = %v, want %q", got.NoHP, noHp)
+	}
+	if got.Pekerjaan == nil || *got.Pekerjaan != pekerjaan {
+		t.Errorf("Pekerjaan = %v, want %q", got.Pekerjaan, pekerjaan)
+	}
+	if got.Urutan != 7 {
+		t.Errorf("Urutan = %d, want 7", got.Urutan)
+	}
+	if !got.HideDob {
+		t.Errorf("HideDob = false, want true")
+	}
+	if got.TglDaftar == nil || !got.TglDaftar.Equal(tgl) {
+		t.Errorf("TglDaftar = %v, want %v", got.TglDaftar, tgl)
 	}
 }
 

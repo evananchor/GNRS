@@ -33,7 +33,8 @@
     "confirm": "Confirm",
     "confirmTitle": "Confirm",
     "pagination": "Page {{page}} of {{total}} · {{count}} total",
-    "fmtOf": "of {{count}} total"
+    "fmtOf": "of {{count}} total",
+    "hideDob": "Hide"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -71,6 +72,9 @@
     "currentDisplay": "Currently shown as:",
     "phone": "Phone",
     "address": "Address",
+    "daerah": "Daerah",
+    "desa": "Desa",
+    "kelompok": "Kelompok",
     "birthPlace": "Place of birth",
     "birthPlacePh": "e.g. Jakarta",
     "birthDate": "Date of birth",
@@ -1231,6 +1235,7 @@
       "editBtn": "Edit",
       "cardAkun": "Account",
       "cardProfil": "Profile",
+      "cardDetail": "Detail",
       "cardMembership": "Membership",
       "cardMurid": "Student data",
       "cardPengajar": "Teacher data",
@@ -1306,7 +1311,8 @@
       "pengguna": "Users",
       "kurikulum": "Curriculum",
       "tahunAjaran": "Academic year",
-      "whatsapp": "WhatsApp"
+      "whatsapp": "WhatsApp",
+      "wilayah": "Wilayah"
     },
     "kurikulumTabs": {
       "materi": "Teaching material",
@@ -1380,6 +1386,25 @@
     "closeAria": "Close",
     "editAria": "Edit",
     "deleteAria": "Delete"
+  },
+  "wilayah": {
+    "title": "Manage Wilayah",
+    "subtitle": "Master list of Daerah → Desa → Kelompok for the cascading dropdowns in the user & profile editors.",
+    "add": "Add",
+    "daerah": "Daerah",
+    "desa": "Desa",
+    "kelompok": "Kelompok",
+    "daerahPh": "New daerah name",
+    "desaPh": "New desa name",
+    "kelompokPh": "New kelompok name",
+    "empty": "No daerah yet. Add one above.",
+    "emptyDesa": "No desa yet.",
+    "emptyKelompok": "No kelompok yet.",
+    "desaCount": "{{n}} desa",
+    "kelompokCount": "{{n}} kelompok",
+    "rename": "Rename",
+    "deleteConfirm": "Delete \"{{name}}\" and everything under it?",
+    "saveFailed": "Failed to save wilayah data"
   },
   "tahunAjaran": {
     "title": "Academic year",

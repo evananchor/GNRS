@@ -58,16 +58,6 @@ const (
 // and the frontend Role union.
 var AllRoles = []Role{RoleAdmin, RoleStaff, RolePengurus, RoleGuru, RoleOrtu, RoleMurid}
 
-// MembershipStatus replaces the old per-role status enums (active/left for
-// students, active/retired for teachers) with a unified set on users.
-type MembershipStatus string
-
-const (
-	MembershipActive  MembershipStatus = "active"
-	MembershipLeft    MembershipStatus = "left"    // murid keluar
-	MembershipRetired MembershipStatus = "retired" // guru purna
-)
-
 type StudentLevel string
 
 const (
@@ -82,8 +72,12 @@ const (
 var StudentKelompoks = []string{"California", "Chicago", "New Hampshire", "Canada"}
 
 // User is the single entity for any person in the system. Auth-related fields
-// (Email, Username, Password, Role, Active) are required; everything below
-// MembershipStatus is profile data populated mostly for guru and murid.
+// (Email, Username, Password, Role, Active) are required; the rest are
+// optional profile fields shared by every role — the unified-user mechanism
+// means there are no role-specific columns. `Active` is the only lifecycle
+// state: a person is either currently a member (active=true) or has left/
+// retired (active=false). Earlier joined_at/left_at/leave_reason/
+// membership_status fields were dropped in migration 041.
 type User struct {
 	// Auth
 	ID       string  `json:"id"`
@@ -94,7 +88,7 @@ type User struct {
 	Role     Role    `json:"role"`
 	Active   bool    `json:"active"`
 
-	// Shared profile
+	// Shared profile (all roles)
 	Nickname    *string    `json:"nickname,omitempty"`
 	DateOfBirth *time.Time `json:"dateOfBirth,omitempty"`
 	Gender      *string    `json:"gender,omitempty"`
@@ -102,24 +96,19 @@ type User struct {
 	Alamat      *string    `json:"alamat,omitempty"`
 	Kelompok    *string    `json:"kelompok,omitempty"`
 
-	// Murid-only
-	Level       *StudentLevel `json:"level,omitempty"`
+	// Education + family ties (kept available to all roles — same fields
+	// across every membership category per the unified-user mechanism).
+	Level             *StudentLevel `json:"level,omitempty"`
 	ParentName        *string       `json:"parentName,omitempty"`
 	ParentTitle       *string       `json:"parentTitle,omitempty"`
 	ParentPhone       *string       `json:"parentPhone,omitempty"`
 	ParentPhoneRegion *string       `json:"parentPhoneRegion,omitempty"`
 	ParentEmail       *string       `json:"parentEmail,omitempty"`
 
-	// Guru-only
+	// Locality + free-form notes (kept available to all roles).
 	Desa   *string `json:"desa,omitempty"`
 	Daerah *string `json:"daerah,omitempty"`
 	Notes  *string `json:"notes,omitempty"`
-
-	// Membership lifecycle
-	JoinedAt         *time.Time       `json:"joinedAt,omitempty"`
-	LeftAt           *time.Time       `json:"leftAt,omitempty"`
-	LeaveReason      *string          `json:"leaveReason,omitempty"`
-	MembershipStatus MembershipStatus `json:"membershipStatus"`
 
 	// Photo: filename inside the photos dir. The handler layer also exposes
 	// a fully-qualified URL via the json:"photoUrl" field when serializing.
@@ -148,9 +137,10 @@ type User struct {
 // (matches the original ppg.fadhil.id contract) so the frontend Generus and
 // Pengajar pages keep working unchanged.
 //
-// They are deliberately structural duplicates of the relevant subset of User
-// fields rather than aliases — the JSON tag naming differs (e.g., teacher
-// uses RetiredAt instead of LeftAt + retired status).
+// Per the unified-user mechanism both views carry the *same* shared profile
+// field set — neither role exposes more data than the other. The only
+// deliberate differences are the role-flavoured Status enum (left vs retired)
+// and Kelompok/Desa/Daerah being non-pointer on Teacher for back-compat.
 
 type StudentStatus string
 
@@ -167,18 +157,32 @@ type Student struct {
 	Gender      string        `json:"gender"`
 	Level       *StudentLevel `json:"level,omitempty"`
 	Kelompok    *string       `json:"kelompok,omitempty"`
-	JoinedAt    *time.Time    `json:"joinedAt,omitempty"`
-	LeftAt      *time.Time    `json:"leftAt,omitempty"`
-	LeaveReason *string       `json:"leaveReason,omitempty"`
-	Status      StudentStatus `json:"status"`
+	// Status is synthesised from User.Active after migration 041 dropped
+	// the membership_status column — active=1 → "active", active=0 → "left".
+	Status            StudentStatus `json:"status"`
 	ParentName        *string       `json:"parentName,omitempty"`
 	ParentTitle       *string       `json:"parentTitle,omitempty"`
 	ParentPhone       *string       `json:"parentPhone,omitempty"`
 	ParentPhoneRegion *string       `json:"parentPhoneRegion,omitempty"`
 	ParentEmail       *string       `json:"parentEmail,omitempty"`
-	PhotoURL          *string       `json:"photoUrl,omitempty"`
-	CreatedAt   time.Time     `json:"createdAt"`
-	UpdatedAt   time.Time     `json:"updatedAt"`
+	// Shared profile fields (same set as Teacher per the unified-user
+	// mechanism — these were previously guru-only).
+	NoHP   *string `json:"noHp,omitempty"`
+	Alamat *string `json:"alamat,omitempty"`
+	Desa   *string `json:"desa,omitempty"`
+	Daerah *string `json:"daerah,omitempty"`
+	Notes  *string `json:"notes,omitempty"`
+	// Taaruf-style biodata (shared by every role).
+	UserCode    *string    `json:"userCode,omitempty"`
+	TempatLahir *string    `json:"tempatLahir,omitempty"`
+	Pendidikan  *string    `json:"pendidikan,omitempty"`
+	Pekerjaan   *string    `json:"pekerjaan,omitempty"`
+	Urutan      int        `json:"urutan"`
+	HideDob     bool       `json:"hideDob"`
+	TglDaftar   *time.Time `json:"tglDaftar,omitempty"`
+	PhotoURL    *string    `json:"photoUrl,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 type TeacherStatus string
@@ -189,18 +193,37 @@ const (
 )
 
 type Teacher struct {
-	ID        string        `json:"id"`
-	Name      string        `json:"name"`
-	Nickname  *string       `json:"nickname,omitempty"`
-	Gender    *string       `json:"gender,omitempty"`
-	Kelompok  string        `json:"kelompok"`
-	Desa      string        `json:"desa"`
-	Daerah    string        `json:"daerah"`
-	JoinedAt  *time.Time    `json:"joinedAt,omitempty"`
-	RetiredAt *time.Time    `json:"retiredAt,omitempty"`
-	Status    TeacherStatus `json:"status"`
-	Notes     *string       `json:"notes,omitempty"`
-	PhotoURL  *string       `json:"photoUrl,omitempty"`
-	CreatedAt time.Time     `json:"createdAt"`
-	UpdatedAt time.Time     `json:"updatedAt"`
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Nickname *string `json:"nickname,omitempty"`
+	Gender   *string `json:"gender,omitempty"`
+	Kelompok string  `json:"kelompok"`
+	Desa     string  `json:"desa"`
+	Daerah   string  `json:"daerah"`
+	// Status is synthesised from User.Active after migration 041 dropped
+	// the membership_status column — active=1 → "active", active=0 → "retired".
+	Status TeacherStatus `json:"status"`
+	Notes  *string       `json:"notes,omitempty"`
+	// Shared profile fields (same set as Student per the unified-user
+	// mechanism — these were previously murid-only).
+	DateOfBirth       *time.Time    `json:"dateOfBirth,omitempty"`
+	NoHP              *string       `json:"noHp,omitempty"`
+	Alamat            *string       `json:"alamat,omitempty"`
+	Level             *StudentLevel `json:"level,omitempty"`
+	ParentName        *string       `json:"parentName,omitempty"`
+	ParentTitle       *string       `json:"parentTitle,omitempty"`
+	ParentPhone       *string       `json:"parentPhone,omitempty"`
+	ParentPhoneRegion *string       `json:"parentPhoneRegion,omitempty"`
+	ParentEmail       *string       `json:"parentEmail,omitempty"`
+	// Taaruf-style biodata (shared by every role).
+	UserCode    *string    `json:"userCode,omitempty"`
+	TempatLahir *string    `json:"tempatLahir,omitempty"`
+	Pendidikan  *string    `json:"pendidikan,omitempty"`
+	Pekerjaan   *string    `json:"pekerjaan,omitempty"`
+	Urutan      int        `json:"urutan"`
+	HideDob     bool       `json:"hideDob"`
+	TglDaftar   *time.Time `json:"tglDaftar,omitempty"`
+	PhotoURL    *string    `json:"photoUrl,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }

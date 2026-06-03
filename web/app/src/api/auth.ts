@@ -22,6 +22,9 @@ export type UpdateMeInput = {
   timezone?: string | null
   noHp?: string | null
   alamat?: string | null
+  desa?: string | null
+  daerah?: string | null
+  kelompok?: string | null
   tempatLahir?: string | null
   pendidikan?: string | null
   pekerjaan?: string | null

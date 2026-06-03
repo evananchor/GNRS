@@ -13,6 +13,7 @@ import { Dialog } from '@/components/Dialog'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/Input'
 import { PhotoUploader } from '@/components/PhotoUploader'
+import { WilayahPicker } from '@/components/WilayahPicker'
 
 /**
  * ProfileDialog — opened by clicking the username chip above the Logout
@@ -29,13 +30,15 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
     nickname: user?.nickname ?? '',
     timezone: user?.timezone ?? DEFAULT_TIMEZONE,
     noHp: user?.noHp ?? '',
-    alamat: user?.alamat ?? '',
+    daerah: user?.daerah ?? '',
+    desa: user?.desa ?? '',
+    kelompok: user?.kelompok ?? '',
     // Taaruf-style biodata fields editable by the user themselves.
     tempatLahir: user?.tempatLahir ?? '',
     dateOfBirth: (user?.dateOfBirth ?? '').slice(0, 10),
+    hideDob: user?.hideDob ?? false,
     gender: (user?.gender as 'male' | 'female' | '') ?? '',
     pendidikan: user?.pendidikan ?? '',
-    pekerjaan: user?.pekerjaan ?? '',
     // Password — empty means "don't change".
     password: '',
   })
@@ -68,12 +71,14 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
       nickname: form.nickname.trim() || '',
       timezone: form.timezone || '',
       noHp: form.noHp.trim() || '',
-      alamat: form.alamat.trim() || '',
+      daerah: form.daerah.trim() || '',
+      desa: form.desa.trim() || '',
+      kelompok: form.kelompok.trim() || '',
       tempatLahir: form.tempatLahir.trim() || '',
       dateOfBirth: form.dateOfBirth ? form.dateOfBirth : '',
+      hideDob: form.hideDob,
       gender: form.gender === '' ? null : form.gender,
       pendidikan: form.pendidikan.trim() || '',
-      pekerjaan: form.pekerjaan.trim() || '',
     })
   }
 
@@ -114,65 +119,63 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
           </Field>
         </div>
 
-        <Field
-          label={t('profileDialog.timezone')}
-          htmlFor="profile-tz"
-          hint={`${t('profileDialog.currentDisplay')} ${timezoneLabel(form.timezone)}`}
-        >
-          <select
-            id="profile-tz"
-            value={form.timezone || ''}
-            onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-          >
-            {timezoneGroups().map((g) => (
-              <optgroup key={g.group} label={g.group}>
-                {g.items.map((tz) => (
-                  <option key={tz.value} value={tz.value}>
-                    {tz.label}
-                    {tz.hint ? ` · ${tz.hint}` : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </Field>
-
-        {/* Language preference — applies immediately and persists in
-            localStorage via the language detector. */}
-        <Field label={t('common.language')} htmlFor="profile-lang">
-          <select
-            id="profile-lang"
-            value={currentLang}
-            onChange={(e) => {
-              const next = e.target.value as Lang
-              void i18n.changeLanguage(next)
-            }}
-            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-          >
-            <option value="id">{t('common.indonesian')}</option>
-            <option value="en">{t('common.english')}</option>
-          </select>
-        </Field>
-
+        {/* Timezone + language on one line. Language applies immediately and
+            persists in localStorage via the language detector. */}
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('profileDialog.phone')} htmlFor="profile-nohp">
-            <Input
-              id="profile-nohp"
-              value={form.noHp}
-              onChange={(e) => setForm({ ...form, noHp: e.target.value })}
-              inputMode="tel"
-              autoComplete="tel"
-            />
+          <Field
+            label={t('profileDialog.timezone')}
+            htmlFor="profile-tz"
+            hint={`${t('profileDialog.currentDisplay')} ${timezoneLabel(form.timezone)}`}
+          >
+            <select
+              id="profile-tz"
+              value={form.timezone || ''}
+              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            >
+              {timezoneGroups().map((g) => (
+                <optgroup key={g.group} label={g.group}>
+                  {g.items.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                      {tz.hint ? ` · ${tz.hint}` : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </Field>
-          <Field label={t('profileDialog.address')} htmlFor="profile-alamat">
-            <Input
-              id="profile-alamat"
-              value={form.alamat}
-              onChange={(e) => setForm({ ...form, alamat: e.target.value })}
-            />
+          <Field label={t('common.language')} htmlFor="profile-lang">
+            <select
+              id="profile-lang"
+              value={currentLang}
+              onChange={(e) => {
+                const next = e.target.value as Lang
+                void i18n.changeLanguage(next)
+              }}
+              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            >
+              <option value="id">{t('common.indonesian')}</option>
+              <option value="en">{t('common.english')}</option>
+            </select>
           </Field>
         </div>
+
+        <Field label={t('profileDialog.phone')} htmlFor="profile-nohp">
+          <Input
+            id="profile-nohp"
+            value={form.noHp}
+            onChange={(e) => setForm({ ...form, noHp: e.target.value })}
+            inputMode="tel"
+            autoComplete="tel"
+          />
+        </Field>
+
+        {/* Daerah → Desa → Kelompok, cascading from the master Wilayah. */}
+        <WilayahPicker
+          value={{ daerah: form.daerah, desa: form.desa, kelompok: form.kelompok }}
+          onChange={(v) => setForm({ ...form, ...v })}
+        />
 
         {/* Taaruf-style biodata: tempat & tanggal lahir, jenis kelamin,
             pendidikan, pekerjaan. */}
@@ -192,6 +195,15 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
               value={form.dateOfBirth}
               onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
             />
+            <label className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                checked={form.hideDob}
+                onChange={(e) => setForm({ ...form, hideDob: e.target.checked })}
+                className="h-3.5 w-3.5 rounded border-slate-300"
+              />
+              {t('common.hideDob')}
+            </label>
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -218,14 +230,6 @@ export function ProfileDialog({ onClose }: { onClose: () => void }) {
             />
           </Field>
         </div>
-        <Field label={t('profileDialog.occupation')} htmlFor="profile-pekerjaan">
-          <Input
-            id="profile-pekerjaan"
-            value={form.pekerjaan}
-            onChange={(e) => setForm({ ...form, pekerjaan: e.target.value })}
-            placeholder={t('profileDialog.occupationPh')}
-          />
-        </Field>
         {/* Akun: username (read-only) + password (kosongkan = skip). */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('profileDialog.usernameLocked')} htmlFor="profile-username">

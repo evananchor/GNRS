@@ -210,6 +210,45 @@ Before you mark the task done:
       no leftovers from already-merged branches; if there are,
       clean them up first.
 
+## Operator preference — rebuild into the main container
+
+**This overrides the per-agent local test container rule below for this
+operator's workflow.** When the operator asks to "rebuild", "rebuild
+the container", or otherwise refresh the running app to pick up local
+edits, **rebuild the existing `gnrs` container on port `8300` via
+`docker-compose`**, not a new branch-namespaced dev container. The
+operator dogfoods their work on the single `gnrs` instance and does
+not want parallel containers cluttering podman.
+
+Default rebuild command (run from the repo root, inside the active
+worktree if that is where the edits live):
+
+    docker-compose up -d --build
+
+This rebuilds the `gnrs:latest` image from local files (committed and
+uncommitted), recreates the `gnrs` container on `0.0.0.0:8300`, and
+preserves the `gnrs-data` (compose-named `gnrs_gnrs-data`) volume so
+existing local test data survives. Smoke-test with
+`curl http://127.0.0.1:8300/healthz` and `podman logs --tail 20 gnrs`.
+
+Caveats:
+
+- The branch may include destructive migrations (e.g. mig 041 dropped
+  `joined_at` / `left_at` / `leave_reason` / `membership_status`).
+  Migrations run against the shared `gnrs-data` volume. If the operator
+  has irreplaceable test data, snapshot the volume first
+  (`podman volume export gnrs_gnrs-data -o backup.tar`) before
+  rebuilding onto a branch with a destructive migration. Otherwise
+  proceed — local test data is rebuildable.
+- Do **not** spin up a separate `gnrs-dev-<slug>` container unless the
+  operator explicitly asks for parallel-agent isolation. The per-agent
+  section below remains documented for the multi-agent scenario, but is
+  off by default.
+- The branch-namespaced rule still applies to *building images* for
+  read-only inspection (e.g. running `make test` inside a throwaway
+  golang container); the override is specifically about the
+  long-running serve-the-app container.
+
 ## Per-agent local test container (both tracks)
 
 **Regardless of which track you're on**, the feature-test loop

@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, Plus, Search, User as UserIcon } from 'lucide-react'
+import { Plus, Search, User as UserIcon } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,6 +12,7 @@ import {
   deleteUser,
   getUser,
   listUsers,
+  setUserPassword,
   updateUser,
   USER_ROLES,
   type ManagedUser,
@@ -30,6 +31,7 @@ import { Input } from '@/components/Input'
 import { PhotoUploader } from '@/components/PhotoUploader'
 import { RowActions } from '@/components/RowActions'
 import { PageShell } from '@/components/PageShell'
+import { WilayahPicker } from '@/components/WilayahPicker'
 
 const PAGE_SIZE = 25
 
@@ -47,16 +49,12 @@ function useRoleLabel() {
   }
 }
 
-function useMembershipLabel() {
-  const { t } = useTranslation()
-  return (ms: 'active' | 'left' | 'retired'): string => t(`users.membership.${ms}`)
-}
 
 export function UsersPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const roleLabel = useRoleLabel()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
   const roleParam = params.get('role')
   const role = (USER_ROLES as readonly string[]).includes(roleParam ?? '')
@@ -66,11 +64,35 @@ export function UsersPage() {
   const active =
     activeParam === 'true' ? true : activeParam === 'false' ? false : undefined
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
+  const newFlag = params.get('new') === '1'
+  const editId = params.get('edit')
 
   const { user: me } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
   const [dialog, setDialog] = useState<DialogMode>(null)
+
+  // /students/new and /teachers/new redirect here with ?new=1 — open the
+  // create dialog and strip the param so refresh / back-nav doesn't reopen.
+  useEffect(() => {
+    if (newFlag) {
+      setDialog({ kind: 'create' })
+      const next = new URLSearchParams(params)
+      next.delete('new')
+      setParams(next, { replace: true })
+    }
+  }, [newFlag, params, setParams])
+
+  // /pengaturan/pengguna/:id (and legacy /users/:id) redirect here with
+  // ?edit=<id> — open the full edit dialog and strip the param.
+  useEffect(() => {
+    if (editId) {
+      setDialog({ kind: 'edit', id: editId })
+      const next = new URLSearchParams(params)
+      next.delete('edit')
+      setParams(next, { replace: true })
+    }
+  }, [editId, params, setParams])
 
   const { data, isPending } = useQuery({
     queryKey: ['users', { q, role, active, page }],
@@ -338,7 +360,6 @@ type CreateValues = {
   desa?: string
   kelompok?: string
   pendidikan?: string
-  pekerjaan?: string
 }
 
 function UserCreateForm({
@@ -373,7 +394,6 @@ function UserCreateForm({
         desa: z.string().max(200).optional().or(z.literal('')),
         kelompok: z.string().max(200).optional().or(z.literal('')),
         pendidikan: z.string().max(80).optional().or(z.literal('')),
-        pekerjaan: z.string().max(80).optional().or(z.literal('')),
       }),
     [t],
   )
@@ -381,6 +401,8 @@ function UserCreateForm({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
@@ -400,7 +422,6 @@ function UserCreateForm({
       desa: '',
       kelompok: '',
       pendidikan: '',
-      pekerjaan: '',
     },
   })
   const apiError = error instanceof ApiError ? error.message : null
@@ -424,7 +445,6 @@ function UserCreateForm({
           desa: v.desa || undefined,
           kelompok: v.kelompok || undefined,
           pendidikan: v.pendidikan || undefined,
-          pekerjaan: v.pekerjaan || undefined,
         }),
       )}
       className="space-y-3"
@@ -481,22 +501,19 @@ function UserCreateForm({
             <option value="female">{t('users.form.genderFemale')}</option>
           </select>
         </Field>
-        <Field label={t('users.form.daerah')} htmlFor="daerah" error={errors.daerah?.message}>
-          <Input id="daerah" {...register('daerah')} />
-        </Field>
-        <Field label={t('users.form.desa')} htmlFor="desa" error={errors.desa?.message}>
-          <Input id="desa" {...register('desa')} />
-        </Field>
-        <Field label={t('users.form.kelompok')} htmlFor="kelompok" error={errors.kelompok?.message}>
-          <Input id="kelompok" {...register('kelompok')} />
-        </Field>
         <Field label={t('users.form.pendidikan')} htmlFor="pendidikan" error={errors.pendidikan?.message}>
           <Input id="pendidikan" {...register('pendidikan')} />
         </Field>
-        <Field label={t('users.form.pekerjaan')} htmlFor="pekerjaan" error={errors.pekerjaan?.message}>
-          <Input id="pekerjaan" {...register('pekerjaan')} />
-        </Field>
       </div>
+      {/* Daerah → Desa → Kelompok, cascading from the master Wilayah. */}
+      <WilayahPicker
+        value={{ daerah: watch('daerah') ?? '', desa: watch('desa') ?? '', kelompok: watch('kelompok') ?? '' }}
+        onChange={(v) => {
+          setValue('daerah', v.daerah)
+          setValue('desa', v.desa)
+          setValue('kelompok', v.kelompok)
+        }}
+      />
       {apiError ? <p className="text-sm text-red-600">{apiError}</p> : null}
       <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-2">
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
@@ -513,11 +530,41 @@ function UserCreateForm({
 // --- Edit dialog ----------------------------------------------------------
 
 type EditValues = {
-  name: string
   email: string
-  username?: string
+  username: string
+  name: string
   role: UserRole
   active: boolean
+  nickname: string
+  tempatLahir: string
+  dateOfBirth: string
+  hideDob: boolean
+  gender: '' | 'male' | 'female'
+  noHp: string
+  daerah: string
+  desa: string
+  kelompok: string
+  pendidikan: string
+}
+
+function userToEditValues(u: ManagedUser): EditValues {
+  return {
+    email: u.email,
+    username: u.username ?? '',
+    name: u.name,
+    role: u.role,
+    active: u.active,
+    nickname: u.nickname ?? '',
+    tempatLahir: u.tempatLahir ?? '',
+    dateOfBirth: u.dateOfBirth?.slice(0, 10) ?? '',
+    hideDob: u.hideDob ?? false,
+    gender: u.gender ?? '',
+    noHp: u.noHp ?? '',
+    daerah: u.daerah ?? '',
+    desa: u.desa ?? '',
+    kelompok: u.kelompok ?? '',
+    pendidikan: u.pendidikan ?? '',
+  }
 }
 
 function UserEditDialog({
@@ -543,7 +590,7 @@ function UserEditDialog({
   })
 
   return (
-    <Dialog title={data ? t('users.editWithName', { name: data.name }) : t('users.edit')} onClose={onClose}>
+    <Dialog title={data ? t('users.editWithName', { name: data.name }) : t('users.edit')} onClose={onClose} size="lg">
       {isPending ? (
         <div className="py-6 text-center text-slate-500">{t('common.loading')}</div>
       ) : data ? (
@@ -563,14 +610,7 @@ function UserEditDialog({
             onSubmit={onSubmit}
             onCancel={onClose}
           />
-          <div className="border-t border-slate-200 pt-3 text-sm">
-            <Link
-              to={`/pengaturan/pengguna/${data.id}`}
-              className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900 hover:underline"
-            >
-              <ExternalLink size={14} /> {t('users.editFullProfileLink')}
-            </Link>
-          </div>
+          <UserPasswordSection userId={data.id} userName={data.name} />
         </div>
       ) : (
         <div className="py-6 text-center text-red-600">{t('common.dataNotFound')}</div>
@@ -594,78 +634,125 @@ function UserEditForm({
 }) {
   const { t } = useTranslation()
   const roleLabel = useRoleLabel()
-
-  const editSchema = useMemo(
-    () =>
-      z.object({
-        name: z.string().min(1, t('users.form.errRequired')).max(200),
-        email: z.string().email(t('users.form.errEmail')),
-        username: z.string().max(64).optional().or(z.literal('')),
-        role: z.enum(USER_ROLES as readonly [UserRole, ...UserRole[]]),
-        active: z.boolean(),
-      }),
-    [t],
-  )
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<EditValues>({
-    resolver: zodResolver(editSchema),
-    defaultValues: {
-      name: initial.name,
-      email: initial.email,
-      username: initial.username ?? '',
-      role: initial.role,
-      active: initial.active,
-    },
-  })
+  const { user: me } = useAuth()
+  const isAdmin = me?.role === 'admin'
+  const [f, setF] = useState<EditValues>(() => userToEditValues(initial))
+  useEffect(() => {
+    setF(userToEditValues(initial))
+  }, [initial])
+  const update = <K extends keyof EditValues>(k: K, v: EditValues[K]) =>
+    setF((p) => ({ ...p, [k]: v }))
   const apiError = error instanceof ApiError ? error.message : null
+
+  const selectCls =
+    'h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400'
 
   return (
     <form
-      onSubmit={handleSubmit((v) =>
+      className="space-y-5"
+      onSubmit={(e) => {
+        e.preventDefault()
+        // Role only included for admins — the backend rejects role changes
+        // from non-admins anyway, so skip it to keep the PATCH minimal.
         onSubmit({
-          name: v.name,
-          email: v.email,
-          username: v.username ?? '',
-          role: v.role,
-          active: v.active,
-        }),
-      )}
-      className="space-y-3"
+          email: f.email.trim(),
+          username: f.username.trim(),
+          name: f.name.trim(),
+          ...(isAdmin ? { role: f.role } : {}),
+          active: f.active,
+          nickname: f.nickname.trim(),
+          tempatLahir: f.tempatLahir.trim(),
+          dateOfBirth: f.dateOfBirth, // '' clears
+          hideDob: f.hideDob,
+          gender: f.gender || undefined,
+          noHp: f.noHp.trim(),
+          daerah: f.daerah.trim(),
+          desa: f.desa.trim(),
+          kelompok: f.kelompok.trim(),
+          pendidikan: f.pendidikan.trim(),
+        })
+      }}
     >
-      <Field label={t('users.cols.name')} htmlFor="e_name" error={errors.name?.message}>
-        <Input id="e_name" {...register('name')} />
-      </Field>
-      <Field label={t('users.form.email')} htmlFor="e_email" error={errors.email?.message}>
-        <Input id="e_email" type="email" {...register('email')} />
-      </Field>
-      <Field label={t('users.form.username')} htmlFor="e_username" error={errors.username?.message}>
-        <Input id="e_username" placeholder={t('users.form.usernamePh')} {...register('username')} />
-      </Field>
-      <Field label={t('users.form.role')} htmlFor="e_role" error={errors.role?.message}>
-        <select
-          id="e_role"
-          {...register('role')}
-          className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-        >
-          {USER_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {roleLabel(r)}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label={t('users.form.active')} htmlFor="e_active" error={errors.active?.message}>
-        <label className="inline-flex items-center gap-2">
-          <input type="checkbox" id="e_active" {...register('active')} className="h-4 w-4" />
-          <span className="text-sm text-slate-600">{t('users.form.activeHint')}</span>
-        </label>
-      </Field>
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-700">{t('users.userDetail.cardAkun')}</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label={t('users.userDetail.akun.email')} htmlFor="e_email">
+            <Input id="e_email" type="email" value={f.email} onChange={(e) => update('email', e.target.value)} required />
+          </Field>
+          <Field label={t('users.userDetail.akun.username')} htmlFor="e_username" hint={t('users.userDetail.akun.usernameHint')}>
+            <Input id="e_username" value={f.username} onChange={(e) => update('username', e.target.value)} />
+          </Field>
+          {isAdmin ? (
+            <Field label={t('users.userDetail.akun.role')} htmlFor="e_role">
+              <select id="e_role" className={selectCls} value={f.role} onChange={(e) => update('role', e.target.value as UserRole)}>
+                {USER_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {roleLabel(r)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : (
+            <Field label={t('users.userDetail.akun.role')} htmlFor="e_role">
+              <div className="flex h-10 items-center text-sm text-slate-700">{roleLabel(f.role)}</div>
+            </Field>
+          )}
+          <Field label={t('users.userDetail.akun.statusAkun')} htmlFor="e_active">
+            <label className="inline-flex h-10 items-center gap-2">
+              <input id="e_active" type="checkbox" checked={f.active} onChange={(e) => update('active', e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+              <span className="text-sm">{t('users.userDetail.akun.activeToggle')}</span>
+            </label>
+          </Field>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-700">{t('users.userDetail.cardProfil')}</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label={t('users.userDetail.profil.fullName')} htmlFor="e_name">
+            <Input id="e_name" value={f.name} onChange={(e) => update('name', e.target.value)} required />
+          </Field>
+          <Field label={t('users.userDetail.profil.nickname')} htmlFor="e_nickname">
+            <Input id="e_nickname" value={f.nickname} onChange={(e) => update('nickname', e.target.value)} />
+          </Field>
+          <Field label={t('profileDialog.birthPlace')} htmlFor="e_ttl">
+            <Input id="e_ttl" value={f.tempatLahir} onChange={(e) => update('tempatLahir', e.target.value)} placeholder={t('profileDialog.birthPlacePh')} />
+          </Field>
+          <Field label={t('users.userDetail.profil.birthDate')} htmlFor="e_dob" hint={t('users.userDetail.profil.birthDateHint')}>
+            <Input id="e_dob" type="date" value={f.dateOfBirth} onChange={(e) => update('dateOfBirth', e.target.value)} />
+            <label className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                checked={f.hideDob}
+                onChange={(e) => update('hideDob', e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300"
+              />
+              {t('common.hideDob')}
+            </label>
+          </Field>
+          <Field label={t('users.userDetail.profil.gender')} htmlFor="e_gender">
+            <select id="e_gender" className={selectCls} value={f.gender} onChange={(e) => update('gender', e.target.value as EditValues['gender'])}>
+              <option value="">—</option>
+              <option value="female">{t('users.userDetail.profil.genderFemale')}</option>
+              <option value="male">{t('users.userDetail.profil.genderMale')}</option>
+            </select>
+          </Field>
+          <Field label={t('users.userDetail.profil.noHp')} htmlFor="e_noHp">
+            <Input id="e_noHp" value={f.noHp} onChange={(e) => update('noHp', e.target.value)} />
+          </Field>
+          <Field label={t('profileDialog.education')} htmlFor="e_pendidikan" className="sm:col-span-2">
+            <Input id="e_pendidikan" value={f.pendidikan} onChange={(e) => update('pendidikan', e.target.value)} placeholder={t('profileDialog.educationPh')} />
+          </Field>
+        </div>
+        {/* Daerah → Desa → Kelompok, cascading from the master Wilayah. */}
+        <WilayahPicker
+          value={{ daerah: f.daerah, desa: f.desa, kelompok: f.kelompok }}
+          onChange={(v) => setF((p) => ({ ...p, ...v }))}
+        />
+      </section>
+
       {apiError ? <p className="text-sm text-red-600">{apiError}</p> : null}
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-3">
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           {t('common.cancel')}
         </Button>
@@ -674,6 +761,57 @@ function UserEditForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+// Self-contained password reset, shown inside the edit dialog (replaces the
+// password section that used to live on the standalone user-detail page).
+function UserPasswordSection({ userId, userName }: { userId: string; userName: string }) {
+  const { t } = useTranslation()
+  const [pw, setPw] = useState('')
+  const [pw2, setPw2] = useState('')
+  const [done, setDone] = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: () => setUserPassword(userId, pw),
+    onSuccess: () => {
+      setDone(true)
+      setPw('')
+      setPw2('')
+      setTimeout(() => setDone(false), 3000)
+    },
+  })
+
+  const apiError = mutation.error instanceof ApiError ? mutation.error.message : null
+  const mismatch = !!pw && !!pw2 && pw !== pw2
+
+  return (
+    <div className="space-y-3 border-t border-slate-200 pt-4">
+      <h3 className="text-sm font-semibold text-slate-700">{t('users.userDetail.cardPassword')}</h3>
+      <p className="text-xs text-slate-500">{t('users.userDetail.password.intro', { name: userName })}</p>
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (mismatch || pw.length < 6) return
+          mutation.mutate()
+        }}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label={t('users.userDetail.password.newPassword')} htmlFor="e_pw">
+            <Input id="e_pw" type="text" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" placeholder={t('users.userDetail.password.newPasswordPh')} />
+          </Field>
+          <Field label={t('users.userDetail.password.repeat')} htmlFor="e_pw2" error={mismatch ? t('users.userDetail.password.mismatch') : undefined}>
+            <Input id="e_pw2" type="text" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" />
+          </Field>
+        </div>
+        {apiError ? <p className="text-sm text-red-600">{apiError}</p> : null}
+        {done ? <p className="text-sm text-emerald-700">{t('users.userDetail.password.saved')}</p> : null}
+        <Button type="submit" size="sm" disabled={mutation.isPending || !pw || pw.length < 6 || mismatch}>
+          {mutation.isPending ? t('common.saving') : t('users.userDetail.password.submit')}
+        </Button>
+      </form>
+    </div>
   )
 }
 
@@ -734,4 +872,4 @@ function ActivePill({ active }: { active: boolean }) {
 }
 
 // Re-export the hook for sibling user pages.
-export { useRoleLabel, useMembershipLabel }
+export { useRoleLabel }

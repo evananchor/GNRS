@@ -50,16 +50,10 @@ type userCreateBody struct {
 	ParentPhoneRegion *string `json:"parentPhoneRegion,omitempty" validate:"omitempty,oneof=ID SG US CA"`
 	ParentEmail       *string `json:"parentEmail,omitempty"       validate:"omitempty,email"`
 
-	// Guru
+	// Locality + free-form notes (kept available to all roles).
 	Desa   *string `json:"desa,omitempty"   validate:"omitempty,max=200"`
 	Daerah *string `json:"daerah,omitempty" validate:"omitempty,max=200"`
 	Notes  *string `json:"notes,omitempty"  validate:"omitempty,max=2000"`
-
-	// Membership
-	JoinedAt         *string `json:"joinedAt,omitempty"         validate:"omitempty,datetime=2006-01-02"`
-	LeftAt           *string `json:"leftAt,omitempty"           validate:"omitempty,datetime=2006-01-02"`
-	LeaveReason      *string `json:"leaveReason,omitempty"      validate:"omitempty,max=500"`
-	MembershipStatus *string `json:"membershipStatus,omitempty" validate:"omitempty,oneof=active left retired"`
 
 	// Taaruf-style biodata extensions.
 	UserCode    *string `json:"userCode,omitempty"    validate:"omitempty,max=40"`
@@ -73,7 +67,7 @@ type userCreateBody struct {
 
 type userUpdateBody struct {
 	Email    *string `json:"email,omitempty"    validate:"omitempty,email,max=200"`
-	Username *string `json:"username,omitempty" validate:"omitempty,max=64"`
+	Username *string `json:"username,omitempty" validate:"omitempty,min=3,max=64"`
 	Name     *string `json:"name,omitempty"     validate:"omitempty,max=200"`
 	Role     *string `json:"role,omitempty"     validate:"omitempty,oneof=admin staff pengurus guru ortu murid"`
 	Active   *bool   `json:"active,omitempty"`
@@ -95,11 +89,6 @@ type userUpdateBody struct {
 	Desa   *string `json:"desa,omitempty"   validate:"omitempty,max=200"`
 	Daerah *string `json:"daerah,omitempty" validate:"omitempty,max=200"`
 	Notes  *string `json:"notes,omitempty"  validate:"omitempty,max=2000"`
-
-	JoinedAt         *string `json:"joinedAt,omitempty"         validate:"omitempty"`
-	LeftAt           *string `json:"leftAt,omitempty"           validate:"omitempty"`
-	LeaveReason      *string `json:"leaveReason,omitempty"      validate:"omitempty,max=500"`
-	MembershipStatus *string `json:"membershipStatus,omitempty" validate:"omitempty,oneof=active left retired"`
 
 	// Taaruf-style biodata extensions.
 	UserCode    *string `json:"userCode,omitempty"    validate:"omitempty,max=40"`
@@ -189,10 +178,9 @@ func (h *Users) Create(w http.ResponseWriter, r *http.Request) {
 		ParentPhone:       trimOptional(b.ParentPhone),
 		ParentPhoneRegion: trimOptional(b.ParentPhoneRegion),
 		ParentEmail:       trimOptional(b.ParentEmail),
-		Desa:        trimOptional(b.Desa),
-		Daerah:      trimOptional(b.Daerah),
-		Notes:       trimOptional(b.Notes),
-		LeaveReason: trimOptional(b.LeaveReason),
+		Desa:   trimOptional(b.Desa),
+		Daerah: trimOptional(b.Daerah),
+		Notes:  trimOptional(b.Notes),
 	}
 	if b.Level != nil && *b.Level != "" {
 		lvl := model.StudentLevel(*b.Level)
@@ -200,15 +188,6 @@ func (h *Users) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if dob, ok := parseOptDate(b.DateOfBirth); ok {
 		in.DateOfBirth = dob
-	}
-	if j, ok := parseOptDate(b.JoinedAt); ok {
-		in.JoinedAt = j
-	}
-	if l, ok := parseOptDate(b.LeftAt); ok {
-		in.LeftAt = l
-	}
-	if b.MembershipStatus != nil && *b.MembershipStatus != "" {
-		in.MembershipStatus = model.MembershipStatus(*b.MembershipStatus)
 	}
 	// Taaruf-style biodata.
 	in.UserCode = trimOptional(b.UserCode)
@@ -252,13 +231,39 @@ func (h *Users) Update(w http.ResponseWriter, r *http.Request) {
 		v := strings.TrimSpace(*b.Name)
 		b.Name = &v
 	}
-	if err := h.validator.Struct(b); err != nil {
+	// Username: trim; an empty string is a clear-to-NULL request (handled
+	// by the store's addStr()). Skip the min=3 rule in that case so the
+	// documented clear path still works.
+	if b.Username != nil {
+		v := strings.TrimSpace(*b.Username)
+		b.Username = &v
+	}
+	skipUsername := b.Username != nil && *b.Username == ""
+	if skipUsername {
+		saved := b.Username
+		b.Username = nil
+		err := h.validator.Struct(b)
+		b.Username = saved
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
+			return
+		}
+	} else if err := h.validator.Struct(b); err != nil {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
 
-	// Self-protection: prevent last-admin lockout.
+	// Admin-only role change (unified-user mechanism). The router already
+	// gates create/delete to admin, but Update can be reached by other
+	// roles for self-edits — block role changes from non-admin callers.
 	claims, _ := auth.ClaimsFrom(r.Context())
+	if b.Role != nil && (claims == nil || claims.Role != model.RoleAdmin) {
+		httpx.Error(w, http.StatusForbidden, "forbidden",
+			"Hanya admin yang boleh mengubah role pengguna")
+		return
+	}
+
+	// Self-protection: prevent last-admin lockout.
 	if claims != nil && claims.UserID == id {
 		willDemote := b.Role != nil && *b.Role != string(model.RoleAdmin)
 		willDeactivate := b.Active != nil && !*b.Active
@@ -290,10 +295,9 @@ func (h *Users) Update(w http.ResponseWriter, r *http.Request) {
 		ParentPhone:       b.ParentPhone,
 		ParentPhoneRegion: b.ParentPhoneRegion,
 		ParentEmail:       b.ParentEmail,
-		Desa:        b.Desa,
-		Daerah:      b.Daerah,
-		Notes:       b.Notes,
-		LeaveReason: b.LeaveReason,
+		Desa:   b.Desa,
+		Daerah: b.Daerah,
+		Notes:  b.Notes,
 	}
 	if b.Role != nil {
 		rr := model.Role(*b.Role)
@@ -323,31 +327,6 @@ func (h *Users) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if b.JoinedAt != nil {
-		if *b.JoinedAt == "" {
-			in.ClearJoinedAt = true
-		} else if d, ok := parseOptDate(b.JoinedAt); ok && d != nil {
-			in.JoinedAt = d
-		} else {
-			httpx.Error(w, http.StatusBadRequest, "bad_request", "Format tanggal masuk tidak valid (YYYY-MM-DD)")
-			return
-		}
-	}
-	if b.LeftAt != nil {
-		if *b.LeftAt == "" {
-			in.ClearLeftAt = true
-		} else if d, ok := parseOptDate(b.LeftAt); ok && d != nil {
-			in.LeftAt = d
-		} else {
-			httpx.Error(w, http.StatusBadRequest, "bad_request", "Format tanggal keluar tidak valid (YYYY-MM-DD)")
-			return
-		}
-	}
-	if b.MembershipStatus != nil {
-		ms := model.MembershipStatus(*b.MembershipStatus)
-		in.MembershipStatus = &ms
-	}
-
 	// Taaruf-style biodata.
 	in.UserCode = b.UserCode
 	in.TempatLahir = b.TempatLahir
