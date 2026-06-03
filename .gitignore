@@ -60,7 +60,3 @@ web/app/src/routeTree.gen.ts
 web/app/vite.config.d.ts
 web/app/vite.config.js
 .gstack/
-
-# Sibling projects sharing this workspace dir — separate repos, NOT part of GNRS
-/Merekah/
-/plane/
