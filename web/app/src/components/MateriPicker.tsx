@@ -7,8 +7,9 @@ import { getMateriAjar, listMateriAjar, type MateriAjar } from '@/api/kurikulum'
 import { listQuranSurahs } from '@/api/quran'
 import { listKitab, listBab } from '@/api/hadits'
 import { listDoa } from '@/api/doa'
-import type { Sesi } from '@/api/sesi'
+import type { Sesi, SesiLibraryItem } from '@/api/sesi'
 import type { DiajarkanKind, MateriDiajarkanInput } from '@/api/diajarkan'
+import { LibraryRefLabel, formatQuranRef } from '@/components/LibraryRefLabel'
 
 // Tab labels & ids ----------------------------------------------------------
 
@@ -104,10 +105,53 @@ function SesiTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarkanInpu
     return list.length > 0 ? list : sesi.materiAjarId ? [sesi.materiAjarId] : []
   }, [sesi])
 
-  const hasAttachedLibrary =
-    sesi.libraryKind && sesi.libraryKind !== 'kurikulum' && sesi.libraryRef
+  // Planned library refs — prefer the multi-item list, fall back to the legacy
+  // single library_* columns. Each carries the aspect it was planned with.
+  const libItems = useMemo<SesiLibraryItem[]>(() => {
+    const items = (sesi.libraryItems ?? []).filter(
+      (it) => Boolean(it.libraryKind && it.libraryRef),
+    )
+    if (items.length > 0) return items
+    if (sesi.libraryKind && sesi.libraryKind !== 'kurikulum' && sesi.libraryRef) {
+      return [
+        {
+          libraryKind: sesi.libraryKind as SesiLibraryItem['libraryKind'],
+          libraryAspect: sesi.libraryAspect ?? null,
+          libraryRef: sesi.libraryRef,
+        },
+      ]
+    }
+    return []
+  }, [sesi])
 
-  if (ids.length === 0 && !hasAttachedLibrary) {
+  // Surah names so the picked label reads "An-Nahl (16) : 1-10" rather than a
+  // bare "16:1-10". Cached app-wide under the same query key.
+  const surahs = useQuery({
+    queryKey: ['quran-surahs'],
+    queryFn: listQuranSurahs,
+    staleTime: 60 * 60_000,
+    enabled: libItems.some((it) => it.libraryKind === 'quran'),
+  })
+  const surahMap = useMemo(() => {
+    const m: Record<number, string> = {}
+    for (const s of surahs.data ?? []) m[s.id] = s.nama
+    return m
+  }, [surahs.data])
+
+  const buildLibraryInput = (it: SesiLibraryItem): MateriDiajarkanInput => {
+    let label = `${it.libraryKind.toUpperCase()} · ${it.libraryRef}`
+    if (it.libraryKind === 'quran') {
+      label = formatQuranRef(it.libraryRef, surahMap, t('pustaka.refLabel.surahFallback'))
+    }
+    return {
+      kind: it.libraryKind as DiajarkanKind,
+      ref: it.libraryRef,
+      label,
+      libraryAspect: it.libraryAspect ?? null,
+    }
+  }
+
+  if (ids.length === 0 && libItems.length === 0) {
     return (
       <div className="grid h-full place-items-center p-8 text-center text-sm text-neutral-500">
         {t('materiComp.picker.sesiEmpty')}
@@ -139,23 +183,27 @@ function SesiTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarkanInpu
           </ul>
         </div>
       )}
-      {hasAttachedLibrary && (
+      {libItems.length > 0 && (
         <div className="mt-4">
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
             {t('materiComp.picker.sesiLibraryHeading')}
           </div>
-          <button
-            onClick={() =>
-              onPick({
-                kind: sesi.libraryKind as DiajarkanKind,
-                ref: sesi.libraryRef ?? undefined,
-                label: `${sesi.libraryKind?.toUpperCase()} · ${sesi.libraryRef}`,
-              })
-            }
-            className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800"
-          >
-            {sesi.libraryKind?.toUpperCase()} · {sesi.libraryRef}
-          </button>
+          <ul className="space-y-1">
+            {libItems.map((it, i) => (
+              <li key={it.id ?? `${it.libraryKind}:${it.libraryRef}:${i}`}>
+                <button
+                  onClick={() => onPick(buildLibraryInput(it))}
+                  className="block w-full rounded-lg px-3 py-2 text-left hover:bg-neutral-800"
+                >
+                  <LibraryRefLabel
+                    libraryKind={it.libraryKind}
+                    libraryRef={it.libraryRef}
+                    libraryAspect={it.libraryAspect}
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

@@ -178,6 +178,7 @@ func run() error {
 	haditsStore := store.NewHadits(db)
 	doaStore := store.NewDoa(db)
 	manqulStore := store.NewManqul(db)
+	manqulShareStore := store.NewManqulShare(db)
 	tahunAjaran := store.NewTahunAjaran(db)
 	bacaan := store.NewBacaan(db)
 	pencapaian := store.NewPencapaian(db)
@@ -328,6 +329,13 @@ func run() error {
 			manqulH := handler.NewManqul(manqulStore)
 			p.Get("/quran/manqul-notes", manqulH.List)
 			p.Post("/quran/manqul-notes", manqulH.Upsert)
+
+			manqulShareH := handler.NewManqulShare(manqulShareStore, users)
+			p.Get("/quran/manqul-shares/available", manqulShareH.Available)
+			p.Get("/quran/manqul-shares/shared", manqulShareH.Shared)
+			p.Get("/quran/manqul-shares/mine", manqulShareH.Mine)
+			p.Post("/quran/manqul-shares", manqulShareH.Set)
+			p.Get("/quran/manqul-recipients", manqulShareH.SearchRecipients)
 
 			tahunAjaranH := handler.NewTahunAjaran(tahunAjaran)
 			p.Get("/tahun-ajaran", tahunAjaranH.List)

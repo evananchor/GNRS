@@ -70,7 +70,7 @@ export function UserNewPage() {
   }
 
   return (
-    <PageShell header={<h1 className="text-2xl font-semibold">{t('users.userNew.title')}</h1>}>
+    <PageShell header={<h1 className="text-lg font-semibold">{t('users.userNew.title')}</h1>}>
       <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">

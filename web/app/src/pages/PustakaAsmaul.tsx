@@ -28,7 +28,7 @@ export function PustakaAsmaulPage() {
   return (
     <LibraryShell backTo="/pustaka" bgClassName="bg-slate-50" contentClassName="px-4 pt-14 pb-6 md:px-8">
       <div className="mx-auto max-w-5xl">
-      <h1 className="mb-1 text-2xl font-semibold">{t('pustaka.asmaul.title')}</h1>
+      <h1 className="mb-1 text-lg font-semibold">{t('pustaka.asmaul.title')}</h1>
       <p className="mb-4 text-sm text-slate-500">{t('pustaka.asmaul.subtitle')}</p>
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
         <Search size={16} className="text-slate-400" />

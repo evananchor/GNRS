@@ -11,7 +11,7 @@ import type { LibraryAspect, LibraryKind } from '@/api/sesi'
  * Accepts "<surah>" | "<surah>:<ayat>" | "<surah>:<from>-<to>". Returns
  * "<Nama Surat> (<n>) : <ayat>" or just "<Nama Surat> (<n>)" for whole surah.
  */
-function formatQuranRef(
+export function formatQuranRef(
   ref: string,
   surahNameById: Record<number, string>,
   surahFallback: string,

@@ -383,8 +383,8 @@ export function KelasCalendarSection() {
           </div>
         </div>
 
-        {/* Stats — mobile shows 2x2: Total + Selesai on top, Berjalan + Terlewat below. */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* Stats — single row of 4 on every breakpoint (compact cards on mobile). */}
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
           <StatCard label={t('kelasSection.calendar.monthTotal')} value={stats.total} sub={isFetching ? t('kelasSection.calendar.loadingSub') : `${BULAN[month]} ${year}`} />
           <StatCard label={STATUS_LABEL.completed} value={stats.completed} dot="bg-emerald-500" />
           <StatCard label={STATUS_LABEL.ongoing} value={stats.ongoing} dot="bg-amber-500" />
@@ -585,13 +585,15 @@ function StatCard({
   dot?: string
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-        {dot ? <span className={'inline-block h-2 w-2 rounded-full ' + dot} /> : null}
-        {label}
+    <div className="min-w-0 rounded-lg border border-slate-200 bg-white p-2 shadow-sm sm:p-4">
+      <div className="flex items-start gap-1 text-[10px] uppercase leading-tight tracking-tight text-slate-500 sm:items-center sm:gap-2 sm:text-xs sm:tracking-wide">
+        {dot ? (
+          <span className={'mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full sm:mt-0 sm:h-2 sm:w-2 ' + dot} />
+        ) : null}
+        <span className="min-w-0">{label}</span>
       </div>
-      <div className="mt-1 text-2xl font-semibold text-slate-900">{value}</div>
-      {sub ? <div className="text-xs text-slate-500">{sub}</div> : null}
+      <div className="mt-0.5 text-lg font-semibold leading-none text-slate-900 sm:mt-1 sm:text-2xl">{value}</div>
+      {sub ? <div className="truncate text-[10px] text-slate-500 sm:text-xs">{sub}</div> : null}
     </div>
   )
 }

@@ -59,7 +59,7 @@ export function PustakaHaditsPage() {
       <div className="mx-auto max-w-5xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <h1 className="text-2xl font-semibold">{t('pustaka.hadits.title')}</h1>
+            <h1 className="text-lg font-semibold">{t('pustaka.hadits.title')}</h1>
             <p className="mb-4 mt-1 text-sm text-slate-500">
               {t('pustaka.hadits.subtitle')}
             </p>

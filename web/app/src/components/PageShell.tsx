@@ -21,7 +21,7 @@ export function PageShell({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {header ? (
-        <div className={cn('flex-shrink-0', !noPadding && 'px-4 pt-5 md:px-6 md:pt-6')}>
+        <div className={cn('flex-shrink-0', !noPadding && 'px-4 pt-3 md:px-6 md:pt-4')}>
           {header}
         </div>
       ) : null}
@@ -39,28 +39,23 @@ export function PageShell({
 }
 
 /**
- * PageHeader — typical page heading: small eyebrow + title + subtitle, plus
+ * PageHeader — compact page heading: title + optional one-line subtitle, plus
  * optional action buttons aligned to the right.
  */
 export function PageHeader({
-  eyebrow,
   title,
   subtitle,
   actions,
 }: {
-  eyebrow?: ReactNode
   title: ReactNode
   subtitle?: ReactNode
   actions?: ReactNode
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0">
-        {eyebrow ? (
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{eyebrow}</p>
-        ) : null}
-        <h1 className="mt-1 truncate text-2xl font-semibold">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+        <h1 className="truncate text-lg font-semibold leading-tight">{title}</h1>
+        {subtitle ? <p className="truncate text-xs text-slate-500">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex flex-shrink-0 flex-wrap gap-2">{actions}</div> : null}
     </div>

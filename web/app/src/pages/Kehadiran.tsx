@@ -46,7 +46,6 @@ export function KehadiranPage() {
     <PageShell
       header={
         <PageHeader
-          eyebrow={t('kehadiran.eyebrow')}
           title={t('kehadiran.title')}
           subtitle={t('kehadiran.subtitle')}
         />
@@ -139,8 +138,15 @@ function AnalitikTab() {
   })
 
   const years = useMemo(() => {
-    const set = new Set<number>(stats?.availableYears ?? [])
     const cur = today.getFullYear()
+    // Bound the year chips to a sensible recent window so an orphan /
+    // sentinel-dated record (e.g. a stray 2005 from a bad import) doesn't
+    // add a misleading year filter. Current + two prior years are always
+    // shown; older real years appear only within the lookback window.
+    const minYear = cur - 6
+    const set = new Set<number>(
+      (stats?.availableYears ?? []).filter((y) => y >= minYear),
+    )
     set.add(cur)
     set.add(cur - 1)
     set.add(cur - 2)
@@ -628,5 +634,5 @@ function StatusDonut({ buckets }: { buckets: { label: string; count: number }[] 
 }
 
 function fmt(n: number, lang: string): string {
-  return n.toLocaleString(lang === 'en' ? 'en-US' : 'id-ID')
+  return n.toLocaleString(lang.startsWith('en') ? 'en-US' : 'id-ID')
 }

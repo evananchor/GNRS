@@ -55,21 +55,21 @@ export function DashboardPage() {
   return (
     <PageShell header={header}>
       <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <KPICard
           icon={<Users size={20} />}
           label={t('dashboard.activeStudents')}
           value={data.students.activeTotal}
+          gender={data.students.byGender}
           subtitle={t('common.fmtOf', { count: data.students.total })}
         />
         <KPICard
           icon={<GraduationCap size={20} />}
           label={t('dashboard.activeTeachers')}
           value={data.teachers.activeTotal}
+          gender={data.teachers.byGender ?? []}
           subtitle={t('common.fmtOf', { count: data.teachers.total })}
         />
-        <GenderCard title={t('dashboard.studentsByGender')} buckets={data.students.byGender} />
-        <GenderCard title={t('dashboard.teachersByGender')} buckets={data.teachers.byGender ?? []} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -101,82 +101,75 @@ function KPICard({
   icon,
   label,
   value,
+  gender,
   subtitle,
 }: {
   icon: React.ReactNode
   label: string
   value: number | string
+  gender?: Bucket[]
   subtitle?: string
 }) {
+  const { t } = useTranslation()
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-3 text-slate-600">
         <span className="rounded-md bg-slate-100 p-2">{icon}</span>
         <span className="text-sm">{label}</span>
       </div>
-      <p className="mt-3 text-3xl font-semibold">{value}</p>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-3xl font-semibold">{value}</p>
+          {gender ? (
+            <div className="mt-1 flex items-center gap-x-3 text-xs text-slate-600">
+              {(['male', 'female'] as const).map((key) => (
+                <span key={key} className="flex items-center gap-1.5 whitespace-nowrap">
+                  <span
+                    className="inline-block h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: GENDER_COLORS[key] }}
+                  />
+                  <span>{key === 'male' ? t('dashboard.genderMale') : t('dashboard.genderFemale')}</span>
+                  <span className="font-medium text-slate-900">
+                    {gender.find((b) => b.label === key)?.count ?? 0}
+                  </span>
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        {gender ? <GenderPie buckets={gender} /> : null}
+      </div>
       {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
     </div>
   )
 }
 
-function GenderCard({ title, buckets }: { title: string; buckets: Bucket[] }) {
-  const { t } = useTranslation()
+function GenderPie({ buckets }: { buckets: Bucket[] }) {
   const total = buckets.reduce((acc, b) => acc + b.count, 0)
   const data = buckets
     .filter((b) => b.count > 0)
-    .map((b) => ({
-      name: b.label === 'male' ? t('dashboard.genderMale') : t('dashboard.genderFemale'),
-      key: b.label,
-      value: b.count,
-    }))
-
+    .map((b) => ({ key: b.label, value: b.count }))
+  if (data.length === 0) return null
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="text-sm text-slate-600">{title}</div>
-      <div className="mt-2 flex min-w-0 items-center gap-2 sm:gap-4">
-        <div className="h-20 w-20 shrink-0 sm:h-24 sm:w-24">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={22}
-                outerRadius={38}
-                paddingAngle={2}
-                stroke="none"
-              >
-                {data.map((d) => (
-                  <Cell key={d.key} fill={GENDER_COLORS[d.key]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v: number) => `${v} (${total ? Math.round((v / total) * 100) : 0}%)`} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <ul className="min-w-0 space-y-1 text-sm">
-          {buckets.map((b) => (
-            <li key={b.label} className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: GENDER_COLORS[b.label] }}
-              />
-              {/* Full label on >= sm, single-letter on mobile so it never
-                  bleeds out of the tile. */}
-              <span className="font-medium">
-                <span className="hidden sm:inline">
-                  {b.label === 'male' ? t('dashboard.genderMale') : t('dashboard.genderFemale')}
-                </span>
-                <span className="sm:hidden">
-                  {b.label === 'male' ? t('dashboard.genderMaleShort') : t('dashboard.genderFemaleShort')}
-                </span>
-              </span>
-              <span className="text-slate-500">{b.count}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+    <div className="h-16 w-16 shrink-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="key"
+            innerRadius={18}
+            outerRadius={30}
+            paddingAngle={2}
+            stroke="none"
+          >
+            {data.map((d) => (
+              <Cell key={d.key} fill={GENDER_COLORS[d.key]} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(v: number) => `${v} (${total ? Math.round((v / total) * 100) : 0}%)`} />
+        </PieChart>
+      </ResponsiveContainer>
     </div>
   )
 }

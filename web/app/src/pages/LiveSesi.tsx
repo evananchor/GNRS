@@ -27,10 +27,20 @@ import { getDoa } from '@/api/doa'
 import { getMateriAjar } from '@/api/kurikulum'
 import { listQuranSurahs } from '@/api/quran'
 import { MateriPicker } from '@/components/MateriPicker'
+import { LibraryRefLabel } from '@/components/LibraryRefLabel'
 import { EndSesiSummaryDialog } from '@/components/EndSesiSummaryDialog'
 import { useToast } from '@/lib/toast'
 
 type DisplayMode = 'full' | 'title' | 'hidden'
+
+// Maps a planned library aspect to its i18n label key (Bacaan / Hafalan /
+// Mengulang / Manqul). Shared by the stage, title view, and history panel.
+const ASPECT_KEY: Record<string, string> = {
+  reciting: 'achievement.aspectReciting',
+  memorizing: 'achievement.aspectMemorizing',
+  review: 'achievement.aspectReview',
+  manqul: 'achievement.aspectManqul',
+}
 
 function formatElapsed(startedAt: string | null | undefined, now: number) {
   if (!startedAt) return '00:00'
@@ -381,6 +391,7 @@ function Stage({
         <div>
           <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">
             {t(kindLabelKey(current.kind))}
+            {current.libraryAspect ? ` · ${t(ASPECT_KEY[current.libraryAspect])}` : ''}
           </div>
           <h1 className="mt-3 text-4xl font-bold leading-tight md:text-6xl">
             {current.label ?? t('live.untitled')}
@@ -444,7 +455,10 @@ function QuranStage({ item }: { item: MateriDiajarkan }) {
   return (
     <div className="grid h-full place-items-center px-8 text-center">
       <div className="space-y-6">
-        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">{t('live.kind.quran')}</div>
+        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">
+          {t('live.kind.quran')}
+          {item.libraryAspect ? ` · ${t(ASPECT_KEY[item.libraryAspect])}` : ''}
+        </div>
         <div className="font-arabic text-6xl text-neutral-100 md:text-8xl" dir="rtl">
           {s?.namaArab ?? '...'}
         </div>
@@ -616,9 +630,19 @@ function HistoryPanel({
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] uppercase tracking-wider text-emerald-400">
                   {t(kindLabelKey(it.kind))}
+                  {it.libraryAspect ? ` · ${t(ASPECT_KEY[it.libraryAspect])}` : ''}
                   {isCurrent ? ` · ${t('live.onStage')}` : ''}
                 </div>
-                <div className="truncate text-neutral-100">{title}</div>
+                {it.kind !== 'kurikulum' && it.ref ? (
+                  <LibraryRefLabel
+                    libraryKind={it.kind}
+                    libraryRef={it.ref}
+                    showKind={false}
+                    className="block truncate text-neutral-100"
+                  />
+                ) : (
+                  <div className="truncate text-neutral-100">{title}</div>
+                )}
               </div>
               {it.completed ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">

@@ -31,6 +31,12 @@ i18n
     fallbackLng: 'id',
     supportedLngs: SUPPORTED_LANGS as unknown as string[],
     nonExplicitSupportedLngs: true,
+    // Normalize region codes ('en-US', 'en-GB') down to the base language
+    // ('en') so `i18n.language` is always a supported code. Without this the
+    // browser detector stores 'en-US', every `i18n.language === 'en'` check
+    // (number formatting, etc.) fails, and numbers fall back to id-ID
+    // formatting (e.g. "5.819" instead of "5,819").
+    load: 'languageOnly',
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],

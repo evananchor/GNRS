@@ -283,7 +283,7 @@
       "scheduled": "Terjadwal"
     },
     "list": {
-      "countRegistered": "{{count}} kelas terdaftar",
+      "countRegistered_other": "{{count}} kelas terdaftar",
       "addKelas": "Tambah kelas",
       "emptyTitle": "Belum ada kelas",
       "emptyHintAdmin": "Klik \"Tambah kelas\" untuk membuat kelas pertama.",
@@ -352,8 +352,8 @@
       "myKelas": "Kelas saya",
       "filterKelasPick": "Filter kelas — pilih kelas",
       "pickKelasFilterTitle": "Pilih kelas (filter)",
-      "allKelasFilter": "Semua kelas (filter)",
-      "monthTotal": "Total bulan ini",
+      "allKelasFilter": "Kelas apa saja",
+      "monthTotal": "Total",
       "loadingSub": "memuat…",
       "moreItems": "+{{count}} lagi",
       "todayHighlight": "kotak hari ini ditandai outline",
@@ -922,6 +922,26 @@
       "tbManqulTitle": "Manqul: catatan terjemahan per ayat",
       "tbManqulOn": "Manqul · on",
       "tbManqul": "Manqul",
+      "tbWordTitle": "Tampilkan terjemahan per kata di bawah tiap ayat",
+      "tbWordOn": "Per kata · on",
+      "tbWord": "Per kata",
+      "tbWordShort": "K",
+      "wbwVerseLabel": "Terjemahan ayat",
+      "tbTranslationTitle": "Sumber terjemahan",
+      "tbManqulSourceGroup": "Manqul Dibagikan",
+      "tbManqulSourceOpt": "Manqul {{name}} ({{count}})",
+      "shareBtn": "Bagikan",
+      "shareBtnTitle": "Bagikan manqul ayat ini ke orang tertentu",
+      "shareTitle": "Bagikan manqul — QS {{key}}",
+      "shareDesc": "Pilih siapa yang dapat melihat manqul Anda untuk ayat ini — muncul di dropdown terjemahan mereka dengan nama Anda.",
+      "shareSearchPh": "Cari orang berdasarkan nama…",
+      "shareSearchHint": "Ketik minimal 2 karakter untuk mencari.",
+      "shareNoResults": "Tidak ada pengguna yang cocok.",
+      "shareSearching": "Mencari…",
+      "shareRecipients": "Dibagikan ke",
+      "shareNobody": "Belum dibagikan ke siapa pun.",
+      "shareRemoveAria": "Hapus {{name}}",
+      "shareSaved": "Berbagi diperbarui",
       "wordPh": "manqul…",
       "savingShort": "save…",
       "failedShort": "gagal",
@@ -1242,6 +1262,8 @@
       "cardPassword": "Ganti kata sandi",
       "akun": {
         "email": "Email",
+        "whatsapp": "WhatsApp",
+        "passwordPh": "Kosongkan jika tidak diubah",
         "username": "Nama pengguna",
         "usernameHint": "Kosongkan untuk hapus",
         "role": "Role",
@@ -1312,7 +1334,7 @@
       "kurikulum": "Kurikulum",
       "tahunAjaran": "Tahun Ajaran",
       "whatsapp": "WhatsApp",
-      "wilayah": "Wilayah"
+      "wilayah": "Scope"
     },
     "kurikulumTabs": {
       "materi": "Materi Ajar",
@@ -1388,7 +1410,7 @@
     "deleteAria": "Hapus"
   },
   "wilayah": {
-    "title": "Manajemen Wilayah",
+    "title": "Scope",
     "subtitle": "Daftar master Daerah → Desa → Kelompok untuk dropdown bertingkat di editor pengguna & profil.",
     "add": "Tambah",
     "daerah": "Daerah",

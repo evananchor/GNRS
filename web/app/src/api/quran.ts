@@ -110,3 +110,55 @@ export function upsertManqulNote(input: { kunciAyat: string; wordIdx: number; te
     body: input,
   })
 }
+
+// --- Manqul sharing -------------------------------------------------------
+
+/** A user another person's manqul ayah is shared with. */
+export type ShareRecipient = {
+  id: string
+  name: string
+}
+
+/** Minimal user shape returned by the recipient search picker. */
+export type ManqulRecipientCandidate = {
+  id: string
+  name: string
+  nickname?: string
+  role: string
+}
+
+/** An owner who has shared >=1 ayah of the current surah with the viewer. */
+export type ManqulSource = {
+  ownerUserId: string
+  ownerName: string
+  ayatCount: number
+}
+
+/** Owners who shared manqul in `surah` with the current user (dropdown sources). */
+export function listAvailableManqulSources(surah: string) {
+  return apiFetch<ManqulSource[]>(`/api/quran/manqul-shares/available?surah=${encodeURIComponent(surah)}`)
+}
+
+/** A sharer's manqul notes (per-ayah + per-word) for the given ayat, shared with me. */
+export function getSharedManqul(owner: string, ayat: string[]) {
+  const sp = new URLSearchParams({ owner, ayat: ayat.join(',') })
+  return apiFetch<ManqulNote[]>(`/api/quran/manqul-shares/shared?${sp.toString()}`)
+}
+
+/** Recipients I've shared one ayah's manqul with (prefills the share dialog). */
+export function listMyShareRecipients(kunciAyat: string) {
+  return apiFetch<ShareRecipient[]>(`/api/quran/manqul-shares/mine?ayat=${encodeURIComponent(kunciAyat)}`)
+}
+
+/** Replace the recipient set for one ayah; empty list unshares. Returns the new set. */
+export function setManqulShare(input: { kunciAyat: string; recipientUserIds: string[] }) {
+  return apiFetch<ShareRecipient[]>('/api/quran/manqul-shares', {
+    method: 'POST',
+    body: input,
+  })
+}
+
+/** Search users to share with (>=2 chars; excludes me). */
+export function searchManqulRecipients(q: string) {
+  return apiFetch<ManqulRecipientCandidate[]>(`/api/quran/manqul-recipients?q=${encodeURIComponent(q)}`)
+}

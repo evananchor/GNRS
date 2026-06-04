@@ -283,7 +283,8 @@
       "scheduled": "Scheduled"
     },
     "list": {
-      "countRegistered": "{{count}} class(es) registered",
+      "countRegistered_one": "{{count}} class registered",
+      "countRegistered_other": "{{count}} classes registered",
       "addKelas": "Add class",
       "emptyTitle": "No classes yet",
       "emptyHintAdmin": "Click \"Add class\" to create the first one.",
@@ -352,8 +353,8 @@
       "myKelas": "My classes",
       "filterKelasPick": "Filter class — pick a class",
       "pickKelasFilterTitle": "Pick a class (filter)",
-      "allKelasFilter": "All classes (filter)",
-      "monthTotal": "Total this month",
+      "allKelasFilter": "Any class",
+      "monthTotal": "Total",
       "loadingSub": "loading…",
       "moreItems": "+{{count}} more",
       "todayHighlight": "today is outlined",
@@ -755,7 +756,7 @@
   },
   "pustaka": {
     "hub": {
-      "eyebrow": "Pustaka",
+      "eyebrow": "Library",
       "title": "Reading Sources",
       "subtitle": "Al-Qur'an, prayers, Asmaul Husna, Hadits — all in one place.",
       "asmaulTitle": "Asmaul Husna",
@@ -922,6 +923,26 @@
       "tbManqulTitle": "Manqul: per-verse translation notes",
       "tbManqulOn": "Manqul · on",
       "tbManqul": "Manqul",
+      "tbWordTitle": "Show word-by-word translation under each verse",
+      "tbWordOn": "Word by word · on",
+      "tbWord": "Word by word",
+      "tbWordShort": "W",
+      "wbwVerseLabel": "Verse translation",
+      "tbTranslationTitle": "Translation source",
+      "tbManqulSourceGroup": "Shared Manqul",
+      "tbManqulSourceOpt": "{{name}}'s Manqul ({{count}})",
+      "shareBtn": "Share",
+      "shareBtnTitle": "Share this verse's manqul with specific people",
+      "shareTitle": "Share manqul — QS {{key}}",
+      "shareDesc": "Pick who can see your manqul for this verse — it appears in their translation dropdown under your name.",
+      "shareSearchPh": "Search people by name…",
+      "shareSearchHint": "Type at least 2 characters to search.",
+      "shareNoResults": "No matching users.",
+      "shareSearching": "Searching…",
+      "shareRecipients": "Shared with",
+      "shareNobody": "Not shared with anyone yet.",
+      "shareRemoveAria": "Remove {{name}}",
+      "shareSaved": "Sharing updated",
       "wordPh": "manqul…",
       "savingShort": "save…",
       "failedShort": "failed",
@@ -1242,6 +1263,8 @@
       "cardPassword": "Change password",
       "akun": {
         "email": "Email",
+        "whatsapp": "WhatsApp",
+        "passwordPh": "Leave blank to keep unchanged",
         "username": "Username",
         "usernameHint": "Leave blank to remove",
         "role": "Role",
@@ -1312,7 +1335,7 @@
       "kurikulum": "Curriculum",
       "tahunAjaran": "Academic year",
       "whatsapp": "WhatsApp",
-      "wilayah": "Wilayah"
+      "wilayah": "Scope"
     },
     "kurikulumTabs": {
       "materi": "Teaching material",
@@ -1388,7 +1411,7 @@
     "deleteAria": "Delete"
   },
   "wilayah": {
-    "title": "Manage Wilayah",
+    "title": "Scope",
     "subtitle": "Master list of Daerah → Desa → Kelompok for the cascading dropdowns in the user & profile editors.",
     "add": "Add",
     "daerah": "Daerah",

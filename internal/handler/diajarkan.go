@@ -33,10 +33,11 @@ func (h *Diajarkan) List(w http.ResponseWriter, r *http.Request) {
 }
 
 type diajarkanCreateBody struct {
-	Kind         string  `json:"kind"          validate:"required,oneof=kurikulum quran hadits tilawati doa"`
-	MateriAjarID *string `json:"materiAjarId,omitempty"`
-	Ref          *string `json:"ref,omitempty"`
-	Label        *string `json:"label,omitempty"`
+	Kind          string  `json:"kind"          validate:"required,oneof=kurikulum quran hadits tilawati doa"`
+	MateriAjarID  *string `json:"materiAjarId,omitempty"`
+	Ref           *string `json:"ref,omitempty"`
+	Label         *string `json:"label,omitempty"`
+	LibraryAspect *string `json:"libraryAspect,omitempty" validate:"omitempty,oneof=reciting memorizing review manqul"`
 }
 
 func (h *Diajarkan) Create(w http.ResponseWriter, r *http.Request) {
@@ -51,10 +52,11 @@ func (h *Diajarkan) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := h.s.Create(r.Context(), sesiID, store.MateriDiajarkanInput{
-		Kind:         b.Kind,
-		MateriAjarID: trimPtr(b.MateriAjarID),
-		Ref:          trimPtr(b.Ref),
-		Label:        trimPtr(b.Label),
+		Kind:          b.Kind,
+		MateriAjarID:  trimPtr(b.MateriAjarID),
+		Ref:           trimPtr(b.Ref),
+		Label:         trimPtr(b.Label),
+		LibraryAspect: trimPtr(b.LibraryAspect),
 	})
 	if err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal mencatat materi diajarkan")

@@ -450,6 +450,45 @@ func (u *Users) List(ctx context.Context, p UserListParams) (UserList, error) {
 	return UserList{Items: items, Total: total}, rows.Err()
 }
 
+// MiniUser is the minimal user shape exposed to authenticated non-admin
+// callers (the manqul-share recipient picker). It deliberately omits every
+// contact/PII column that List returns.
+type MiniUser struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Nickname *string `json:"nickname,omitempty"`
+	Role     string  `json:"role"`
+}
+
+// SearchMinimal returns up to `limit` active users whose name/username/nickname
+// match q, excluding excludeID. Used by the recipient picker so a normal user
+// can find people to share manqul with without exposing the admin user payload.
+func (u *Users) SearchMinimal(ctx context.Context, q, excludeID string, limit int) ([]MiniUser, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	like := "%" + q + "%"
+	rows, err := u.db.QueryContext(ctx,
+		`SELECT id, name, nickname, role FROM users
+		 WHERE active = 1 AND id != ?
+		   AND (name LIKE ? OR username LIKE ? OR nickname LIKE ?)
+		 ORDER BY name ASC LIMIT ?`,
+		excludeID, like, like, like, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []MiniUser{}
+	for rows.Next() {
+		var m MiniUser
+		if err := rows.Scan(&m.ID, &m.Name, &m.Nickname, &m.Role); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
 func scanUserRow(row *sql.Row) (*model.User, error) {
 	u, err := readUserRow(row)
 	if err != nil {

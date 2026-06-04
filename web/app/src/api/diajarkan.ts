@@ -1,3 +1,4 @@
+import type { LibraryAspect } from './sesi'
 import { apiFetch } from './client'
 
 export type DiajarkanKind = 'kurikulum' | 'quran' | 'hadits' | 'tilawati' | 'doa'
@@ -9,6 +10,7 @@ export type MateriDiajarkan = {
   materiAjarId?: string | null
   ref?: string | null
   label?: string | null
+  libraryAspect?: LibraryAspect | null
   needsParentReview: boolean
   parentNote?: string | null
   completed: boolean
@@ -23,6 +25,7 @@ export type MateriDiajarkanInput = {
   materiAjarId?: string | null
   ref?: string | null
   label?: string | null
+  libraryAspect?: LibraryAspect | null
 }
 
 export type MateriDiajarkanUpdate = {
