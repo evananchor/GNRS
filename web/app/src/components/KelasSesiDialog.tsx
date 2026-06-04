@@ -23,7 +23,7 @@ import { useConfirm } from '@/lib/confirm'
  * session sub-dialogs open layered above this one.
  */
 
-export type Status = 'upcoming' | 'ongoing' | 'completed' | 'missed'
+type Status = 'upcoming' | 'ongoing' | 'completed' | 'missed'
 
 const STATUS_DOT: Record<Status, string> = {
   upcoming: 'bg-sky-500',
@@ -38,7 +38,7 @@ function pad2(n: number) {
 function localDate(d: Date) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
-export function statusOf(s: Sesi, today: Date): Status {
+function statusOf(s: Sesi, today: Date): Status {
   if (s.endedAt) return 'completed'
   if (s.startedAt) return 'ongoing'
   const iso = (s.tanggal || '').slice(0, 10)
