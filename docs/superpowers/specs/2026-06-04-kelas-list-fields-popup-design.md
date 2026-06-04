@@ -32,16 +32,16 @@ the Kalender or Rencana sub-tabs; the `statusOf` bucketing logic is reused as-is
 
 ## Layout
 
-The List tab body becomes a vertical flex (`flex h-full min-h-0 flex-col`) of two
-fields, each `flex-1 min-h-0` so they split the available height and scroll
-independently:
+The List tab body becomes a vertical flex (`flex h-full min-h-0 flex-col`):
+a flex-none top bar (count text + Add Kelas), then a `flex-1 min-h-0` region
+holding the two fields.
 
 ```
 ┌─ List tab body (flex-col, min-h-0) ──────────┐
-│ [Add Kelas]                      (admin, top) │
-│ ┌ MY CLASS (flex-1, min-h-0) ──────────────┐ │
-│ │ label + count                            │ │
-│ │ [🔍 search my classes...]   ← sticky top │ │
+│ N kelas terdaftar               [+ Add Kelas] │  ← flex-none top bar
+│ ┌ MY CLASS (flex-none, max-h-[45%]) ───────┐ │
+│ │ label + count                            │ │  ← flex-none
+│ │ [🔍 search my classes...]   ← sticky top │ │  ← sticky inside scroll
 │ │ ┌─────────┐┌─────────┐┌─────────┐  scroll│ │
 │ │ │🏫 tile  ││🏫 tile  ││🏫 tile  │  ↕      │ │
 │ │ └─────────┘└─────────┘└─────────┘         │ │
@@ -55,52 +55,79 @@ independently:
 └───────────────────────────────────────────────┘
 ```
 
-- Each field: a header row (translated label + count badge), a **sticky** search
-  `Input` (`sticky top-0 z-10` with a solid background so cards scroll under it),
-  then a responsive **card grid** (`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3`)
-  inside an `overflow-y-auto` container.
+- **Field rendering** is driven by the *unfiltered* split: render the My Class
+  field iff `myKelas.length > 0`; render the Other Class field iff
+  `otherKelas.length > 0`. The search box only filters cards *within* a field,
+  so a field never appears/disappears as you type.
+- **Height split:** when *both* fields render, My Class is `flex-none max-h-[45%]`
+  (scrolls internally if a guru has many) and Other Class is `flex-1` (takes the
+  rest). When only one field renders, it gets `flex-1` and fills the area.
+- Each field: a `flex-none` header row (translated label + count badge), then a
+  `flex-1 min-h-0 overflow-y-auto` scroll container. Inside the scroll container,
+  a **sticky** search wrapper (`sticky top-0 z-10` with a solid `bg-slate-50`
+  backing — matching the app body bg — so white cards scroll cleanly under it),
+  followed by a responsive **card grid**
+  (`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3`).
 - The old "Semua Kelas" collapse toggle (`showAll`, Chevron button) is **removed**;
   Other Class is always rendered as its own field.
-- "Add Kelas" button (admin only) stays above both fields.
-- Per-field empty state ("no classes") and no-match state ("no results for query").
+- "Add Kelas" button (admin only) stays in the top bar above both fields.
+- Per-field no-match state ("no results for query"). The whole-page empty state
+  ("no kelas at all") is retained.
 
 ## Card → tile (`KelasCard`)
 
-- The card body (🏫 icon, name, subtitle `tingkat · tahun · wali`, plus a small
-  `N sesi` count) becomes a single click target (`<button>` / clickable div) that
-  opens the session popup for that class.
-- Admin icon buttons (👥 manage members, ✎ edit, 🗑 delete) remain top-right on
-  the card. Each handler calls `e.stopPropagation()` so clicking an icon does not
-  also open the popup.
+- The card body (🏫 icon, name, subtitle `tingkat · tahun · wali`) becomes a
+  single click target — an inner `<button>` — that opens the session popup for
+  that class. **No live session count** is shown on the tile: `Kelas` carries no
+  count field, and fetching one per card would add an N-query regression (today
+  sessions load only inside the popup). Counts live in the popup.
+- Admin icon buttons (👥 manage members, ✎ edit, 🗑 delete) sit absolutely
+  positioned top-right of the card, as siblings of the main button (not nested —
+  HTML forbids nested buttons). They are visually on top and receive their own
+  clicks; the main button has right padding so its text clears the icons. Each
+  icon handler also calls `e.stopPropagation()` defensively.
 - The inline accordion expansion is removed entirely (no `open`/`onToggle`).
 
 ## Search
 
-- Each field owns a `useState<string>` search value.
+- Each field owns a `useState<string>` search value, kept inside a reusable
+  `KelasField` component (one instance per field, so state is naturally isolated).
 - Filtering is **client-side** over the already-loaded `listKelas({})` result —
-  no new query. Match is case-insensitive against **name + guru name + tingkat**.
-- `myKelas` / `otherKelas` split is unchanged (`isMine` via `guruUserIds`); the
-  search filter applies on top of each split.
+  no new query. Match is case-insensitive against **name + guru name + tingkat**
+  via a shared `matchKelas(k, query)` helper.
+- The `myKelas` / `otherKelas` split is unchanged (`isMine` via `guruUserIds`);
+  the search filter applies on top of each split.
 
-## Session popup (`KelasSesiDialog`, new file)
+## Session popup (`KelasSesiDialog`, new file in `web/app/src/components/`)
 
 - Built on the existing `Dialog` component (centered modal, overlay) for
   consistency with the rest of the app.
-- Props: `{ kelas: Kelas; onClose: () => void }`.
-- Header: 🏫 name + subtitle (`tingkat · tahun`, wali if present).
+- Props: `{ kelas: Kelas; isAdmin: boolean; onClose: () => void }`.
+- Title (Dialog header) = `kelas.nama`. A subtitle line at the top of the body
+  shows `tingkat · tahun` (+ wali when present), reusing `cardSubtitle` /
+  `cardSubtitleWithWali`.
 - Lazily fetches `listSesi({ kelasId: kelas.id })` (the same query used today,
-  moved into the dialog; runs only while the dialog is open).
-- Body groups sessions via the existing `statusOf` + `buckets` logic into four
-  groups rendered in order **In Progress (ongoing) · Upcoming · Missed · Done
-  (completed)**, each with its colored status dot and a count badge. (Decision:
-  keep `missed` as its own group rather than folding/dropping.)
-- **Add Sesi** button (admin) lives in the dialog (header action).
+  moved into the dialog; the dialog only mounts when open, so no `enabled` guard
+  is needed). Query key `['kelas-sesi', kelas.id]`. The redundant `as any` cast
+  on the old call is dropped (`kelasId` is in `SesiListParams`).
+- Body groups sessions via `statusOf` + `buckets` into four groups rendered in
+  order **In Progress (ongoing) · Upcoming · Missed · Done (completed)**, each
+  with its colored status dot and a count badge. (Decision: keep `missed` as its
+  own group.)
+- **Add Sesi** button (admin) in the dialog body, above the buckets.
 - Per-session row actions are lifted verbatim from today's expanded view:
-  start, Live link, end, reschedule, edit, delete, and the click-to-review
-  summary for ended sessions.
+  start, Live link (`/kelas/:kelasId/sesi/:id/live`), end, reschedule, edit,
+  delete, and the click-to-review summary for ended sessions.
 - The nested sub-dialogs (RescheduleSesiDialog, SesiFormDialog,
-  EndSesiSummaryDialog) open layered above the popup, as they do today, with the
-  same query invalidation (`['kelas-sesi', kelasId]`, `['sesi']`).
+  EndSesiSummaryDialog) open layered above the popup, with the same query
+  invalidation (`['kelas-sesi', kelas.id]`, `['sesi']`).
+- The status helpers (`Status`, `STATUS_DOT`, `statusOf`, `localDate`, `pad2`)
+  move from `KelasListSection.tsx` into this file (their only consumer after the
+  refactor).
+
+Known minor behavior: pressing Escape with a sub-dialog open closes both the
+sub-dialog and the popup (both use the shared `Dialog` Escape handler). Accepted
+— not worth special-casing.
 
 ## Refactor note
 
@@ -117,9 +144,9 @@ New keys in `en.json` + `id.json`:
 - `kelasSection.list.searchMyKelas` — placeholder for the My Class search box.
 - `kelasSection.list.searchOtherKelas` — placeholder for the Other Class box.
 - `kelasSection.list.noMatch` — no-results state for a field's search.
-- Popup title/subtitle keys as needed (reuse `cardSubtitle` / `cardSubtitleWithWali`).
 
-Existing status labels (`kelasSection.status.*`) and all action keys
+Existing status labels (`kelasSection.status.*`), the subtitle keys
+(`cardSubtitle` / `cardSubtitleWithWali`), and all action keys
 (`kelasSection.list.*`) are reused unchanged.
 
 ## Testing
