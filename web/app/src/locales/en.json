@@ -1263,6 +1263,8 @@
       "cardPassword": "Change password",
       "akun": {
         "email": "Email",
+        "whatsapp": "WhatsApp",
+        "passwordPh": "Leave blank to keep unchanged",
         "username": "Username",
         "usernameHint": "Leave blank to remove",
         "role": "Role",

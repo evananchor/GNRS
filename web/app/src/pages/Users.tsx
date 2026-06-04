@@ -532,38 +532,36 @@ function UserCreateForm({
 type EditValues = {
   email: string
   username: string
+  password: string
   name: string
   role: UserRole
   active: boolean
   nickname: string
   tempatLahir: string
   dateOfBirth: string
-  hideDob: boolean
   gender: '' | 'male' | 'female'
   noHp: string
   daerah: string
   desa: string
   kelompok: string
-  pendidikan: string
 }
 
 function userToEditValues(u: ManagedUser): EditValues {
   return {
     email: u.email,
     username: u.username ?? '',
+    password: '',
     name: u.name,
     role: u.role,
     active: u.active,
     nickname: u.nickname ?? '',
     tempatLahir: u.tempatLahir ?? '',
     dateOfBirth: u.dateOfBirth?.slice(0, 10) ?? '',
-    hideDob: u.hideDob ?? false,
     gender: u.gender ?? '',
     noHp: u.noHp ?? '',
     daerah: u.daerah ?? '',
     desa: u.desa ?? '',
     kelompok: u.kelompok ?? '',
-    pendidikan: u.pendidikan ?? '',
   }
 }
 
@@ -610,7 +608,6 @@ function UserEditDialog({
             onSubmit={onSubmit}
             onCancel={onClose}
           />
-          <UserPasswordSection userId={data.id} userName={data.name} />
         </div>
       ) : (
         <div className="py-6 text-center text-red-600">{t('common.dataNotFound')}</div>
@@ -636,6 +633,13 @@ function UserEditForm({
   const roleLabel = useRoleLabel()
   const { user: me } = useAuth()
   const isAdmin = me?.role === 'admin'
+  const toast = useToast()
+  // Password lives in this form now: empty = unchanged; non-empty = set via the
+  // dedicated endpoint on save (the profile PATCH never carries a password).
+  const pwMut = useMutation({
+    mutationFn: (p: string) => setUserPassword(initial.id, p),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('common.saveFailed'), 'error'),
+  })
   const [f, setF] = useState<EditValues>(() => userToEditValues(initial))
   useEffect(() => {
     setF(userToEditValues(initial))
@@ -652,6 +656,9 @@ function UserEditForm({
       className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault()
+        // Password is optional here: only push it when filled (empty = keep).
+        const pw = f.password.trim()
+        if (pw) pwMut.mutate(pw)
         // Role only included for admins — the backend rejects role changes
         // from non-admins anyway, so skip it to keep the PATCH minimal.
         onSubmit({
@@ -663,24 +670,28 @@ function UserEditForm({
           nickname: f.nickname.trim(),
           tempatLahir: f.tempatLahir.trim(),
           dateOfBirth: f.dateOfBirth, // '' clears
-          hideDob: f.hideDob,
           gender: f.gender || undefined,
           noHp: f.noHp.trim(),
           daerah: f.daerah.trim(),
           desa: f.desa.trim(),
           kelompok: f.kelompok.trim(),
-          pendidikan: f.pendidikan.trim(),
         })
       }}
     >
       <section className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-700">{t('users.userDetail.cardAkun')}</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label={t('users.userDetail.akun.email')} htmlFor="e_email">
             <Input id="e_email" type="email" value={f.email} onChange={(e) => update('email', e.target.value)} required />
           </Field>
+          <Field label={t('users.userDetail.akun.whatsapp')} htmlFor="e_wa">
+            <Input id="e_wa" value={f.noHp} onChange={(e) => update('noHp', e.target.value)} />
+          </Field>
           <Field label={t('users.userDetail.akun.username')} htmlFor="e_username" hint={t('users.userDetail.akun.usernameHint')}>
             <Input id="e_username" value={f.username} onChange={(e) => update('username', e.target.value)} />
+          </Field>
+          <Field label={t('users.form.password')} htmlFor="e_pw">
+            <Input id="e_pw" type="text" value={f.password} onChange={(e) => update('password', e.target.value)} autoComplete="new-password" placeholder={t('users.userDetail.akun.passwordPh')} />
           </Field>
           {isAdmin ? (
             <Field label={t('users.userDetail.akun.role')} htmlFor="e_role">
@@ -708,7 +719,7 @@ function UserEditForm({
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-700">{t('users.userDetail.cardProfil')}</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label={t('users.userDetail.profil.fullName')} htmlFor="e_name">
             <Input id="e_name" value={f.name} onChange={(e) => update('name', e.target.value)} required />
           </Field>
@@ -720,15 +731,6 @@ function UserEditForm({
           </Field>
           <Field label={t('users.userDetail.profil.birthDate')} htmlFor="e_dob" hint={t('users.userDetail.profil.birthDateHint')}>
             <Input id="e_dob" type="date" value={f.dateOfBirth} onChange={(e) => update('dateOfBirth', e.target.value)} />
-            <label className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-slate-500">
-              <input
-                type="checkbox"
-                checked={f.hideDob}
-                onChange={(e) => update('hideDob', e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-slate-300"
-              />
-              {t('common.hideDob')}
-            </label>
           </Field>
           <Field label={t('users.userDetail.profil.gender')} htmlFor="e_gender">
             <select id="e_gender" className={selectCls} value={f.gender} onChange={(e) => update('gender', e.target.value as EditValues['gender'])}>
@@ -736,12 +738,6 @@ function UserEditForm({
               <option value="female">{t('users.userDetail.profil.genderFemale')}</option>
               <option value="male">{t('users.userDetail.profil.genderMale')}</option>
             </select>
-          </Field>
-          <Field label={t('users.userDetail.profil.noHp')} htmlFor="e_noHp">
-            <Input id="e_noHp" value={f.noHp} onChange={(e) => update('noHp', e.target.value)} />
-          </Field>
-          <Field label={t('profileDialog.education')} htmlFor="e_pendidikan" className="sm:col-span-2">
-            <Input id="e_pendidikan" value={f.pendidikan} onChange={(e) => update('pendidikan', e.target.value)} placeholder={t('profileDialog.educationPh')} />
           </Field>
         </div>
         {/* Daerah → Desa → Kelompok, cascading from the master Wilayah. */}
@@ -761,57 +757,6 @@ function UserEditForm({
         </Button>
       </div>
     </form>
-  )
-}
-
-// Self-contained password reset, shown inside the edit dialog (replaces the
-// password section that used to live on the standalone user-detail page).
-function UserPasswordSection({ userId, userName }: { userId: string; userName: string }) {
-  const { t } = useTranslation()
-  const [pw, setPw] = useState('')
-  const [pw2, setPw2] = useState('')
-  const [done, setDone] = useState(false)
-
-  const mutation = useMutation({
-    mutationFn: () => setUserPassword(userId, pw),
-    onSuccess: () => {
-      setDone(true)
-      setPw('')
-      setPw2('')
-      setTimeout(() => setDone(false), 3000)
-    },
-  })
-
-  const apiError = mutation.error instanceof ApiError ? mutation.error.message : null
-  const mismatch = !!pw && !!pw2 && pw !== pw2
-
-  return (
-    <div className="space-y-3 border-t border-slate-200 pt-4">
-      <h3 className="text-sm font-semibold text-slate-700">{t('users.userDetail.cardPassword')}</h3>
-      <p className="text-xs text-slate-500">{t('users.userDetail.password.intro', { name: userName })}</p>
-      <form
-        className="space-y-3"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (mismatch || pw.length < 6) return
-          mutation.mutate()
-        }}
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t('users.userDetail.password.newPassword')} htmlFor="e_pw">
-            <Input id="e_pw" type="text" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" placeholder={t('users.userDetail.password.newPasswordPh')} />
-          </Field>
-          <Field label={t('users.userDetail.password.repeat')} htmlFor="e_pw2" error={mismatch ? t('users.userDetail.password.mismatch') : undefined}>
-            <Input id="e_pw2" type="text" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" />
-          </Field>
-        </div>
-        {apiError ? <p className="text-sm text-red-600">{apiError}</p> : null}
-        {done ? <p className="text-sm text-emerald-700">{t('users.userDetail.password.saved')}</p> : null}
-        <Button type="submit" size="sm" disabled={mutation.isPending || !pw || pw.length < 6 || mismatch}>
-          {mutation.isPending ? t('common.saving') : t('users.userDetail.password.submit')}
-        </Button>
-      </form>
-    </div>
   )
 }
 

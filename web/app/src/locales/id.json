@@ -1262,6 +1262,8 @@
       "cardPassword": "Ganti kata sandi",
       "akun": {
         "email": "Email",
+        "whatsapp": "WhatsApp",
+        "passwordPh": "Kosongkan jika tidak diubah",
         "username": "Nama pengguna",
         "usernameHint": "Kosongkan untuk hapus",
         "role": "Role",
