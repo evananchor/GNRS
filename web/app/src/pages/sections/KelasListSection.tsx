@@ -4,8 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { ChevronDown, ChevronRight, Pencil, Play, Plus, Radio, RotateCcw, Square, Trash2, Users } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Pencil, Plus, Trash2, Users } from 'lucide-react'
 
 import {
   addAnggota,
@@ -17,7 +16,6 @@ import {
   type KelasInput,
 } from '@/api/kelas'
 import { listTingkat } from '@/api/kurikulum'
-import { deleteSesi, listSesi, startSesi, type Sesi } from '@/api/sesi'
 import { listStudents } from '@/api/students'
 import { listUsers } from '@/api/users'
 import { ApiError } from '@/api/client'
@@ -26,46 +24,28 @@ import { Dialog } from '@/components/Dialog'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/Input'
 import { KelasAnggotaDialog } from '@/components/KelasAnggotaDialog'
-import { PageShell } from '@/components/PageShell'
-import { RescheduleSesiDialog } from '@/components/RescheduleSesiDialog'
-import { EndSesiSummaryDialog } from '@/components/EndSesiSummaryDialog'
-import { SesiFormDialog } from '@/components/SesiFormDialog'
+import { KelasSesiDialog } from '@/components/KelasSesiDialog'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 
 /**
- * KelasListSection — porting sitrac-v3's `Kelas.tsx` accordion layout. Each
- * kelas card is collapsible; expanded view shows its sesi grouped by status
- * (upcoming/ongoing/completed/missed). Admins can CRUD kelas via dialogs.
+ * KelasListSection — two always-visible searchable fields (My Class / Other
+ * Class). Each field has its own search box, a sticky search bar, and a
+ * scrollable card grid. Clicking a card opens KelasSesiDialog (the session
+ * popup). Admins CRUD kelas via dialogs reached from the card icons / top bar.
  */
 
-type Status = 'upcoming' | 'ongoing' | 'completed' | 'missed'
-
-const STATUS_DOT: Record<Status, string> = {
-  upcoming: 'bg-sky-500',
-  ongoing: 'bg-amber-500',
-  completed: 'bg-emerald-500',
-  missed: 'bg-rose-500',
+function matchKelas(k: Kelas, q: string): boolean {
+  const needle = q.trim().toLowerCase()
+  if (!needle) return true
+  return (
+    k.nama.toLowerCase().includes(needle) ||
+    (k.guruName ?? '').toLowerCase().includes(needle) ||
+    k.tingkat.toLowerCase().includes(needle)
+  )
 }
-
-function localDate(d: Date) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
-function pad2(n: number) {
-  return n < 10 ? `0${n}` : String(n)
-}
-
-function statusOf(s: Sesi, today: Date): Status {
-  if (s.endedAt) return 'completed'
-  if (s.startedAt) return 'ongoing'
-  const iso = (s.tanggal || '').slice(0, 10)
-  if (iso && iso < localDate(today)) return 'missed'
-  return 'upcoming'
-}
-
-// -----------------------------------------------------------------------
 
 export function KelasListSection() {
   const { user } = useAuth()
@@ -80,20 +60,18 @@ export function KelasListSection() {
     | { kind: 'anggota'; kelas: Kelas }
     | null
   >(null)
-  const [openId, setOpenId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Kelas | null>(null)
 
   const { data: list = [], isPending } = useQuery({
     queryKey: ['kelas'],
     queryFn: () => listKelas({}),
   })
 
-  // Split into "kelas saya" (where current user is one of the guru) and the
-  // rest. Uses the kelas_guru join (k.guruUserIds), so a kelas with multiple
-  // guru shows up for each of them. Empty for non-guru users.
+  // Split into "kelas saya" (current user is one of the guru) and the rest.
   const isMine = (k: Kelas) => Boolean(user?.id) && (k.guruUserIds ?? []).includes(user!.id)
   const myKelas = useMemo(() => list.filter(isMine), [list, user?.id])
   const otherKelas = useMemo(() => list.filter((k) => !isMine(k)), [list, user?.id])
-  const [showAll, setShowAll] = useState(false)
+  const bothFields = myKelas.length > 0 && otherKelas.length > 0
 
   const deleteMut = useMutation({
     mutationFn: deleteKelas,
@@ -111,8 +89,8 @@ export function KelasListSection() {
   }
 
   return (
-    <PageShell>
-      <div className="mb-4 flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-col px-4 pb-4 pt-4 md:px-6">
+      <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-3">
         <p className="text-sm text-slate-500">
           {isPending ? t('common.loading') : t('kelasSection.list.countRegistered', { count: list.length })}
         </p>
@@ -124,78 +102,47 @@ export function KelasListSection() {
       </div>
 
       {!isPending && list.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
           <p className="text-base font-semibold text-slate-700">{t('kelasSection.list.emptyTitle')}</p>
           <p className="mt-1 text-sm text-slate-500">
-            {isAdmin
-              ? t('kelasSection.list.emptyHintAdmin')
-              : t('kelasSection.list.emptyHintUser')}
+            {isAdmin ? t('kelasSection.list.emptyHintAdmin') : t('kelasSection.list.emptyHintUser')}
           </p>
         </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          {myKelas.length > 0 ? (
+            <KelasField
+              label={t('kelasSection.list.myKelas')}
+              searchPlaceholder={t('kelasSection.list.searchMyKelas')}
+              kelasList={myKelas}
+              isAdmin={isAdmin}
+              onOpen={setSelected}
+              onEdit={(k) => setDialog({ kind: 'edit', kelas: k })}
+              onDelete={handleDelete}
+              onAnggota={(k) => setDialog({ kind: 'anggota', kelas: k })}
+              className={bothFields ? 'max-h-[45%] flex-none' : 'flex-1'}
+            />
+          ) : null}
+
+          {otherKelas.length > 0 ? (
+            <KelasField
+              label={t('kelasSection.list.allKelas')}
+              searchPlaceholder={t('kelasSection.list.searchOtherKelas')}
+              kelasList={otherKelas}
+              isAdmin={isAdmin}
+              onOpen={setSelected}
+              onEdit={(k) => setDialog({ kind: 'edit', kelas: k })}
+              onDelete={handleDelete}
+              onAnggota={(k) => setDialog({ kind: 'anggota', kelas: k })}
+              className="flex-1"
+            />
+          ) : null}
+        </div>
+      )}
+
+      {selected ? (
+        <KelasSesiDialog kelas={selected} isAdmin={isAdmin} onClose={() => setSelected(null)} />
       ) : null}
-
-      <div className="space-y-5">
-        {myKelas.length > 0 ? (
-          <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {t('kelasSection.list.myKelas')}
-            </h3>
-            <div className="space-y-3">
-              {myKelas.map((k) => (
-                <KelasCard
-                  key={k.id}
-                  kelas={k}
-                  open={openId === k.id}
-                  onToggle={() => setOpenId(openId === k.id ? null : k.id)}
-                  isAdmin={isAdmin}
-                  onEdit={() => setDialog({ kind: 'edit', kelas: k })}
-                  onDelete={() => handleDelete(k)}
-                  onAnggota={() => setDialog({ kind: 'anggota', kelas: k })}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {otherKelas.length > 0 ? (
-          <section>
-            <button
-              type="button"
-              onClick={() => setShowAll((v) => !v)}
-              className="mb-2 flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:bg-slate-50"
-              aria-expanded={showAll}
-            >
-              <span>
-                {t('kelasSection.list.allKelas')}{' '}
-                <span className="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-700">
-                  {otherKelas.length}
-                </span>
-              </span>
-              {showAll ? (
-                <ChevronDown size={14} className="text-slate-500" />
-              ) : (
-                <ChevronRight size={14} className="text-slate-500" />
-              )}
-            </button>
-            {showAll ? (
-              <div className="space-y-3">
-                {otherKelas.map((k) => (
-                  <KelasCard
-                    key={k.id}
-                    kelas={k}
-                    open={openId === k.id}
-                    onToggle={() => setOpenId(openId === k.id ? null : k.id)}
-                    isAdmin={isAdmin}
-                    onEdit={() => setDialog({ kind: 'edit', kelas: k })}
-                    onDelete={() => handleDelete(k)}
-                    onAnggota={() => setDialog({ kind: 'anggota', kelas: k })}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-      </div>
 
       {dialog?.kind === 'create' ? (
         <KelasFormDialog onClose={() => setDialog(null)} onSaved={() => setDialog(null)} />
@@ -215,7 +162,73 @@ export function KelasListSection() {
           onClose={() => setDialog(null)}
         />
       ) : null}
-    </PageShell>
+    </div>
+  )
+}
+
+// -----------------------------------------------------------------------
+
+function KelasField({
+  label,
+  searchPlaceholder,
+  kelasList,
+  isAdmin,
+  onOpen,
+  onEdit,
+  onDelete,
+  onAnggota,
+  className,
+}: {
+  label: string
+  searchPlaceholder: string
+  kelasList: Kelas[]
+  isAdmin: boolean
+  onOpen: (k: Kelas) => void
+  onEdit: (k: Kelas) => void
+  onDelete: (k: Kelas) => void
+  onAnggota: (k: Kelas) => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  const [q, setQ] = useState('')
+  const filtered = useMemo(() => kelasList.filter((k) => matchKelas(k, q)), [kelasList, q])
+
+  return (
+    <section className={cn('flex min-h-0 flex-col', className)}>
+      <div className="mb-1 flex flex-shrink-0 items-center gap-2 px-0.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</h3>
+        <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-700">
+          {kelasList.length}
+        </span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="sticky top-0 z-10 bg-slate-50 pb-2">
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+          />
+        </div>
+        {filtered.length === 0 ? (
+          <p className="px-1 py-6 text-center text-sm text-slate-500">{t('kelasSection.list.noMatch')}</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((k) => (
+              <KelasCard
+                key={k.id}
+                kelas={k}
+                isAdmin={isAdmin}
+                onOpen={() => onOpen(k)}
+                onEdit={() => onEdit(k)}
+                onDelete={() => onDelete(k)}
+                onAnggota={() => onAnggota(k)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -223,347 +236,81 @@ export function KelasListSection() {
 
 function KelasCard({
   kelas: k,
-  open,
-  onToggle,
   isAdmin,
+  onOpen,
   onEdit,
   onDelete,
   onAnggota,
 }: {
   kelas: Kelas
-  open: boolean
-  onToggle: () => void
   isAdmin: boolean
+  onOpen: () => void
   onEdit: () => void
   onDelete: () => void
   onAnggota: () => void
 }) {
-  const today = useMemo(() => new Date(), [open])
-  const [rescheduling, setRescheduling] = useState<Sesi | null>(null)
-  const [editingSesi, setEditingSesi] = useState<Sesi | null>(null)
-  const [endingSesi, setEndingSesi] = useState<Sesi | null>(null)
-  const [reviewingSesi, setReviewingSesi] = useState<Sesi | null>(null)
-  const [addingSesi, setAddingSesi] = useState(false)
-  const qc = useQueryClient()
-  const toast = useToast()
-  const confirm = useConfirm()
   const { t } = useTranslation()
-  const STATUS_LABEL: Record<Status, string> = {
-    upcoming: t('kelasSection.status.upcoming'),
-    ongoing: t('kelasSection.status.ongoing'),
-    completed: t('kelasSection.status.completed'),
-    missed: t('kelasSection.status.missed'),
-  }
-  const invalidateSesi = () => {
-    qc.invalidateQueries({ queryKey: ['kelas-sesi', k.id] })
-    qc.invalidateQueries({ queryKey: ['sesi'] })
-  }
-  const startMut = useMutation({
-    mutationFn: startSesi,
-    onSuccess: () => {
-      toast(t('kelasSection.list.sesiStarted'), 'success')
-      invalidateSesi()
-    },
-    onError: (e) => toast(e instanceof ApiError ? e.message : t('kelasSection.list.sesiStartFailed'), 'error'),
-  })
-  const delMut = useMutation({
-    mutationFn: deleteSesi,
-    onSuccess: () => {
-      toast(t('kelasSection.list.sesiDeleted'), 'success')
-      invalidateSesi()
-    },
-    onError: (e) => toast(e instanceof ApiError ? e.message : t('kelasSection.list.sesiDeleteFailed'), 'error'),
-  })
-  const { data: sesiList = [], isLoading } = useQuery({
-    queryKey: ['kelas-sesi', k.id],
-    queryFn: () => listSesi({ kelasId: k.id } as any),
-    enabled: open,
-  })
-
-  const buckets = useMemo(() => {
-    const out: Record<Status, Sesi[]> = { ongoing: [], upcoming: [], completed: [], missed: [] }
-    for (const s of sesiList) out[statusOf(s, today)].push(s)
-    out.upcoming.sort((a, b) => a.tanggal.localeCompare(b.tanggal))
-    out.completed.sort((a, b) => b.tanggal.localeCompare(a.tanggal))
-    out.missed.sort((a, b) => b.tanggal.localeCompare(a.tanggal))
-    return out
-  }, [sesiList, today])
-
-  const counts = {
-    upcoming: buckets.upcoming.length,
-    ongoing: buckets.ongoing.length,
-    completed: buckets.completed.length,
-    missed: buckets.missed.length,
-    total: sesiList.length,
-  }
+  const subtitle = k.guruName
+    ? t('kelasSection.list.cardSubtitleWithWali', { tingkat: k.tingkat, tahun: k.tahun, wali: k.guruName })
+    : t('kelasSection.list.cardSubtitle', { tingkat: k.tingkat, tahun: k.tahun })
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div
+    <div className="relative rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-sky-300 hover:shadow">
+      <button
+        type="button"
+        onClick={onOpen}
         className={cn(
-          'flex w-full items-center gap-3 px-4 py-3 transition',
-          open ? 'bg-slate-50' : 'hover:bg-slate-50',
+          'flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+          isAdmin && 'pr-24',
         )}
       >
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex flex-1 items-center gap-3 text-left"
-          aria-expanded={open}
-        >
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-sky-50 text-lg">
-            🏫
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-base font-semibold text-slate-900">{k.nama}</div>
-            <div className="truncate text-xs text-slate-500">
-              {k.guruName
-                ? t('kelasSection.list.cardSubtitleWithWali', {
-                    tingkat: k.tingkat,
-                    tahun: k.tahun,
-                    wali: k.guruName,
-                  })
-                : t('kelasSection.list.cardSubtitle', {
-                    tingkat: k.tingkat,
-                    tahun: k.tahun,
-                  })}
-            </div>
-          </div>
-          {open ? (
-            <ChevronDown size={18} className="text-slate-400" />
-          ) : (
-            <ChevronRight size={18} className="text-slate-400" />
-          )}
-        </button>
-        {isAdmin ? (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={onAnggota}
-              className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-              aria-label={t('kelasSection.list.manageAnggota')}
-              title={t('kelasSection.list.manageAnggota')}
-            >
-              <Users size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={onEdit}
-              className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-              aria-label={t('kelasSection.list.editKelas')}
-              title={t('kelasSection.list.editKelas')}
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              className="rounded-md p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-              aria-label={t('kelasSection.list.deleteKelas')}
-              title={t('kelasSection.list.deleteKelas')}
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ) : null}
-      </div>
-
-      {open ? (
-        <div className="border-t border-slate-200 px-4 py-3">
-          {isAdmin ? (
-            <div className="mb-3 flex justify-end">
-              <Button size="sm" onClick={() => setAddingSesi(true)}>
-                <Plus size={14} className="mr-1" /> {t('kelasSection.list.addSesi')}
-              </Button>
-            </div>
-          ) : null}
-          {isLoading ? (
-            <p className="text-sm text-slate-500">{t('kelasSection.list.loadingSesi')}</p>
-          ) : counts.total === 0 ? (
-            <p className="text-sm text-slate-500">{t('kelasSection.list.noSesi')}</p>
-          ) : (
-            <div className="space-y-3">
-              {(['ongoing', 'upcoming', 'missed', 'completed'] as Status[]).map((st) =>
-                buckets[st].length > 0 ? (
-                  <div key={st}>
-                    <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      <span className={cn('inline-block h-2 w-2 rounded-full', STATUS_DOT[st])} />
-                      {STATUS_LABEL[st]}
-                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-700">
-                        {buckets[st].length}
-                      </span>
-                    </div>
-                    <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
-                      {buckets[st].map((s) => {
-                        const canResched = isAdmin && !s.endedAt && (st === 'upcoming' || st === 'missed' || st === 'ongoing')
-                        return (
-                          <li key={s.id} className="flex items-center gap-1.5 px-3 py-2">
-                            {s.endedAt ? (
-                              <button
-                                type="button"
-                                onClick={() => setReviewingSesi(s)}
-                                className="min-w-0 flex-1 cursor-pointer text-left transition hover:opacity-75"
-                                title={t('kelasSection.list.reviewSummary')}
-                              >
-                                <div className="text-sm font-medium text-slate-900 underline decoration-dotted underline-offset-2">
-                                  {s.topik}
-                                </div>
-                                <div className="text-xs text-slate-500">
-                                  {s.tanggal}
-                                  {s.mulai ? ` · ${s.mulai}${s.selesai ? `–${s.selesai}` : ''}` : ''}
-                                </div>
-                              </button>
-                            ) : (
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm font-medium text-slate-900">{s.topik}</div>
-                                <div className="text-xs text-slate-500">
-                                  {s.tanggal}
-                                  {s.mulai ? ` · ${s.mulai}${s.selesai ? `–${s.selesai}` : ''}` : ''}
-                                </div>
-                              </div>
-                            )}
-                            {isAdmin ? (
-                              <>
-                                {!s.startedAt ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => startMut.mutate(s.id)}
-                                    disabled={startMut.isPending}
-                                    className="rounded-md p-1.5 text-slate-400 transition hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50"
-                                    aria-label={t('kelasSection.list.startSesi')}
-                                    title={t('kelasSection.list.startSesi')}
-                                  >
-                                    <Play size={14} />
-                                  </button>
-                                ) : !s.endedAt ? (
-                                  <>
-                                    <Link
-                                      to={`/kelas/${s.kelasId ?? k.id}/sesi/${s.id}/live`}
-                                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                                      aria-label={t('kelasSection.list.liveStage')}
-                                      title={t('kelasSection.list.openLive')}
-                                    >
-                                      <span className="relative flex h-2 w-2">
-                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-                                      </span>
-                                      <Radio size={13} />
-                                      Live
-                                    </Link>
-                                    <button
-                                      type="button"
-                                      onClick={() => setEndingSesi(s)}
-                                      className="rounded-md p-1.5 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                                      aria-label={t('kelasSection.list.endSesi')}
-                                      title={t('kelasSection.list.endSesi')}
-                                    >
-                                      <Square size={14} />
-                                    </button>
-                                  </>
-                                ) : null}
-                                {canResched ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setRescheduling(s)}
-                                    className="rounded-md p-1.5 text-slate-400 transition hover:bg-sky-50 hover:text-sky-700"
-                                    aria-label={t('kelasSection.list.reschedule')}
-                                    title={t('kelasSection.list.reschedule')}
-                                  >
-                                    <RotateCcw size={14} />
-                                  </button>
-                                ) : null}
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingSesi(s)}
-                                  className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
-                                  aria-label={t('common.edit')}
-                                  title={t('common.edit')}
-                                >
-                                  <Pencil size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (await confirm({ message: t('kelasSection.list.confirmDeleteSesi', { topik: s.topik }), danger: true })) delMut.mutate(s.id)
-                                  }}
-                                  disabled={delMut.isPending}
-                                  className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                                  aria-label={t('common.delete')}
-                                  title={t('common.delete')}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            ) : null}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-                ) : null,
-              )}
-            </div>
-          )}
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-sky-50 text-lg">
+          🏫
         </div>
-      ) : null}
-
-      {rescheduling ? (
-        <RescheduleSesiDialog
-          sesi={rescheduling}
-          tingkat={k.tingkat}
-          onClose={() => setRescheduling(null)}
-          onSaved={() => {
-            qc.invalidateQueries({ queryKey: ['kelas-sesi', k.id] })
-            qc.invalidateQueries({ queryKey: ['sesi'] })
-            setRescheduling(null)
-          }}
-        />
-      ) : null}
-
-      {addingSesi ? (
-        <SesiFormDialog
-          mode="create"
-          defaults={{ kelasId: k.id, defaultTingkat: k.tingkat }}
-          onClose={() => setAddingSesi(false)}
-          onSaved={() => {
-            invalidateSesi()
-            setAddingSesi(false)
-          }}
-        />
-      ) : null}
-
-      {editingSesi ? (
-        <SesiFormDialog
-          mode="edit"
-          sesi={editingSesi}
-          onClose={() => setEditingSesi(null)}
-          onSaved={() => {
-            invalidateSesi()
-            setEditingSesi(null)
-          }}
-        />
-      ) : null}
-
-      {endingSesi ? (
-        <EndSesiSummaryDialog
-          sesi={endingSesi}
-          onClose={() => setEndingSesi(null)}
-          onEnded={() => {
-            invalidateSesi()
-            setEndingSesi(null)
-          }}
-        />
-      ) : null}
-
-      {reviewingSesi ? (
-        <EndSesiSummaryDialog
-          sesi={reviewingSesi}
-          onClose={() => setReviewingSesi(null)}
-          onEnded={() => {
-            invalidateSesi()
-            setReviewingSesi(null)
-          }}
-        />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-base font-semibold text-slate-900">{k.nama}</div>
+          <div className="truncate text-xs text-slate-500">{subtitle}</div>
+        </div>
+      </button>
+      {isAdmin ? (
+        <div className="absolute right-2 top-2 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onAnggota()
+            }}
+            className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            aria-label={t('kelasSection.list.manageAnggota')}
+            title={t('kelasSection.list.manageAnggota')}
+          >
+            <Users size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit()
+            }}
+            className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            aria-label={t('kelasSection.list.editKelas')}
+            title={t('kelasSection.list.editKelas')}
+          >
+            <Pencil size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+            className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+            aria-label={t('kelasSection.list.deleteKelas')}
+            title={t('kelasSection.list.deleteKelas')}
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
       ) : null}
     </div>
   )
