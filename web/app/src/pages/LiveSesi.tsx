@@ -25,7 +25,8 @@ import {
 import { getSesi, setSesiLive } from '@/api/sesi'
 import { getDoa } from '@/api/doa'
 import { getMateriAjar } from '@/api/kurikulum'
-import { listQuranSurahs } from '@/api/quran'
+import { PustakaQuranMushafPage } from '@/pages/PustakaQuranMushaf'
+import { PustakaTilawatiPage } from '@/pages/PustakaTilawati'
 import { MateriPicker } from '@/components/MateriPicker'
 import { LibraryRefLabel } from '@/components/LibraryRefLabel'
 import { EndSesiSummaryDialog } from '@/components/EndSesiSummaryDialog'
@@ -448,29 +449,10 @@ function KurikulumStage({ item }: { item: MateriDiajarkan }) {
 }
 
 function QuranStage({ item }: { item: MateriDiajarkan }) {
-  const { t } = useTranslation()
-  const surahs = useQuery({ queryKey: ['quran-surahs'], queryFn: listQuranSurahs })
-  const surahId = Number(item.ref?.split(':')[0])
-  const s = (surahs.data ?? []).find((x) => x.id === surahId)
-  return (
-    <div className="grid h-full place-items-center px-8 text-center">
-      <div className="space-y-6">
-        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">
-          {t('live.kind.quran')}
-          {item.libraryAspect ? ` · ${t(ASPECT_KEY[item.libraryAspect])}` : ''}
-        </div>
-        <div className="font-arabic text-6xl text-neutral-100 md:text-8xl" dir="rtl">
-          {s?.namaArab ?? '...'}
-        </div>
-        <div className="text-2xl font-medium text-neutral-200 md:text-4xl">
-          QS. {s?.nama ?? ''} ({surahId || '?'})
-        </div>
-        {item.ref && item.ref.includes(':') && (
-          <div className="text-lg text-neutral-400">{t('live.ayatLabel', { ayat: item.ref.split(':')[1] })}</div>
-        )}
-      </div>
-    </div>
-  )
+  // Reuse the library mushaf reader (2-page spread + all features), jumped to
+  // this item's surah. `key` forces a re-jump when the displayed surah changes.
+  const surahId = item.ref?.split(':')[0]
+  return <PustakaQuranMushafPage key={surahId} surahId={surahId} embedded />
 }
 
 function HaditsStage({ item }: { item: MateriDiajarkan }) {
@@ -488,16 +470,16 @@ function HaditsStage({ item }: { item: MateriDiajarkan }) {
 }
 
 function TilawatiStage({ item }: { item: MateriDiajarkan }) {
-  const { t } = useTranslation()
+  // Reuse the library Tilawati reader. ref = "jilid" or "jilid/halaman".
+  const [jilid, halaman] = (item.ref ?? '').split('/')
+  const page = halaman ? Number(halaman) : undefined
   return (
-    <div className="grid h-full place-items-center px-8 text-center">
-      <div className="space-y-4">
-        <div className="text-xs uppercase tracking-[0.3em] text-emerald-400">{t('live.kind.tilawati')}</div>
-        <h1 className="text-4xl font-bold text-neutral-100 md:text-6xl">
-          {item.label ?? item.ref ?? t('live.untitled')}
-        </h1>
-      </div>
-    </div>
+    <PustakaTilawatiPage
+      key={item.ref}
+      jilidId={jilid || undefined}
+      page={page}
+      embedded
+    />
   )
 }
 

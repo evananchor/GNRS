@@ -224,10 +224,12 @@ function MateriAjarRow({ id, onPick }: { id: string; onPick: (m: MateriAjar) => 
           <span className="text-xs text-neutral-500">{t('materiComp.picker.materiLoading')}</span>
         ) : q.data ? (
           <div>
-            <div className="text-sm font-medium text-neutral-100">{q.data.tema}</div>
-            {q.data.subTema && (
-              <div className="truncate text-xs text-neutral-400">{q.data.subTema}</div>
-            )}
+            <div className="truncate text-[10px] uppercase tracking-wider text-neutral-500">
+              {[q.data.tema, q.data.subTema, q.data.kelompokMateri].filter(Boolean).join(' · ')}
+            </div>
+            <div className="mt-0.5 text-sm font-medium text-neutral-100">
+              {q.data.detailMateri || '—'}
+            </div>
           </div>
         ) : (
           <span className="text-xs text-neutral-500">{t('materiComp.picker.materiNotFound')}</span>
@@ -283,10 +285,12 @@ function KurikulumTab({ sesi, onPick }: { sesi: Sesi; onPick: (i: MateriDiajarka
                   }
                   className="block w-full rounded-lg px-3 py-2 text-left transition hover:bg-neutral-800"
                 >
-                  <div className="text-sm font-medium text-neutral-100">{m.tema}</div>
-                  {m.subTema && (
-                    <div className="truncate text-xs text-neutral-400">{m.subTema}</div>
-                  )}
+                  <div className="truncate text-[10px] uppercase tracking-wider text-neutral-500">
+                    {[m.tema, m.subTema, m.kelompokMateri].filter(Boolean).join(' · ')}
+                  </div>
+                  <div className="mt-0.5 text-sm font-medium text-neutral-100">
+                    {m.detailMateri || '—'}
+                  </div>
                   <div className="mt-0.5 text-[10px] uppercase tracking-wider text-neutral-500">
                     {m.tingkat} · {t('materiComp.picker.semShort', { n: m.semester })} · {m.kategori}
                   </div>

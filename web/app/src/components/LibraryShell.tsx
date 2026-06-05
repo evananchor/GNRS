@@ -18,12 +18,14 @@ export function LibraryShell({
   backLabel,
   bgClassName = 'bg-[#f0ece0]',
   contentClassName,
+  hideBack = false,
   children,
 }: {
   backTo?: string
   backLabel?: string
   bgClassName?: string
   contentClassName?: string
+  hideBack?: boolean
   children: ReactNode
 }) {
   const { t } = useTranslation()
@@ -32,14 +34,16 @@ export function LibraryShell({
     <div className={cn('relative flex h-full min-h-0 flex-col', bgClassName)}>
       {/* Floating back button. Sticks to top-left of the viewport even when
           content scrolls. */}
-      <Link
-        to={backTo}
-        className="absolute left-3 top-3 z-40 inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white/85 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-md backdrop-blur transition hover:bg-white"
-        aria-label={t('libraryShell.backToAria', { label })}
-        title={t('libraryShell.backToTitle', { label })}
-      >
-        <ArrowLeft size={14} /> {label}
-      </Link>
+      {hideBack ? null : (
+        <Link
+          to={backTo}
+          className="absolute left-3 top-3 z-40 inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white/85 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-md backdrop-blur transition hover:bg-white"
+          aria-label={t('libraryShell.backToAria', { label })}
+          title={t('libraryShell.backToTitle', { label })}
+        >
+          <ArrowLeft size={14} /> {label}
+        </Link>
+      )}
 
       <div className={cn('flex-1 min-h-0 overflow-y-auto', contentClassName)}>
         {children}

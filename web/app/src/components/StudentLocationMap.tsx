@@ -35,7 +35,7 @@ export function StudentLocationMap({ buckets }: { buckets: Bucket[] }) {
   const max = placed.reduce((acc, b) => Math.max(acc, b.count), 1)
 
   return (
-    <div className="overflow-hidden rounded-md border border-slate-200">
+    <div className="relative z-0 isolate overflow-hidden rounded-md border border-slate-200">
       <MapContainer
         bounds={INITIAL_BOUNDS}
         boundsOptions={{ padding: [40, 40] }}
