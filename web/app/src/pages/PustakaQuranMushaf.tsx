@@ -57,9 +57,13 @@ function useIsDesktop() {
  * shows one page at a time. Manqul mode enables per-ayah note taking; notes
  * are persisted via /api/quran/manqul-notes.
  */
-export function PustakaQuranMushafPage() {
+export function PustakaQuranMushafPage({
+  surahId: surahIdProp,
+  embedded = false,
+}: { surahId?: string; embedded?: boolean } = {}) {
   const { t } = useTranslation()
-  const { surahId } = useParams()
+  const params = useParams()
+  const surahId = surahIdProp ?? params.surahId
   const [currentPage, setCurrentPage] = useState(1)
   const [translationIds, setTranslationIds] = useState<string>('33') // Kemenag
   const [manqulMode, setManqulMode] = useState(false)
@@ -196,7 +200,7 @@ export function PustakaQuranMushafPage() {
   }, [translationIds, manqulSources, surahNum])
 
   return (
-    <LibraryShell backTo="/pustaka" bgClassName="bg-[#f0ece0]">
+    <LibraryShell backTo="/pustaka" bgClassName="bg-[#f0ece0]" hideBack={embedded}>
       {/* Top floating toolbar — sits below the back-button. */}
       <div className="sticky top-0 z-30 flex justify-center px-2 pt-3">
         <Toolbar

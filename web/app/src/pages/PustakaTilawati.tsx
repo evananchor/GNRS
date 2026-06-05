@@ -63,15 +63,22 @@ function useIsDesktop() {
  * height without overflow.
  * Mobile: single page; image fills viewport height inside flex-1.
  */
-export function PustakaTilawatiPage() {
+export function PustakaTilawatiPage({
+  jilidId: jilidIdProp,
+  page: pageProp,
+  embedded = false,
+}: { jilidId?: string; page?: number; embedded?: boolean } = {}) {
   const { t } = useTranslation()
-  const { jilidId } = useParams()
+  const params = useParams()
+  const jilidId = jilidIdProp ?? params.jilidId
   const initialJilid = (() => {
     const n = Number(jilidId)
     return Number.isFinite(n) && n >= 1 && n <= 6 ? n : 1
   })()
   const [currentJilid, setCurrentJilid] = useState(initialJilid)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(() =>
+    pageProp && pageProp >= 1 ? pageProp : 1,
+  )
   const isDesktop = useIsDesktop()
 
   const jilid = JILID_LIST.find((j) => j.id === currentJilid)!
@@ -150,6 +157,7 @@ export function PustakaTilawatiPage() {
     <LibraryShell
       backTo="/pustaka"
       contentClassName="flex h-full min-h-0 flex-col"
+      hideBack={embedded}
     >
       {/* Floating header — jilid + page + nav. Single row, compact on
           mobile (icon-only nav, short labels). flex-nowrap with min-w-0
@@ -207,8 +215,8 @@ export function PustakaTilawatiPage() {
       <div className="flex flex-1 min-h-0 items-stretch justify-center gap-3 px-2 pb-3 pt-3 lg:px-6">
         {isDesktop && rightPage && rightPage !== leftPage ? (
           <>
-            <PageImage jilid={currentJilid} page={leftPage} />
-            <PageImage jilid={currentJilid} page={rightPage} />
+            <PageImage jilid={currentJilid} page={leftPage} align="end" />
+            <PageImage jilid={currentJilid} page={rightPage} align="start" />
           </>
         ) : (
           <PageImage jilid={currentJilid} page={currentPage} />
@@ -218,10 +226,20 @@ export function PustakaTilawatiPage() {
   )
 }
 
-function PageImage({ jilid, page }: { jilid: number; page: number }) {
+function PageImage({
+  jilid,
+  page,
+  align = 'center',
+}: {
+  jilid: number
+  page: number
+  align?: 'start' | 'center' | 'end'
+}) {
   const { t } = useTranslation()
+  const alignClass =
+    align === 'end' ? 'items-end' : align === 'start' ? 'items-start' : 'items-center'
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col items-center">
+    <div className={`flex h-full min-h-0 min-w-0 flex-1 flex-col ${alignClass}`}>
       <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg bg-white p-2 shadow-md">
         <img
           src={pageUrl(jilid, page)}
