@@ -108,14 +108,20 @@ export function KelasSesiDialog({
   }, [sesiList, today])
 
   const totalSesi = sesiList.length
-  const subtitle = k.guruName
-    ? t('kelasSection.list.cardSubtitleWithWali', { tingkat: k.tingkat, tahun: k.tahun, wali: k.guruName })
-    : t('kelasSection.list.cardSubtitle', { tingkat: k.tingkat, tahun: k.tahun })
 
   return (
     <Dialog title={k.nama} onClose={onClose} size="lg">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="truncate text-sm text-slate-500">{subtitle}</p>
+        <div className="min-w-0">
+          {k.guruName ? (
+            <p className="truncate text-sm font-medium text-slate-700">
+              {t('kelasSection.list.homeroomLine', { wali: k.guruName })}
+            </p>
+          ) : null}
+          <p className="truncate text-xs text-slate-500">
+            {t('kelasSection.list.cardSubtitle', { tingkat: k.tingkat, tahun: k.tahun })}
+          </p>
+        </div>
         {isAdmin ? (
           <Button size="sm" onClick={() => setAddingSesi(true)}>
             <Plus size={14} className="mr-1" /> {t('kelasSection.list.addSesi')}

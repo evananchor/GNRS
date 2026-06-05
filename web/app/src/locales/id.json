@@ -298,6 +298,7 @@
       "confirmDelete": "Hapus kelas \"{{nama}}\"? Sesi yang sudah ada tidak dihapus.",
       "cardSubtitle": "Tingkat {{tingkat}} · Tahun {{tahun}}",
       "cardSubtitleWithWali": "Tingkat {{tingkat}} · Tahun {{tahun}} · Wali {{wali}}",
+      "homeroomLine": "Wali {{wali}}",
       "manageAnggota": "Kelola anggota",
       "editKelas": "Ubah kelas",
       "deleteKelas": "Hapus kelas",

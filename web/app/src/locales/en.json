@@ -299,6 +299,7 @@
       "confirmDelete": "Delete class \"{{nama}}\"? Existing sessions will not be deleted.",
       "cardSubtitle": "Level {{tingkat}} · Year {{tahun}}",
       "cardSubtitleWithWali": "Level {{tingkat}} · Year {{tahun}} · Homeroom {{wali}}",
+      "homeroomLine": "Homeroom {{wali}}",
       "manageAnggota": "Manage members",
       "editKelas": "Edit class",
       "deleteKelas": "Delete class",
