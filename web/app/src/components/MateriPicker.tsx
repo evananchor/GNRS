@@ -474,16 +474,16 @@ function HaditsPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void })
 
 function TilawatiPicker({ onPick }: { onPick: (i: MateriDiajarkanInput) => void }) {
   const { t } = useTranslation()
+  // Only Jilid 1–6 have page images on disk. Pra/Gharib/Tajwid were
+  // previously listed but have no assets, so picking them silently fell
+  // back to Jilid 1 in the reader — removed until their pages exist.
   const TILAWATI_JILID = [
-    { value: 'pra', label: t('materiComp.picker.tilawatiPra') },
     { value: '1', label: t('materiComp.picker.tilawatiJilidN', { n: 1 }) },
     { value: '2', label: t('materiComp.picker.tilawatiJilidN', { n: 2 }) },
     { value: '3', label: t('materiComp.picker.tilawatiJilidN', { n: 3 }) },
     { value: '4', label: t('materiComp.picker.tilawatiJilidN', { n: 4 }) },
     { value: '5', label: t('materiComp.picker.tilawatiJilidN', { n: 5 }) },
     { value: '6', label: t('materiComp.picker.tilawatiJilidN', { n: 6 }) },
-    { value: 'gharib', label: t('materiComp.picker.tilawatiGharib') },
-    { value: 'tajwid', label: t('materiComp.picker.tilawatiTajwid') },
   ]
   const [jilid, setJilid] = useState<string>('1')
   const [halaman, setHalaman] = useState<string>('')
