@@ -272,7 +272,7 @@ func (q *Quran) Get(ctx context.Context, surahID string, query url.Values, w htt
 	}
 	// verses with translation
 	verses, err := q.cachedGet(ctx,
-		"/verses/by_chapter/"+surahID+"?language="+lang+"&words=false&translations="+tr+"&per_page=300",
+		"/verses/by_chapter/"+surahID+"?language="+lang+"&fields=text_uthmani,verse_key,verse_number&words=false&translations="+tr+"&per_page=300",
 	)
 	if err != nil {
 		httpx.Error(w, http.StatusBadGateway, "upstream", "Gagal mengambil ayat")
