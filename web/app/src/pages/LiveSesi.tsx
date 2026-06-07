@@ -62,53 +62,87 @@ function kindLabelKey(k: DiajarkanKind) {
 }
 
 const AUTO_HIDE_KEY = 'gnrs.live.autoHideChrome'
-const HIDE_DELAY_MS = 3000
+const EDGE_REVEAL_PX = 36 // pointer within this many px of the top/bottom edge reveals that bar
+const TOUCH_REVEAL_MS = 3500 // touch has no hover-out, so an edge-tapped bar re-hides after this
 
-// Auto-hide the live-stage chrome (header + footer) after HIDE_DELAY_MS of no
-// pointer/touch/key activity, so the materi fills the screen. Any activity
-// reveals it and restarts the countdown. `suspended` forces the chrome visible
-// and pauses the timer (e.g. while a dialog is open, or no materi is on stage).
-function useAutoHideChrome({
+// Edge-reveal for the live-stage chrome. When `enabled` (auto-hide on) and not
+// `suspended`, the header and footer start hidden and reveal independently: the
+// header only when the pointer reaches the top edge, the footer only at the
+// bottom edge. Moving the mouse through the centre — or typing — never reveals
+// them. Mouse: a window pointermove near an edge reveals that bar, and the bar
+// hides on its own pointer-leave (wired in the page). Touch: an edge tap reveals
+// the bar, which auto-hides after TOUCH_REVEAL_MS (touch has no hover-out). When
+// disabled or suspended, both bars are forced visible.
+function useEdgeChrome({
   enabled,
   suspended,
 }: {
   enabled: boolean
   suspended: boolean
 }) {
-  const [visible, setVisible] = useState(true)
-  const timerRef = useRef<number | null>(null)
+  const active = enabled && !suspended
+  const [headerShown, setHeaderShown] = useState(true)
+  const [footerShown, setFooterShown] = useState(true)
+  const hTouch = useRef<number | null>(null)
+  const fTouch = useRef<number | null>(null)
 
   useEffect(() => {
-    const clear = () => {
-      if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current)
-        timerRef.current = null
+    const clearTimers = () => {
+      if (hTouch.current !== null) {
+        window.clearTimeout(hTouch.current)
+        hTouch.current = null
+      }
+      if (fTouch.current !== null) {
+        window.clearTimeout(fTouch.current)
+        fTouch.current = null
       }
     }
-    if (!enabled || suspended) {
-      clear()
-      setVisible(true)
+    if (!active) {
+      clearTimers()
+      setHeaderShown(true)
+      setFooterShown(true)
       return
     }
-    const arm = () => {
-      clear()
-      timerRef.current = window.setTimeout(() => setVisible(false), HIDE_DELAY_MS)
+    // Auto-hide engaged: start hidden, reveal only at the edges.
+    setHeaderShown(false)
+    setFooterShown(false)
+    const atTop = (y: number) => y <= EDGE_REVEAL_PX
+    const atBottom = (y: number) => y >= window.innerHeight - EDGE_REVEAL_PX
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return
+      if (atTop(e.clientY)) setHeaderShown(true)
+      if (atBottom(e.clientY)) setFooterShown(true)
     }
-    const reveal = () => {
-      setVisible(true)
-      arm()
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return
+      if (atTop(e.clientY)) {
+        setHeaderShown(true)
+        if (hTouch.current !== null) window.clearTimeout(hTouch.current)
+        hTouch.current = window.setTimeout(() => setHeaderShown(false), TOUCH_REVEAL_MS)
+      }
+      if (atBottom(e.clientY)) {
+        setFooterShown(true)
+        if (fTouch.current !== null) window.clearTimeout(fTouch.current)
+        fTouch.current = window.setTimeout(() => setFooterShown(false), TOUCH_REVEAL_MS)
+      }
     }
-    setVisible(true)
-    arm()
-    const events: (keyof WindowEventMap)[] = ['mousemove', 'pointerdown', 'touchstart', 'keydown']
-    events.forEach((e) => window.addEventListener(e, reveal, { passive: true }))
+    window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('pointerdown', onDown, { passive: true })
     return () => {
-      events.forEach((e) => window.removeEventListener(e, reveal))
-      clear()
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerdown', onDown)
+      clearTimers()
     }
-  }, [enabled, suspended])
+  }, [active])
 
-  return visible
+  const hideHeader = () => {
+    if (active) setHeaderShown(false)
+  }
+  const hideFooter = () => {
+    if (active) setFooterShown(false)
+  }
+
+  return { active, headerShown, footerShown, hideHeader, hideFooter }
 }
 
 export function LiveSesiPage() {
@@ -211,10 +245,20 @@ export function LiveSesiPage() {
         : 'pre'
 
   const anyOverlayOpen = pickerOpen || endOpen || replaceConfirm || historyOpen
-  const chromeVisible = useAutoHideChrome({
+  const edge = useEdgeChrome({
     enabled: autoHide,
     suspended: !current || anyOverlayOpen,
   })
+  // Overlay layout (materi as a full-screen canvas with the bars floating over
+  // it) only when auto-hide is on. When off, the bars sit in normal flow and the
+  // materi is contained between them.
+  const overlay = autoHide
+  const headerBase =
+    'flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/80 px-4 py-2.5 backdrop-blur'
+  const footerBase =
+    'flex flex-wrap items-center gap-2 border-t border-neutral-800 bg-neutral-900/80 px-3 py-2 backdrop-blur'
+  const overlayBar =
+    'absolute inset-x-0 z-20 transition-all duration-300 ease-out motion-reduce:transition-none'
 
   if (sesiQ.isLoading || !sesi) {
     return (
@@ -240,13 +284,24 @@ export function LiveSesiPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-neutral-950 text-neutral-100">
+    <div className={`fixed inset-0 z-50 bg-neutral-950 text-neutral-100${overlay ? '' : ' flex flex-col'}`}>
       {/* Top bar */}
       <header
-        aria-hidden={!chromeVisible}
-        className={`absolute inset-x-0 top-0 z-10 flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/80 px-4 py-2.5 backdrop-blur transition-all duration-300 ease-out motion-reduce:transition-none ${
-          chromeVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
-        }`}
+        aria-hidden={overlay && !edge.headerShown}
+        onPointerLeave={
+          overlay
+            ? (e) => {
+                if (e.pointerType === 'mouse') edge.hideHeader()
+              }
+            : undefined
+        }
+        className={
+          overlay
+            ? `${headerBase} ${overlayBar} top-0 ${
+                edge.headerShown ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+              }`
+            : headerBase
+        }
       >
         <button
           onClick={() => navigate(-1)}
@@ -292,7 +347,7 @@ export function LiveSesiPage() {
       </header>
 
       {/* Stage */}
-      <main className="absolute inset-0 overflow-hidden">
+      <main className={overlay ? 'absolute inset-0 overflow-hidden' : 'relative flex-1 overflow-hidden'}>
         <Stage
           mode={displayMode}
           current={current}
@@ -303,10 +358,21 @@ export function LiveSesiPage() {
 
       {/* Bottom toolbar */}
       <footer
-        aria-hidden={!chromeVisible}
-        className={`absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-center gap-2 border-t border-neutral-800 bg-neutral-900/80 px-3 py-2 backdrop-blur transition-all duration-300 ease-out motion-reduce:transition-none ${
-          chromeVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
+        aria-hidden={overlay && !edge.footerShown}
+        onPointerLeave={
+          overlay
+            ? (e) => {
+                if (e.pointerType === 'mouse') edge.hideFooter()
+              }
+            : undefined
+        }
+        className={
+          overlay
+            ? `${footerBase} ${overlayBar} bottom-0 ${
+                edge.footerShown ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+              }`
+            : footerBase
+        }
       >
         <button
           onClick={requestPickMateri}
