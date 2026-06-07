@@ -201,5 +201,52 @@ Add to the `live` block of both `locales/en.json` and `locales/id.json`:
 
 ## Open questions
 
-None outstanding. Trigger (idle), scope (both bars), approach (overlay), and
-default (off / opt-in) are all decided.
+None outstanding. Scope (both bars), approach (overlay), and default
+(off / opt-in) are decided. The reveal trigger was revised after first testing —
+see the revision below.
+
+## Revision 2026-06-07 — edge-reveal + per-mode layout
+
+After dogfooding the first implementation, the operator requested two changes.
+These supersede the **Behavior / state model** and **Layout change** sections
+above.
+
+### 1. Reveal is edge-triggered, not idle-timed
+
+The idle timer (`useAutoHideChrome`, 3 s, reveal on any
+mousemove/pointerdown/touchstart/keydown) is replaced by `useEdgeChrome`:
+
+- When auto-hide is on and not suspended, the header and footer start hidden and
+  reveal **independently by edge proximity**: the header only when the pointer is
+  within `EDGE_REVEAL_PX` (36 px) of the **top** edge, the footer only within
+  36 px of the **bottom** edge.
+- Typing (no `keydown` listener) and moving the mouse through the centre never
+  reveal the bars.
+- Mouse: a window `pointermove` reveals the relevant bar; the bar hides on its
+  own `pointerleave`. (`EDGE_REVEAL_PX` is kept smaller than a bar's height so a
+  revealed bar's own pointer-leave can't immediately re-trigger the edge zone.)
+- Touch: a `pointerdown` within an edge zone reveals that bar, which auto-hides
+  after `TOUCH_REVEAL_MS` (3500 ms), since touch has no hover-out.
+- Suspended (a dialog/history open, or no materi on stage) or disabled forces
+  both bars visible.
+
+There are no overlay hot-zone `<div>`s — reveal is driven by a window-level
+listener, so the materi underneath stays fully interactive.
+
+### 2. Layout depends on the mode
+
+The overlay layout is now applied **only when auto-hide is on**:
+
+- **Auto-hide off** → the original flow layout: container `flex flex-col`,
+  header / `main` (`flex-1`) / footer in normal flow. The materi is contained
+  **between** the bars (no overlap).
+- **Auto-hide on** → overlay layout: `main` is `absolute inset-0` (full-screen
+  canvas) and the bars are `absolute` overlays that float **over** the materi.
+
+Consequence: hover-revealing a bar no longer resizes the materi canvas (so the
+Qur'an/Tilawati readers never re-paginate on reveal). The canvas only resizes on
+the deliberate on/off toggle, which is acceptable.
+
+The `live.autoHide` i18n string, the persisted `gnrs.live.autoHideChrome` toggle
+(default off), `motion-reduce` handling, and `aria-hidden` / `pointer-events-none`
+on hidden bars are unchanged.
