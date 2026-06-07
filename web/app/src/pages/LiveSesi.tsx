@@ -9,6 +9,8 @@ import {
   LayoutPanelTop,
   Maximize2,
   Minimize2,
+  PanelTopClose,
+  PanelTopOpen,
   Radio,
   Square,
   Type,
@@ -58,6 +60,8 @@ function formatElapsed(startedAt: string | null | undefined, now: number) {
 function kindLabelKey(k: DiajarkanKind) {
   return `live.kind.${k}` as const
 }
+
+const AUTO_HIDE_KEY = 'gnrs.live.autoHideChrome'
 
 export function LiveSesiPage() {
   const { sesiId } = useParams<{ kelasId: string; sesiId: string }>()
@@ -125,6 +129,25 @@ export function LiveSesiPage() {
   const [endOpen, setEndOpen] = useState(false)
   const [replaceConfirm, setReplaceConfirm] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+
+  // Per-operator viewing preference (not server-synced like liveDisplayMode):
+  // when on, the stage chrome auto-hides while idle. Persisted in localStorage.
+  const [autoHide, setAutoHide] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return window.localStorage.getItem(AUTO_HIDE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(AUTO_HIDE_KEY, autoHide ? '1' : '0')
+    } catch {
+      /* ignore storage errors (private mode, disabled storage, etc.) */
+    }
+  }, [autoHide])
+  const toggleAutoHide = () => setAutoHide((v) => !v)
 
   const requestPickMateri = () => {
     if (current && !current.completed) setReplaceConfirm(true)
@@ -274,6 +297,19 @@ export function LiveSesiPage() {
               {t('live.history', { count: diajarkan.length })}
             </button>
           ) : null}
+          <button
+            onClick={toggleAutoHide}
+            aria-pressed={autoHide}
+            aria-label={t('live.autoHide')}
+            title={t('live.autoHide')}
+            className={`rounded-lg border p-1.5 transition ${
+              autoHide
+                ? 'border-emerald-600/60 bg-emerald-500/20 text-emerald-300'
+                : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'
+            }`}
+          >
+            {autoHide ? <PanelTopClose size={14} /> : <PanelTopOpen size={14} />}
+          </button>
           <button
             onClick={toggleFs}
             className="rounded-lg border border-neutral-700 p-1.5 text-neutral-300 hover:bg-neutral-800"
