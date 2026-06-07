@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -62,6 +62,54 @@ function kindLabelKey(k: DiajarkanKind) {
 }
 
 const AUTO_HIDE_KEY = 'gnrs.live.autoHideChrome'
+const HIDE_DELAY_MS = 3000
+
+// Auto-hide the live-stage chrome (header + footer) after HIDE_DELAY_MS of no
+// pointer/touch/key activity, so the materi fills the screen. Any activity
+// reveals it and restarts the countdown. `suspended` forces the chrome visible
+// and pauses the timer (e.g. while a dialog is open, or no materi is on stage).
+function useAutoHideChrome({
+  enabled,
+  suspended,
+}: {
+  enabled: boolean
+  suspended: boolean
+}) {
+  const [visible, setVisible] = useState(true)
+  const timerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const clear = () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    }
+    if (!enabled || suspended) {
+      clear()
+      setVisible(true)
+      return
+    }
+    const arm = () => {
+      clear()
+      timerRef.current = window.setTimeout(() => setVisible(false), HIDE_DELAY_MS)
+    }
+    const reveal = () => {
+      setVisible(true)
+      arm()
+    }
+    setVisible(true)
+    arm()
+    const events: (keyof WindowEventMap)[] = ['mousemove', 'pointerdown', 'touchstart', 'keydown']
+    events.forEach((e) => window.addEventListener(e, reveal, { passive: true }))
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, reveal))
+      clear()
+    }
+  }, [enabled, suspended])
+
+  return visible
+}
 
 export function LiveSesiPage() {
   const { sesiId } = useParams<{ kelasId: string; sesiId: string }>()
@@ -162,8 +210,11 @@ export function LiveSesiPage() {
         ? 'live'
         : 'pre'
 
-  // Replaced by the useAutoHideChrome hook in Task 4.
-  const chromeVisible = true
+  const anyOverlayOpen = pickerOpen || endOpen || replaceConfirm || historyOpen
+  const chromeVisible = useAutoHideChrome({
+    enabled: autoHide,
+    suspended: !current || anyOverlayOpen,
+  })
 
   if (sesiQ.isLoading || !sesi) {
     return (
