@@ -81,27 +81,45 @@ export function PustakaTilawatiPage({
   )
   const isDesktop = useIsDesktop()
 
+  // Follow the controlling props when they change. Embedded in a live
+  // session the displayed jilid/page is driven by props; without this the
+  // reader would stay frozen on whatever it first mounted with whenever the
+  // host reuses the same component instance (e.g. switching materi).
+  useEffect(() => {
+    const n = Number(jilidId)
+    if (Number.isFinite(n) && n >= 1 && n <= 6) setCurrentJilid(n)
+  }, [jilidId])
+  useEffect(() => {
+    if (pageProp && pageProp >= 1) setCurrentPage(pageProp)
+  }, [pageProp])
+
   const jilid = JILID_LIST.find((j) => j.id === currentJilid)!
   const totalPages = jilid.jumlahHalaman
 
-  // Indonesian-bound textbook: left = even (lower), right = odd (higher).
+  // Desktop spread: fixed, non-overlapping pairs [1,2] → [3,4] → [5,6].
+  // Left page is the odd (lower) of the pair, right is the following even
+  // page. No page repeats between consecutive spreads, so every Next/Prev
+  // advances a full spread instead of nudging by one.
   const leftPage = useMemo(() => {
     if (!isDesktop) return currentPage
-    return currentPage % 2 === 0 ? currentPage : Math.max(1, currentPage - 1)
+    return currentPage % 2 === 1 ? currentPage : currentPage - 1
   }, [currentPage, isDesktop])
-  const rightPage = isDesktop ? Math.min(leftPage + 1, totalPages) : null
+  const rightPage = isDesktop && leftPage + 1 <= totalPages ? leftPage + 1 : null
+
+  const atStart = leftPage <= 1
+  const atEnd = isDesktop ? leftPage + 2 > totalPages : currentPage >= totalPages
 
   const jumpPage = useCallback(
     (n: number) => setCurrentPage(Math.max(1, Math.min(totalPages, n))),
     [totalPages],
   )
   const nextSpread = useCallback(
-    () => jumpPage(currentPage + (isDesktop ? 2 : 1)),
-    [currentPage, isDesktop, jumpPage],
+    () => jumpPage((isDesktop ? leftPage : currentPage) + (isDesktop ? 2 : 1)),
+    [currentPage, leftPage, isDesktop, jumpPage],
   )
   const prevSpread = useCallback(
-    () => jumpPage(currentPage - (isDesktop ? 2 : 1)),
-    [currentPage, isDesktop, jumpPage],
+    () => jumpPage((isDesktop ? leftPage : currentPage) - (isDesktop ? 2 : 1)),
+    [currentPage, leftPage, isDesktop, jumpPage],
   )
 
   useEffect(() => {
@@ -181,7 +199,7 @@ export function PustakaTilawatiPage({
           <button
             type="button"
             onClick={prevSpread}
-            disabled={currentPage <= 1}
+            disabled={atStart}
             aria-label={t('pustaka.tilawati.prevAria')}
             className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
           >
@@ -200,7 +218,7 @@ export function PustakaTilawatiPage({
           <button
             type="button"
             onClick={nextSpread}
-            disabled={currentPage >= totalPages}
+            disabled={atEnd}
             aria-label={t('pustaka.tilawati.nextAria')}
             className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
           >
