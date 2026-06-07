@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -9,6 +9,8 @@ import {
   LayoutPanelTop,
   Maximize2,
   Minimize2,
+  PanelTopClose,
+  PanelTopOpen,
   Radio,
   Square,
   Type,
@@ -57,6 +59,90 @@ function formatElapsed(startedAt: string | null | undefined, now: number) {
 
 function kindLabelKey(k: DiajarkanKind) {
   return `live.kind.${k}` as const
+}
+
+const AUTO_HIDE_KEY = 'gnrs.live.autoHideChrome'
+const EDGE_REVEAL_PX = 36 // pointer within this many px of the top/bottom edge reveals that bar
+const TOUCH_REVEAL_MS = 3500 // touch has no hover-out, so an edge-tapped bar re-hides after this
+
+// Edge-reveal for the live-stage chrome. When `enabled` (auto-hide on) and not
+// `suspended`, the header and footer start hidden and reveal independently: the
+// header only when the pointer reaches the top edge, the footer only at the
+// bottom edge. Moving the mouse through the centre — or typing — never reveals
+// them. Mouse: a window pointermove near an edge reveals that bar, and the bar
+// hides on its own pointer-leave (wired in the page). Touch: an edge tap reveals
+// the bar, which auto-hides after TOUCH_REVEAL_MS (touch has no hover-out). When
+// disabled or suspended, both bars are forced visible.
+function useEdgeChrome({
+  enabled,
+  suspended,
+}: {
+  enabled: boolean
+  suspended: boolean
+}) {
+  const active = enabled && !suspended
+  const [headerShown, setHeaderShown] = useState(true)
+  const [footerShown, setFooterShown] = useState(true)
+  const hTouch = useRef<number | null>(null)
+  const fTouch = useRef<number | null>(null)
+
+  useEffect(() => {
+    const clearTimers = () => {
+      if (hTouch.current !== null) {
+        window.clearTimeout(hTouch.current)
+        hTouch.current = null
+      }
+      if (fTouch.current !== null) {
+        window.clearTimeout(fTouch.current)
+        fTouch.current = null
+      }
+    }
+    if (!active) {
+      clearTimers()
+      setHeaderShown(true)
+      setFooterShown(true)
+      return
+    }
+    // Auto-hide engaged: start hidden, reveal only at the edges.
+    setHeaderShown(false)
+    setFooterShown(false)
+    const atTop = (y: number) => y <= EDGE_REVEAL_PX
+    const atBottom = (y: number) => y >= window.innerHeight - EDGE_REVEAL_PX
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return
+      if (atTop(e.clientY)) setHeaderShown(true)
+      if (atBottom(e.clientY)) setFooterShown(true)
+    }
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return
+      if (atTop(e.clientY)) {
+        setHeaderShown(true)
+        if (hTouch.current !== null) window.clearTimeout(hTouch.current)
+        hTouch.current = window.setTimeout(() => setHeaderShown(false), TOUCH_REVEAL_MS)
+      }
+      if (atBottom(e.clientY)) {
+        setFooterShown(true)
+        if (fTouch.current !== null) window.clearTimeout(fTouch.current)
+        fTouch.current = window.setTimeout(() => setFooterShown(false), TOUCH_REVEAL_MS)
+      }
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('pointerdown', onDown, { passive: true })
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerdown', onDown)
+      clearTimers()
+    }
+  }, [active])
+
+  const hideHeader = () => {
+    if (active) setHeaderShown(false)
+  }
+  const hideFooter = () => {
+    if (active) setFooterShown(false)
+  }
+
+  return { active, headerShown, footerShown, hideHeader, hideFooter }
 }
 
 export function LiveSesiPage() {
@@ -126,6 +212,25 @@ export function LiveSesiPage() {
   const [replaceConfirm, setReplaceConfirm] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
 
+  // Per-operator viewing preference (not server-synced like liveDisplayMode):
+  // when on, the stage chrome auto-hides while idle. Persisted in localStorage.
+  const [autoHide, setAutoHide] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return window.localStorage.getItem(AUTO_HIDE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(AUTO_HIDE_KEY, autoHide ? '1' : '0')
+    } catch {
+      /* ignore storage errors (private mode, disabled storage, etc.) */
+    }
+  }, [autoHide])
+  const toggleAutoHide = () => setAutoHide((v) => !v)
+
   const requestPickMateri = () => {
     if (current && !current.completed) setReplaceConfirm(true)
     else setPickerOpen(true)
@@ -138,6 +243,22 @@ export function LiveSesiPage() {
       : sesi.startedAt
         ? 'live'
         : 'pre'
+
+  const anyOverlayOpen = pickerOpen || endOpen || replaceConfirm || historyOpen
+  const edge = useEdgeChrome({
+    enabled: autoHide,
+    suspended: !current || anyOverlayOpen,
+  })
+  // Overlay layout (materi as a full-screen canvas with the bars floating over
+  // it) only when auto-hide is on. When off, the bars sit in normal flow and the
+  // materi is contained between them.
+  const overlay = autoHide
+  const headerBase =
+    'flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/80 px-4 py-2.5 backdrop-blur'
+  const footerBase =
+    'flex flex-wrap items-center gap-2 border-t border-neutral-800 bg-neutral-900/80 px-3 py-2 backdrop-blur'
+  const overlayBar =
+    'absolute inset-x-0 z-20 transition-all duration-300 ease-out motion-reduce:transition-none'
 
   if (sesiQ.isLoading || !sesi) {
     return (
@@ -163,9 +284,25 @@ export function LiveSesiPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-neutral-950 text-neutral-100">
+    <div className={`fixed inset-0 z-50 bg-neutral-950 text-neutral-100${overlay ? '' : ' flex flex-col'}`}>
       {/* Top bar */}
-      <header className="flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/80 px-4 py-2.5 backdrop-blur">
+      <header
+        aria-hidden={overlay && !edge.headerShown}
+        onPointerLeave={
+          overlay
+            ? (e) => {
+                if (e.pointerType === 'mouse') edge.hideHeader()
+              }
+            : undefined
+        }
+        className={
+          overlay
+            ? `${headerBase} ${overlayBar} top-0 ${
+                edge.headerShown ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+              }`
+            : headerBase
+        }
+      >
         <button
           onClick={() => navigate(-1)}
           className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
@@ -210,7 +347,7 @@ export function LiveSesiPage() {
       </header>
 
       {/* Stage */}
-      <main className="relative flex-1 overflow-hidden">
+      <main className={overlay ? 'absolute inset-0 overflow-hidden' : 'relative flex-1 overflow-hidden'}>
         <Stage
           mode={displayMode}
           current={current}
@@ -220,7 +357,23 @@ export function LiveSesiPage() {
       </main>
 
       {/* Bottom toolbar */}
-      <footer className="flex flex-wrap items-center gap-2 border-t border-neutral-800 bg-neutral-900/80 px-3 py-2 backdrop-blur">
+      <footer
+        aria-hidden={overlay && !edge.footerShown}
+        onPointerLeave={
+          overlay
+            ? (e) => {
+                if (e.pointerType === 'mouse') edge.hideFooter()
+              }
+            : undefined
+        }
+        className={
+          overlay
+            ? `${footerBase} ${overlayBar} bottom-0 ${
+                edge.footerShown ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+              }`
+            : footerBase
+        }
+      >
         <button
           onClick={requestPickMateri}
           disabled={liveStatus !== 'live'}
@@ -261,6 +414,19 @@ export function LiveSesiPage() {
               {t('live.history', { count: diajarkan.length })}
             </button>
           ) : null}
+          <button
+            onClick={toggleAutoHide}
+            aria-pressed={autoHide}
+            aria-label={t('live.autoHide')}
+            title={t('live.autoHide')}
+            className={`rounded-lg border p-1.5 transition ${
+              autoHide
+                ? 'border-emerald-600/60 bg-emerald-500/20 text-emerald-300'
+                : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'
+            }`}
+          >
+            {autoHide ? <PanelTopClose size={14} /> : <PanelTopOpen size={14} />}
+          </button>
           <button
             onClick={toggleFs}
             className="rounded-lg border border-neutral-700 p-1.5 text-neutral-300 hover:bg-neutral-800"
