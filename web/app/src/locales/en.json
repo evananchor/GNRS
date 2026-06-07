@@ -1061,6 +1061,7 @@
     "modeHidden": "Hidden",
     "history": "History ({{count}})",
     "fullscreen": "Full screen",
+    "autoHide": "Auto-hide bars",
     "noMateriYet": "No material is currently shown for the class.",
     "untitled": "(untitled)",
     "emptyTitle": "(empty title)",
