@@ -139,6 +139,9 @@ export function LiveSesiPage() {
         ? 'live'
         : 'pre'
 
+  // Replaced by the useAutoHideChrome hook in Task 4.
+  const chromeVisible = true
+
   if (sesiQ.isLoading || !sesi) {
     return (
       <div className="fixed inset-0 z-50 grid place-items-center bg-neutral-950 text-neutral-200">
@@ -163,9 +166,14 @@ export function LiveSesiPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-neutral-950 text-neutral-100">
+    <div className="fixed inset-0 z-50 bg-neutral-950 text-neutral-100">
       {/* Top bar */}
-      <header className="flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/80 px-4 py-2.5 backdrop-blur">
+      <header
+        aria-hidden={!chromeVisible}
+        className={`absolute inset-x-0 top-0 z-10 flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/80 px-4 py-2.5 backdrop-blur transition-all duration-300 ease-out motion-reduce:transition-none ${
+          chromeVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
         <button
           onClick={() => navigate(-1)}
           className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
@@ -210,7 +218,7 @@ export function LiveSesiPage() {
       </header>
 
       {/* Stage */}
-      <main className="relative flex-1 overflow-hidden">
+      <main className="absolute inset-0 overflow-hidden">
         <Stage
           mode={displayMode}
           current={current}
@@ -220,7 +228,12 @@ export function LiveSesiPage() {
       </main>
 
       {/* Bottom toolbar */}
-      <footer className="flex flex-wrap items-center gap-2 border-t border-neutral-800 bg-neutral-900/80 px-3 py-2 backdrop-blur">
+      <footer
+        aria-hidden={!chromeVisible}
+        className={`absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-center gap-2 border-t border-neutral-800 bg-neutral-900/80 px-3 py-2 backdrop-blur transition-all duration-300 ease-out motion-reduce:transition-none ${
+          chromeVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
         <button
           onClick={requestPickMateri}
           disabled={liveStatus !== 'live'}
