@@ -158,8 +158,11 @@ func (q *Quran) Page(w http.ResponseWriter, r *http.Request) {
 	if wordTrans == "" {
 		wordTrans = "id"
 	}
+	// quran.com keys the per-word glosses off the `language` param (NOT
+	// `word_translation_language`, which it ignores here), so drive `language`
+	// from the requested word-by-word language. Defaults to "id".
 	url := "/verses/by_page/" + pageNum +
-		"?language=id&translations=" + tr +
+		"?language=" + wordTrans + "&translations=" + tr +
 		"&fields=text_uthmani,verse_key,page_number,juz_number&per_page=50"
 	if wantWords {
 		url += "&words=true&word_fields=text_uthmani,translation,transliteration&word_translation_language=" + wordTrans

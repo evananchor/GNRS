@@ -418,7 +418,7 @@ export function KelasCalendarSection() {
                   type="button"
                   onClick={() => gotoDate(cell.iso)}
                   className={
-                    'relative flex min-h-[88px] flex-col gap-1 border-r border-t border-slate-200 px-1.5 py-1 text-left text-sm transition ' +
+                    'relative flex min-h-[88px] min-w-0 flex-col gap-1 overflow-hidden border-r border-t border-slate-200 px-1.5 py-1 text-left text-sm transition ' +
                     (cell.inMonth ? '' : 'bg-slate-50/50 text-slate-400 ') +
                     (isPicked ? 'bg-sky-50/70 ring-2 ring-inset ring-sky-400 ' : 'hover:bg-slate-50 ') +
                     (isToday ? 'outline outline-2 -outline-offset-2 outline-slate-900 ' : '')

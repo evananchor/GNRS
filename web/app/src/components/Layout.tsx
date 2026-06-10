@@ -117,10 +117,16 @@ export function Layout() {
   ].filter((it) => !it.adminOnly || user?.role === 'admin')
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden md:flex-row">
+    <div className="flex h-full flex-col overflow-hidden md:h-screen md:flex-row">
       {/* Mobile: top header with brand on the left + user avatar dropdown
           on the right. Menu lives at the bottom (see <nav> below). */}
-      <header className="flex flex-shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-2 md:hidden">
+      <header
+        className="flex flex-shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 md:hidden"
+        style={{
+          paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
+          paddingBottom: '0.5rem',
+        }}
+      >
         <Link to="/dashboard" className="text-base font-semibold">
           <Brand />
         </Link>
@@ -263,6 +269,7 @@ export function Layout() {
       <nav
         className="flex flex-shrink-0 items-stretch overflow-x-auto border-t border-slate-200 bg-white md:hidden"
         aria-label={t('nav.mainMenu')}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {items.map((it) => (
           <BottomNavLink key={it.to} to={it.to} icon={it.icon} label={it.label} />

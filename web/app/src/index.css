@@ -7,7 +7,34 @@
   body,
   #root {
     height: 100%;
+    /* iOS Safari < 15.4 (no svh): fill the visible viewport, excluding the
+       browser toolbars, so the bottom nav isn't hidden behind the URL bar. */
+    height: -webkit-fill-available;
     overflow: hidden;
+  }
+
+  /* iOS Safari: size the app shell to the SMALL viewport (svh) — the height
+     when the toolbars are shown — so the bottom nav always sits above the
+     URL/tool bar regardless of its collapse state. `dvh` is dynamic and on a
+     non-scrolling shell can resolve to the large viewport, hiding the nav. */
+  @supports (height: 100svh) {
+    html,
+    body,
+    #root {
+      height: 100svh;
+    }
+  }
+
+  /* iOS Safari auto-zooms into any focused input/select/textarea whose
+     font-size is < 16px. Force form controls to 16px on touch devices to stop
+     the zoom-on-focus. Pinch-zoom still works (we don't touch maximum-scale).
+     !important overrides Tailwind's text-sm/text-xs on inputs. */
+  @media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 
   /* Arabic typeface — Amiri preferred (Google Fonts), falls back to system
