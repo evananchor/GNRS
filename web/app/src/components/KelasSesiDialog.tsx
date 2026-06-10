@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Pencil, Play, Plus, Radio, RotateCcw, Square, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { type Kelas } from '@/api/kelas'
+import { generateJadwal, type Kelas } from '@/api/kelas'
 import { deleteSesi, listSesi, startSesi, type Sesi } from '@/api/sesi'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/Button'
@@ -13,6 +13,7 @@ import { RescheduleSesiDialog } from '@/components/RescheduleSesiDialog'
 import { EndSesiSummaryDialog } from '@/components/EndSesiSummaryDialog'
 import { SesiFormDialog } from '@/components/SesiFormDialog'
 import { cn } from '@/lib/cn'
+import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 
@@ -76,6 +77,25 @@ export function KelasSesiDialog({
     qc.invalidateQueries({ queryKey: ['kelas-sesi', k.id] })
     qc.invalidateQueries({ queryKey: ['sesi'] })
   }
+
+  const { user } = useAuth()
+  const canManage = isAdmin || (user?.id != null && k.guruUserId === user.id)
+
+  // Auto-generate recurring sesi when an admin/wali opens the class (rolling,
+  // idempotent). Best-effort: no schedule or no permission → silently ignored.
+  useEffect(() => {
+    if (!canManage) return
+    let cancelled = false
+    generateJadwal(k.id)
+      .then((res) => {
+        if (!cancelled && res.created > 0) invalidateSesi()
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [k.id, canManage])
   const startMut = useMutation({
     mutationFn: startSesi,
     onSuccess: () => {
@@ -167,7 +187,14 @@ export function KelasSesiDialog({
                           </button>
                         ) : (
                           <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-slate-900">{s.topik}</div>
+                            <div className="flex items-center gap-1.5 text-sm font-medium text-slate-900">
+                              {s.topik}
+                              {s.jadwalId ? (
+                                <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                                  {t('kelasSection.jadwal.badge')}
+                                </span>
+                              ) : null}
+                            </div>
                             <div className="text-xs text-slate-500">
                               {s.tanggal}
                               {s.mulai ? ` · ${s.mulai}${s.selesai ? `–${s.selesai}` : ''}` : ''}
