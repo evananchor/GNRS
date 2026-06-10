@@ -184,7 +184,7 @@ func (h *Laporan) assemble(r *http.Request, muridID, from, to string) (*laporanR
 	if err != nil {
 		return nil, http.StatusInternalServerError, "internal", "Gagal menghitung kehadiran"
 	}
-	hadir := counts[string("hadir")]
+	hadir := counts["hadir"]
 	izinMurid := counts["izin_murid"]
 	izinGuru := counts["izin_guru"]
 	byVn := counts["by_vn"]
@@ -262,10 +262,10 @@ func (h *Laporan) assemble(r *http.Request, muridID, from, to string) (*laporanR
 		kurikulum = append(kurikulum, *temaMap[t])
 	}
 
-	total2 := tuntas + proses + belum
+	totalItems := tuntas + proses + belum
 	pctTuntas := 0.0
-	if total2 > 0 {
-		pctTuntas = float64(tuntas) * 100.0 / float64(total2)
+	if totalItems > 0 {
+		pctTuntas = float64(tuntas) * 100.0 / float64(totalItems)
 	}
 	ringkasan := laporanRingkasan{
 		Tuntas:    tuntas,
@@ -323,6 +323,15 @@ func (h *Laporan) Get(w http.ResponseWriter, r *http.Request) {
 	if !isDate(from) || !isDate(to) || from > to {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", "Parameter from/to (YYYY-MM-DD) wajib dan valid")
 		return
+	}
+	// Mirror pencapaian.go: semester filters only accept 1 or 2.
+	for _, p := range []string{"fromSem", "toSem"} {
+		if v := q.Get(p); v != "" {
+			if n, err := strconv.Atoi(v); err != nil || (n != 1 && n != 2) {
+				httpx.Error(w, http.StatusBadRequest, "bad_request", p+" harus 1 atau 2")
+				return
+			}
+		}
 	}
 	if !h.canSeeMurid(r, id) {
 		httpx.Error(w, http.StatusForbidden, "forbidden", "Akses tidak diizinkan")
