@@ -349,7 +349,3 @@ func (h *Laporan) Get(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, rep)
 }
 
-// writeXlsx is implemented in the next task (laporan_xlsx.go); temporary stub.
-func (h *Laporan) writeXlsx(w http.ResponseWriter, rep *laporanResponse) {
-	httpx.Error(w, http.StatusNotImplemented, "not_implemented", "Ekspor Excel belum tersedia")
-}
