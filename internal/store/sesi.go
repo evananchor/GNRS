@@ -35,6 +35,7 @@ type Sesi struct {
 	CreatedBy     *string  `json:"createdBy,omitempty"`
 	CreatedAt     string   `json:"createdAt"`
 	UpdatedAt     string   `json:"updatedAt"`
+	JadwalID      *string  `json:"jadwalId,omitempty"`
 }
 
 // SesiLibraryItem is one non-kurikulum reference attached to a sesi.
@@ -62,6 +63,7 @@ type SesiInput struct {
 	LibraryAspect *string
 	LibraryRef    *string
 	LibraryItems  []SesiLibraryItem
+	JadwalID      *string
 }
 
 type SesiListParams struct {
@@ -88,7 +90,7 @@ func (s *SesiStore) AttachRencana(r *RencanaStore) { s.rencana = r }
 const sesiCols = `id, tanggal, mulai, selesai, topik, catatan, tingkat,
 	materi_ajar_id, guru_id, kelas_id, library_kind, library_aspect, library_ref,
 	started_at, ended_at, live_materi_id, live_display_mode,
-	created_by, created_at, updated_at`
+	created_by, created_at, updated_at, jadwal_id`
 
 // loadMateriIDs fills MateriAjarIDs on every sesi in the slice. Uses a
 // single IN() query to avoid N+1.
@@ -422,12 +424,12 @@ func (s *SesiStore) Create(ctx context.Context, in SesiInput, createdBy string) 
 		`INSERT INTO sesi (id, tanggal, mulai, selesai, topik, catatan, tingkat,
 		   materi_ajar_id, guru_id, kelas_id, library_kind, library_aspect, library_ref,
 		   started_at, ended_at, live_materi_id, live_display_mode,
-		   created_by, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?)`,
+		   created_by, created_at, updated_at, jadwal_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?)`,
 		id, in.Tanggal, in.Mulai, in.Selesai, in.Topik, in.Catatan, in.Tingkat,
 		primary, in.GuruID, in.KelasID,
 		in.LibraryKind, in.LibraryAspect, in.LibraryRef,
-		createdByPtr, now, now,
+		createdByPtr, now, now, in.JadwalID,
 	); err != nil {
 		return nil, err
 	}
@@ -611,7 +613,7 @@ func scanSesi(s scanner) (*Sesi, error) {
 		&v.StartedAt, &v.EndedAt,
 		&v.LiveMateriID, &v.LiveDisplayMode,
 		&v.CreatedBy,
-		&v.CreatedAt, &v.UpdatedAt,
+		&v.CreatedAt, &v.UpdatedAt, &v.JadwalID,
 	); err != nil {
 		return nil, err
 	}
