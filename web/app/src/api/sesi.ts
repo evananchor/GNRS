@@ -31,6 +31,7 @@ export type Sesi = {
   liveMateriId?: string | null
   liveDisplayMode?: 'full' | 'title' | 'hidden' | null
   createdBy?: string | null
+  jadwalId?: string | null
   createdAt: string
   updatedAt: string
 }

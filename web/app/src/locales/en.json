@@ -282,6 +282,27 @@
       "missed": "Missed",
       "scheduled": "Scheduled"
     },
+    "jadwal": {
+      "title": "Recurring schedule — {{name}}",
+      "manage": "Set recurring schedule",
+      "hari": "Days",
+      "jam": "Time",
+      "topik": "Default topic (optional)",
+      "topikPh": "e.g. Routine tahsin",
+      "mulaiTanggal": "Starts",
+      "sampaiTanggal": "Until",
+      "horizon": "Generate sessions ahead (weeks)",
+      "aktif": "Active",
+      "save": "Save",
+      "saving": "Saving…",
+      "delete": "Delete schedule",
+      "confirmDelete": "Delete the recurring schedule for \"{{name}}\"? Upcoming not-yet-started recurring sessions will be removed.",
+      "saved": "Recurring schedule saved",
+      "saveFailed": "Failed to save schedule",
+      "deleted": "Recurring schedule deleted",
+      "deleteFailed": "Failed to delete schedule",
+      "badge": "Routine"
+    },
     "list": {
       "countRegistered_one": "{{count}} class registered",
       "countRegistered_other": "{{count}} classes registered",

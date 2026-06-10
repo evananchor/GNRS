@@ -99,3 +99,48 @@ export function removeGuruAnggota(kelasId: string, guruId: string) {
     { method: 'DELETE' },
   )
 }
+
+// --- Jadwal rutin (recurring weekly schedule) ---
+
+export type KelasJadwal = {
+  id: string
+  kelasId: string
+  /** Weekday ints, 0=Minggu..6=Sabtu. */
+  hari: number[]
+  mulai: string
+  selesai?: string | null
+  topikDefault?: string | null
+  mulaiTanggal?: string | null
+  sampaiTanggal?: string | null
+  horizonMinggu: number
+  aktif: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type KelasJadwalInput = {
+  hari: number[]
+  mulai: string
+  selesai?: string | null
+  topikDefault?: string | null
+  mulaiTanggal?: string | null
+  sampaiTanggal?: string | null
+  horizonMinggu: number
+  aktif: boolean
+}
+
+export function getJadwal(kelasId: string) {
+  return apiFetch<KelasJadwal | null>(`/api/kelas/${encodeURIComponent(kelasId)}/jadwal`)
+}
+
+export function putJadwal(kelasId: string, input: KelasJadwalInput) {
+  return apiFetch<KelasJadwal>(`/api/kelas/${encodeURIComponent(kelasId)}/jadwal`, { method: 'PUT', body: input })
+}
+
+export function deleteJadwal(kelasId: string) {
+  return apiFetch<void>(`/api/kelas/${encodeURIComponent(kelasId)}/jadwal`, { method: 'DELETE' })
+}
+
+export function generateJadwal(kelasId: string) {
+  return apiFetch<{ created: number }>(`/api/kelas/${encodeURIComponent(kelasId)}/jadwal/generate`, { method: 'POST' })
+}

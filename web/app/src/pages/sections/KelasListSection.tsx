@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { CalendarClock, Pencil, Plus, Trash2, Users } from 'lucide-react'
 
 import {
   addAnggota,
@@ -24,6 +24,7 @@ import { Dialog } from '@/components/Dialog'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/Input'
 import { KelasAnggotaDialog } from '@/components/KelasAnggotaDialog'
+import { KelasJadwalDialog } from '@/components/KelasJadwalDialog'
 import { KelasSesiDialog } from '@/components/KelasSesiDialog'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
@@ -58,6 +59,7 @@ export function KelasListSection() {
     | { kind: 'create' }
     | { kind: 'edit'; kelas: Kelas }
     | { kind: 'anggota'; kelas: Kelas }
+    | { kind: 'jadwal'; kelas: Kelas }
     | null
   >(null)
   const [selected, setSelected] = useState<Kelas | null>(null)
@@ -120,6 +122,8 @@ export function KelasListSection() {
               onEdit={(k) => setDialog({ kind: 'edit', kelas: k })}
               onDelete={handleDelete}
               onAnggota={(k) => setDialog({ kind: 'anggota', kelas: k })}
+              onJadwal={(k) => setDialog({ kind: 'jadwal', kelas: k })}
+              currentUserId={user?.id}
               className={bothFields ? 'max-h-[45%] flex-none' : 'flex-1'}
             />
           ) : null}
@@ -134,6 +138,8 @@ export function KelasListSection() {
               onEdit={(k) => setDialog({ kind: 'edit', kelas: k })}
               onDelete={handleDelete}
               onAnggota={(k) => setDialog({ kind: 'anggota', kelas: k })}
+              onJadwal={(k) => setDialog({ kind: 'jadwal', kelas: k })}
+              currentUserId={user?.id}
               className="flex-1"
             />
           ) : null}
@@ -162,6 +168,13 @@ export function KelasListSection() {
           onClose={() => setDialog(null)}
         />
       ) : null}
+      {dialog?.kind === 'jadwal' ? (
+        <KelasJadwalDialog
+          kelasId={dialog.kelas.id}
+          kelasNama={dialog.kelas.nama}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
     </div>
   )
 }
@@ -177,6 +190,8 @@ function KelasField({
   onEdit,
   onDelete,
   onAnggota,
+  onJadwal,
+  currentUserId,
   className,
 }: {
   label: string
@@ -187,6 +202,8 @@ function KelasField({
   onEdit: (k: Kelas) => void
   onDelete: (k: Kelas) => void
   onAnggota: (k: Kelas) => void
+  onJadwal: (k: Kelas) => void
+  currentUserId?: string
   className?: string
 }) {
   const { t } = useTranslation()
@@ -219,10 +236,12 @@ function KelasField({
                 key={k.id}
                 kelas={k}
                 isAdmin={isAdmin}
+                canManageJadwal={isAdmin || (currentUserId != null && k.guruUserId === currentUserId)}
                 onOpen={() => onOpen(k)}
                 onEdit={() => onEdit(k)}
                 onDelete={() => onDelete(k)}
                 onAnggota={() => onAnggota(k)}
+                onJadwal={() => onJadwal(k)}
               />
             ))}
           </div>
@@ -237,17 +256,21 @@ function KelasField({
 function KelasCard({
   kelas: k,
   isAdmin,
+  canManageJadwal,
   onOpen,
   onEdit,
   onDelete,
   onAnggota,
+  onJadwal,
 }: {
   kelas: Kelas
   isAdmin: boolean
+  canManageJadwal: boolean
   onOpen: () => void
   onEdit: () => void
   onDelete: () => void
   onAnggota: () => void
+  onJadwal: () => void
 }) {
   const { t } = useTranslation()
   const subtitle = k.guruName
@@ -261,7 +284,7 @@ function KelasCard({
         onClick={onOpen}
         className={cn(
           'flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-          isAdmin && 'pr-24',
+          isAdmin ? 'pr-28' : canManageJadwal && 'pr-10',
         )}
       >
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-sky-50 text-lg">
@@ -272,44 +295,60 @@ function KelasCard({
           <div className="truncate text-xs text-slate-500">{subtitle}</div>
         </div>
       </button>
-      {isAdmin ? (
+      {isAdmin || canManageJadwal ? (
         <div className="absolute right-2 top-2 flex items-center gap-1">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              onAnggota()
+              onJadwal()
             }}
             className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            aria-label={t('kelasSection.list.manageAnggota')}
-            title={t('kelasSection.list.manageAnggota')}
+            aria-label={t('kelasSection.jadwal.manage')}
+            title={t('kelasSection.jadwal.manage')}
           >
-            <Users size={16} />
+            <CalendarClock size={16} />
           </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit()
-            }}
-            className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            aria-label={t('kelasSection.list.editKelas')}
-            title={t('kelasSection.list.editKelas')}
-          >
-            <Pencil size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
-            className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-            aria-label={t('kelasSection.list.deleteKelas')}
-            title={t('kelasSection.list.deleteKelas')}
-          >
-            <Trash2 size={16} />
-          </button>
+          {isAdmin ? (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAnggota()
+                }}
+                className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                aria-label={t('kelasSection.list.manageAnggota')}
+                title={t('kelasSection.list.manageAnggota')}
+              >
+                <Users size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit()
+                }}
+                className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                aria-label={t('kelasSection.list.editKelas')}
+                title={t('kelasSection.list.editKelas')}
+              >
+                <Pencil size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete()
+                }}
+                className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+                aria-label={t('kelasSection.list.deleteKelas')}
+                title={t('kelasSection.list.deleteKelas')}
+              >
+                <Trash2 size={16} />
+              </button>
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>
