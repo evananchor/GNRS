@@ -282,6 +282,27 @@
       "missed": "Terlewat",
       "scheduled": "Terjadwal"
     },
+    "jadwal": {
+      "title": "Jadwal Rutin — {{name}}",
+      "manage": "Atur jadwal rutin",
+      "hari": "Hari",
+      "jam": "Jam",
+      "topik": "Topik default (opsional)",
+      "topikPh": "mis. Tahsin rutin",
+      "mulaiTanggal": "Mulai berlaku",
+      "sampaiTanggal": "Sampai",
+      "horizon": "Buat sesi (minggu ke depan)",
+      "aktif": "Aktif",
+      "save": "Simpan",
+      "saving": "Menyimpan…",
+      "delete": "Hapus jadwal",
+      "confirmDelete": "Hapus jadwal rutin kelas \"{{name}}\"? Sesi rutin yang belum dimulai akan ikut dihapus.",
+      "saved": "Jadwal rutin disimpan",
+      "saveFailed": "Gagal menyimpan jadwal",
+      "deleted": "Jadwal rutin dihapus",
+      "deleteFailed": "Gagal menghapus jadwal",
+      "badge": "Rutin"
+    },
     "list": {
       "countRegistered_other": "{{count}} kelas terdaftar",
       "addKelas": "Tambah kelas",
