@@ -65,7 +65,7 @@ export function PustakaQuranMushafPage({
   const params = useParams()
   const surahId = surahIdProp ?? params.surahId
   const [currentPage, setCurrentPage] = useState(1)
-  const [translationIds, setTranslationIds] = useState<string>('33') // Kemenag
+  const [translationIds, setTranslationIds] = useState<string>('20') // English — Sahih International
   const [manqulMode, setManqulMode] = useState(false)
   const [wordByWord, setWordByWord] = useState(false)
   const [popup, setPopup] = useState<QuranAyah | null>(null)
@@ -468,21 +468,23 @@ function MushafPage({
     ? translationIds.slice(MANQUL_SOURCE_PREFIX.length)
     : null
   const baseTranslation = manqulOwner ? '33' : translationIds
+  // Word-by-word glosses follow the selected translation's language (en/id/ms),
+  // not a hardcoded one. Manqul note-taking stays Indonesian (base '33').
+  const wordLang = translations.find((tr) => String(tr.id) === baseTranslation)?.lang ?? 'id'
   // Fetch the per-word breakdown when a word-level view is active (manqul
   // note-taking, read-only word-by-word, or a shared-manqul source whose
   // per-word glosses we overlay). It's ~5x bigger, so lazy-load it.
   const wantWords = manqulMode || wordByWord || !!manqulOwner
   const { data, isPending } = useQuery<QuranPageResponse>({
-    queryKey: ['quran-page', pageNum, baseTranslation, wantWords],
+    queryKey: ['quran-page', pageNum, baseTranslation, wantWords, wordLang],
     queryFn: () =>
       getQuranPage(pageNum, {
         translations: baseTranslation,
         words: wantWords,
-        wordTrans: 'id',
+        wordTrans: wordLang,
       }),
     staleTime: 60 * 60 * 1000,
   })
-  void translations // reserved for future multi-translation rendering
 
   // When a shared-manqul source is selected, fetch that owner's notes for the
   // ayat on this page (only ones shared with me come back) and overlay them.
