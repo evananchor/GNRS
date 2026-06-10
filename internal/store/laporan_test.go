@@ -23,6 +23,28 @@ func TestKelasFindByMurid(t *testing.T) {
 	}
 }
 
+func TestKelasFindByMuridPrefersLatestTahun(t *testing.T) {
+	db := newJadwalDB(t)
+	ks := NewKelas(db)
+	older, err := ks.Create(context.Background(), KelasInput{Nama: "Lama", Tingkat: "PAUD", Tahun: 2025})
+	if err != nil {
+		t.Fatalf("create older: %v", err)
+	}
+	newer, err := ks.Create(context.Background(), KelasInput{Nama: "Baru", Tingkat: "PAUD", Tahun: 2026})
+	if err != nil {
+		t.Fatalf("create newer: %v", err)
+	}
+	for _, kid := range []string{older.ID, newer.ID} {
+		if _, err := db.Exec(`INSERT INTO kelas_anggota (kelas_id, murid_user_id) VALUES (?, ?)`, kid, "MURID02"); err != nil {
+			t.Fatalf("seed anggota: %v", err)
+		}
+	}
+	k, err := ks.FindByMurid(context.Background(), "MURID02")
+	if err != nil || k == nil || k.ID != newer.ID {
+		t.Fatalf("expected latest-tahun kelas %s, got %+v err=%v", newer.ID, k, err)
+	}
+}
+
 func TestAttendanceCountForStudent(t *testing.T) {
 	db := newJadwalDB(t)
 	at := NewAttendances(db)

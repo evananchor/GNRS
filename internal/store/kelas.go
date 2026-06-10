@@ -464,7 +464,9 @@ func (s *KelasStore) RemoveGuruAnggota(ctx context.Context, kelasID, guruID stri
 }
 
 // FindByMurid returns the kelas a murid belongs to (most recent tahun first),
-// or nil when the murid has no kelas. Used by the laporan endpoint.
+// or nil when the murid has no kelas. Unlike Get, "no rows" is NOT an error
+// here — a murid without a kelas is a valid state, so callers get (nil, nil)
+// instead of ErrNotFound. Used by the laporan endpoint.
 func (s *KelasStore) FindByMurid(ctx context.Context, muridUserID string) (*Kelas, error) {
 	row := s.db.QueryRowContext(ctx,
 		`SELECT `+kelasCols+`
