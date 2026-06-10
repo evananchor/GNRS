@@ -42,9 +42,11 @@ function TabLink({ to, icon, label }: { to: string; icon: React.ReactNode; label
   return (
     <NavLink
       to={to}
+      title={label}
+      aria-label={label}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-2 rounded-t-md px-4 py-2 text-sm font-medium transition',
+          'flex items-center gap-2 rounded-t-md px-3 py-2 text-sm font-medium transition sm:px-4',
           '-mb-px border-b-2',
           isActive
             ? 'border-slate-900 text-slate-900'
@@ -53,7 +55,7 @@ function TabLink({ to, icon, label }: { to: string; icon: React.ReactNode; label
       }
     >
       {icon}
-      {label}
+      <span className="hidden sm:inline">{label}</span>
     </NavLink>
   )
 }
