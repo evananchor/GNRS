@@ -174,6 +174,7 @@ func run() error {
 	kelas := store.NewKelas(db)
 	rencana := store.NewRencana(db)
 	sesi.AttachRencana(rencana)
+	kelas.AttachSesi(sesi)
 	karakter := store.NewKarakter(db)
 	haditsStore := store.NewHadits(db)
 	doaStore := store.NewDoa(db)
@@ -302,6 +303,12 @@ func run() error {
 			p.Get("/kelas/{id}", kelasH.Get)
 			p.Get("/kelas/{id}/anggota", kelasH.ListAnggota)
 			p.Get("/kelas/{id}/guru", kelasH.ListGuruAnggota)
+			// Jadwal rutin — read open to any authenticated user; writes are
+			// admin-or-wali (enforced inside the handlers, not via RequireRole).
+			p.Get("/kelas/{id}/jadwal", kelasH.GetJadwal)
+			p.Put("/kelas/{id}/jadwal", kelasH.PutJadwal)
+			p.Delete("/kelas/{id}/jadwal", kelasH.DeleteJadwal)
+			p.Post("/kelas/{id}/jadwal/generate", kelasH.GenerateJadwal)
 
 			rencanaH := handler.NewRencana(rencana)
 			p.Get("/rencana-bulanan", rencanaH.List)
