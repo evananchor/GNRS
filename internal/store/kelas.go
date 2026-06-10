@@ -42,7 +42,8 @@ type KelasListParams struct {
 }
 
 type KelasStore struct {
-	db *sql.DB
+	db   *sql.DB
+	sesi *SesiStore
 }
 
 func NewKelas(db *sql.DB) *KelasStore { return &KelasStore{db: db} }
@@ -259,6 +260,8 @@ func (s *KelasStore) Delete(ctx context.Context, id string) error {
 	if n == 0 {
 		return ErrNotFound
 	}
+	// No SQL FK cascade — drop the kelas's recurring schedule explicitly.
+	_, _ = s.db.ExecContext(ctx, `DELETE FROM kelas_jadwal WHERE kelas_id = ?`, id)
 	return nil
 }
 
