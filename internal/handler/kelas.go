@@ -10,7 +10,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 
+	"github.com/fadhilkurnia/ppg-dashboard/internal/auth"
 	"github.com/fadhilkurnia/ppg-dashboard/internal/httpx"
+	"github.com/fadhilkurnia/ppg-dashboard/internal/model"
 	"github.com/fadhilkurnia/ppg-dashboard/internal/store"
 )
 
@@ -48,6 +50,111 @@ func (h *Kelas) parse(r *http.Request) (store.KelasInput, error) {
 		Tahun:       b.Tahun,
 		Deskripsi:   trimPtr(b.Deskripsi),
 	}, nil
+}
+
+// --- Jadwal rutin (recurring schedule) ---
+
+type jadwalBody struct {
+	Hari          []int   `json:"hari"          validate:"required,min=1,max=7,dive,gte=0,lte=6"`
+	Mulai         string  `json:"mulai"         validate:"required,len=5"`
+	Selesai       *string `json:"selesai,omitempty"       validate:"omitempty,len=5"`
+	TopikDefault  *string `json:"topikDefault,omitempty"`
+	MulaiTanggal  *string `json:"mulaiTanggal,omitempty"  validate:"omitempty,len=10"`
+	SampaiTanggal *string `json:"sampaiTanggal,omitempty" validate:"omitempty,len=10"`
+	HorizonMinggu int     `json:"horizonMinggu" validate:"omitempty,gte=1,lte=52"`
+	Aktif         bool    `json:"aktif"`
+}
+
+// canManageJadwal loads the kelas and authorizes the caller as admin OR the
+// kelas wali (primary guru). On failure it writes the response and returns nil.
+func (h *Kelas) canManageJadwal(w http.ResponseWriter, r *http.Request, id string) *store.Kelas {
+	k, err := h.k.Get(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			httpx.Error(w, http.StatusNotFound, "not_found", "Kelas tidak ditemukan")
+		} else {
+			httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal mengambil kelas")
+		}
+		return nil
+	}
+	claims, ok := auth.ClaimsFrom(r.Context())
+	if !ok || claims == nil {
+		httpx.Error(w, http.StatusUnauthorized, "unauthorized", "Sesi tidak ditemukan")
+		return nil
+	}
+	isWali := k.GuruUserID != nil && *k.GuruUserID == claims.UserID
+	if claims.Role != model.RoleAdmin && !isWali {
+		httpx.Error(w, http.StatusForbidden, "forbidden", "Akses tidak diizinkan")
+		return nil
+	}
+	return k
+}
+
+func (h *Kelas) GetJadwal(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	j, err := h.k.GetJadwal(r.Context(), id)
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal mengambil jadwal")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, j) // nil → JSON null (no schedule yet)
+}
+
+func (h *Kelas) PutJadwal(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if h.canManageJadwal(w, r, id) == nil {
+		return
+	}
+	var b jadwalBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "bad_request", errBadJSON.Error())
+		return
+	}
+	if err := h.validator.Struct(b); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	in := store.KelasJadwalInput{
+		Hari:          b.Hari,
+		Mulai:         b.Mulai,
+		Selesai:       trimPtr(b.Selesai),
+		TopikDefault:  trimPtr(b.TopikDefault),
+		MulaiTanggal:  trimPtr(b.MulaiTanggal),
+		SampaiTanggal: trimPtr(b.SampaiTanggal),
+		HorizonMinggu: b.HorizonMinggu,
+		Aktif:         b.Aktif,
+	}
+	j, err := h.k.UpsertJadwal(r.Context(), id, in)
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal menyimpan jadwal")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, j)
+}
+
+func (h *Kelas) DeleteJadwal(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if h.canManageJadwal(w, r, id) == nil {
+		return
+	}
+	if err := h.k.DeleteJadwal(r.Context(), id); err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal menghapus jadwal")
+		return
+	}
+	httpx.JSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Kelas) GenerateJadwal(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if h.canManageJadwal(w, r, id) == nil {
+		return
+	}
+	created, err := h.k.GenerateJadwal(r.Context(), id)
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal membuat sesi rutin")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]int{"created": created})
 }
 
 func (h *Kelas) List(w http.ResponseWriter, r *http.Request) {
