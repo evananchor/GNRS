@@ -25,6 +25,18 @@
     }
   }
 
+  /* iOS Safari auto-zooms into any focused input/select/textarea whose
+     font-size is < 16px. Force form controls to 16px on touch devices to stop
+     the zoom-on-focus. Pinch-zoom still works (we don't touch maximum-scale).
+     !important overrides Tailwind's text-sm/text-xs on inputs. */
+  @media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
   /* Arabic typeface — Amiri preferred (Google Fonts), falls back to system
      Arabic faces. Matches sitrac-v3's --font-arab so the Quran/Doa/Hadits
      viewers render identically. */
