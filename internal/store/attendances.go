@@ -352,6 +352,30 @@ func (a *Attendances) Stats(ctx context.Context, p AttendanceStatsParams) (*Atte
 	return out, yearRows.Err()
 }
 
+// CountForStudent tallies attendance rows per status for one student within
+// [from, to] (inclusive, YYYY-MM-DD). Missing statuses are simply absent
+// from the map. Used by the laporan endpoint.
+func (a *Attendances) CountForStudent(ctx context.Context, studentID, from, to string) (map[string]int, error) {
+	rows, err := a.db.QueryContext(ctx,
+		`SELECT status, COUNT(*) FROM attendances
+		  WHERE student_id = ? AND date >= ? AND date <= ?
+		  GROUP BY status`, studentID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var st string
+		var n int
+		if err := rows.Scan(&st, &n); err != nil {
+			return nil, err
+		}
+		out[st] = n
+	}
+	return out, rows.Err()
+}
+
 func nullableAttInt(p *int) any {
 	if p == nil {
 		return nil
