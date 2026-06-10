@@ -6,12 +6,14 @@ import {
   CheckCircle2,
   ChevronLeft,
   EyeOff,
+  History,
   LayoutPanelTop,
   Maximize2,
   Minimize2,
   PanelTopClose,
   PanelTopOpen,
   Radio,
+  Replace,
   Square,
   Type,
 } from 'lucide-react'
@@ -377,9 +379,12 @@ export function LiveSesiPage() {
         <button
           onClick={requestPickMateri}
           disabled={liveStatus !== 'live'}
-          className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium hover:bg-neutral-800 disabled:opacity-50"
+          title={current ? t('live.replaceMateri') : t('live.pickMateri')}
+          aria-label={current ? t('live.replaceMateri') : t('live.pickMateri')}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-xs font-medium hover:bg-neutral-800 disabled:opacity-50 sm:px-3"
         >
-          {current ? t('live.replaceMateri') : t('live.pickMateri')}
+          <Replace size={14} />
+          <span className="hidden sm:inline">{current ? t('live.replaceMateri') : t('live.pickMateri')}</span>
         </button>
         <div className="flex items-center gap-0.5 rounded-lg border border-neutral-700 p-0.5">
           <ModeBtn
@@ -408,10 +413,13 @@ export function LiveSesiPage() {
           {diajarkan.length > 0 ? (
             <button
               onClick={() => setHistoryOpen((v) => !v)}
-              className="rounded-lg border border-neutral-700 px-2.5 py-1 text-[11px] text-neutral-300 hover:bg-neutral-800"
+              title={t('live.history', { count: diajarkan.length })}
+              aria-label={t('live.history', { count: diajarkan.length })}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-2 py-1 text-[11px] text-neutral-300 hover:bg-neutral-800 sm:px-2.5"
               aria-expanded={historyOpen}
             >
-              {t('live.history', { count: diajarkan.length })}
+              <History size={14} />
+              <span className="hidden sm:inline">{t('live.history', { count: diajarkan.length })}</span>
             </button>
           ) : null}
           <button
@@ -503,12 +511,14 @@ function ModeBtn({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
+      title={label}
+      aria-label={label}
+      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition disabled:opacity-50 sm:px-2.5 ${
         active ? 'bg-emerald-500/20 text-emerald-300' : 'text-neutral-300 hover:bg-neutral-800'
       }`}
     >
       {icon}
-      <span>{label}</span>
+      <span className="hidden sm:inline">{label}</span>
     </button>
   )
 }
