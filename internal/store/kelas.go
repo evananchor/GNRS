@@ -463,6 +463,33 @@ func (s *KelasStore) RemoveGuruAnggota(ctx context.Context, kelasID, guruID stri
 	return tx.Commit()
 }
 
+// FindByMurid returns the kelas a murid belongs to (most recent tahun first),
+// or nil when the murid has no kelas. Unlike Get, "no rows" is NOT an error
+// here — a murid without a kelas is a valid state, so callers get (nil, nil)
+// instead of ErrNotFound. Used by the laporan endpoint.
+func (s *KelasStore) FindByMurid(ctx context.Context, muridUserID string) (*Kelas, error) {
+	row := s.db.QueryRowContext(ctx,
+		`SELECT `+kelasCols+`
+		   FROM kelas k
+		   LEFT JOIN users u ON u.id = k.guru_user_id
+		   JOIN kelas_anggota a ON a.kelas_id = k.id
+		  WHERE a.murid_user_id = ?
+		  ORDER BY k.tahun DESC
+		  LIMIT 1`, muridUserID)
+	k, err := scanKelas(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	one := []Kelas{*k}
+	if err := s.loadGuruIDs(ctx, one); err != nil {
+		return nil, err
+	}
+	return &one[0], nil
+}
+
 func scanKelas(s scanner) (*Kelas, error) {
 	var k Kelas
 	if err := s.Scan(

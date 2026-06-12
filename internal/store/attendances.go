@@ -352,6 +352,36 @@ func (a *Attendances) Stats(ctx context.Context, p AttendanceStatsParams) (*Atte
 	return out, yearRows.Err()
 }
 
+// CountForStudent tallies attendance rows per status for one student within
+// [from, to] (inclusive, YYYY-MM-DD). Missing statuses are simply absent
+// from the map. Used by the laporan endpoint.
+//
+// `date(date)` truncates the column to YYYY-MM-DD before comparing: imported
+// rows store a bare date, but rows written via Create bind a time.Time that
+// go-sqlite3 serializes as "YYYY-MM-DD 00:00:00+00:00". A raw string compare
+// would drop those live rows on the `to` boundary (the month-end day used by
+// the monthly report).
+func (a *Attendances) CountForStudent(ctx context.Context, studentID, from, to string) (map[string]int, error) {
+	rows, err := a.db.QueryContext(ctx,
+		`SELECT status, COUNT(*) FROM attendances
+		  WHERE student_id = ? AND date(date) >= ? AND date(date) <= ?
+		  GROUP BY status`, studentID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var st string
+		var n int
+		if err := rows.Scan(&st, &n); err != nil {
+			return nil, err
+		}
+		out[st] = n
+	}
+	return out, rows.Err()
+}
+
 func nullableAttInt(p *int) any {
 	if p == nil {
 		return nil

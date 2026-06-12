@@ -287,6 +287,9 @@ func run() error {
 			p.Post("/pencapaian", pencapaianH.Upsert)
 			p.Delete("/pencapaian/{id}", pencapaianH.Delete)
 
+			laporanH := handler.NewLaporan(users, kelas, attendances, pencapaian, settings)
+			p.Get("/laporan/murid/{id}", laporanH.Get)
+
 			settingsH := handler.NewSettings(settings)
 			p.Get("/settings", settingsH.List)
 
