@@ -3,9 +3,31 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/xuri/excelize/v2"
 )
+
+// safeFilenamePart keeps only ASCII letters, digits, space, dot, dash and
+// underscore so a free-text nickname can't break the Content-Disposition
+// header (no quotes, CR/LF, or control chars). Spaces collapse to '-'.
+func safeFilenamePart(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9',
+			r == '.', r == '-', r == '_':
+			b.WriteRune(r)
+		case r == ' ':
+			b.WriteByte('-')
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		return "murid"
+	}
+	return out
+}
 
 // derefStr safely extracts a plain string from a map[string]any value that
 // may hold a string, a *string (nil → ""), or nil.
@@ -104,7 +126,7 @@ func (h *Laporan) writeXlsx(w http.ResponseWriter, rep *laporanResponse) {
 	if nick == "" {
 		nick = derefStr(rep.Murid["name"])
 	}
-	fname := fmt.Sprintf("rapor-%s-%v_%v.xlsx", nick, rep.Periode["from"], rep.Periode["to"])
+	fname := fmt.Sprintf("rapor-%s-%v_%v.xlsx", safeFilenamePart(nick), rep.Periode["from"], rep.Periode["to"])
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fname+`"`)
 	_ = f.Write(w)
