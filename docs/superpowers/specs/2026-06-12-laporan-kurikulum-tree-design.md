@@ -35,10 +35,17 @@ materi immediately.
    title line** (e.g. "LAPORAN HASIL BELAJAR"). One shared letterhead,
    used by every report. Operator chose this over a per-report free-text
    header.
-6. **Slim running header on page 2+.** Page 1 prints the full kop
-   (logo + name + address + title + period). Pages 2 and beyond print a
-   thin running line (murid name · periode) so the reader keeps context
-   across pages. The full kop does NOT repeat.
+6. **Slim running header.** A thin running line (murid name · periode)
+   gives the reader context across pages; the full kop does NOT repeat.
+   Intended target was "page 2+ only", but browser print CSS cannot
+   reliably suppress a `position: fixed` header on the first page only —
+   the header renders in the page-margin band, which in-flow content
+   can't cover (verified empirically with `@page :first` + cover hacks,
+   both failed in Chrome). **Resolved as a masthead on every page**: the
+   slim line prints at the top of all pages; page 1 keeps the full kop
+   just below it. This is the robust, print-engine-independent outcome.
+   (The only reliable "different first page" alternative is repeating the
+   *full* kop on every page, which the operator rejected.)
 
 ## Changes
 
