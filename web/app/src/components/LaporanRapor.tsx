@@ -20,10 +20,12 @@ export function LaporanRapor({ data, periodeLabel }: { data: LaporanResponse; pe
   return (
     <div id="laporan-print-area" className="mx-auto max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 shadow-sm print:border-0 print:shadow-none">
       {/* Kop */}
-      <header className="flex items-center gap-3 border-b-2 border-slate-900 pb-3">
+      <header className="instansi-kop flex items-center gap-3 border-b-2 border-slate-900 pb-3">
         {data.instansi.logo ? <img src={data.instansi.logo} alt="" className="h-12 w-12 object-contain" /> : null}
         <div className="flex-1">
           <div className="text-lg font-bold leading-tight">GNRS{data.instansi.name ? ` ${data.instansi.name}` : ''}</div>
+          {data.instansi.alamat ? <div className="text-xs text-slate-500">{data.instansi.alamat}</div> : null}
+          {data.instansi.title ? <div className="mt-0.5 text-sm font-semibold uppercase tracking-wide text-slate-800">{data.instansi.title}</div> : null}
           <div className="text-sm font-semibold text-slate-700">{periodeLabel}</div>
           <div className="text-xs text-slate-500">
             {data.periode.from} — {data.periode.to} · {t('achievement.laporan.printedOn', { date: printedOn })}
