@@ -213,6 +213,12 @@ export function LaporanRapor({ data, periodeLabel }: { data: LaporanResponse; pe
 
   return (
     <div id="laporan-print-area" className="mx-auto max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 shadow-sm print:border-0 print:shadow-none">
+      {/* Running header — hidden on screen, repeats on printed pages 2+ */}
+      <div className="laporan-running-head">
+        <span className="font-semibold">{data.murid.name}{data.murid.nickname ? ` (${data.murid.nickname})` : ''}</span>
+        <span className="mx-2 text-slate-400">·</span>
+        <span>{periodeLabel}</span>
+      </div>
       {/* Kop */}
       <header className="instansi-kop flex items-center gap-3 border-b-2 border-slate-900 pb-3">
         {data.instansi.logo ? <img src={data.instansi.logo} alt="" className="h-12 w-12 object-contain" /> : null}

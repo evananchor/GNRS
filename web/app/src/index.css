@@ -75,6 +75,7 @@
   @page {
     size: A4;
     margin: 14mm;
+    margin-top: 20mm;
   }
   body * {
     visibility: hidden;
@@ -97,5 +98,36 @@
   #root {
     height: auto !important;
     overflow: visible !important;
+  }
+  /* Slim running header: hidden on page 1 (covered by the opaque kop),
+     visible on continued pages. */
+  .laporan-running-head {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    padding: 2mm 0;
+    border-bottom: 1px solid #cbd5e1;
+    background: #ffffff;
+    font-size: 10px;
+    color: #475569;
+  }
+  /* The full kop paints above the running head on page 1. */
+  .instansi-kop {
+    position: relative;
+    z-index: 2;
+    background: #ffffff;
+  }
+}
+
+/* Running header only exists for print. */
+.laporan-running-head {
+  display: none;
+}
+@media print {
+  .laporan-running-head {
+    display: block;
   }
 }
