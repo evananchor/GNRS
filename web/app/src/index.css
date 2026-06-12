@@ -75,7 +75,9 @@
   @page {
     size: A4;
     margin: 14mm;
-    margin-top: 20mm;
+    /* Reserve room at the top of every page for the fixed running
+       masthead (murid · periode) so body content never slides under it. */
+    margin-top: 22mm;
   }
   body * {
     visibility: hidden;
@@ -99,8 +101,11 @@
     height: auto !important;
     overflow: visible !important;
   }
-  /* Slim running header: hidden on page 1 (covered by the opaque kop),
-     visible on continued pages. */
+  /* Slim running masthead (murid · periode) repeated at the top of every
+     printed page so continuation pages keep the report's context. On page 1
+     the full kop sits just below it. (Browser print CSS can't reliably
+     suppress a fixed header on the first page only, so the masthead is shown
+     on all pages by design rather than via a fragile per-page hack.) */
   .laporan-running-head {
     display: block;
     position: fixed;
@@ -113,12 +118,6 @@
     background: #ffffff;
     font-size: 10px;
     color: #475569;
-  }
-  /* The full kop paints above the running head on page 1. */
-  .instansi-kop {
-    position: relative;
-    z-index: 2;
-    background: #ffffff;
   }
 }
 
