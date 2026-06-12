@@ -29,6 +29,16 @@ materi immediately.
    directly under the tema; items with a sub-tema but empty
    `kelompokMateri` list directly under the sub-tema — the same idiom
    the Curriculum tab uses (`flat` buckets).
+5. **Custom letterhead in Settings.** The report "kop" is editable from
+   the existing Instansi settings (Pengaturan → Instansi): institution
+   name (exists), logo (exists), plus new **address** and **report
+   title line** (e.g. "LAPORAN HASIL BELAJAR"). One shared letterhead,
+   used by every report. Operator chose this over a per-report free-text
+   header.
+6. **Slim running header on page 2+.** Page 1 prints the full kop
+   (logo + name + address + title + period). Pages 2 and beyond print a
+   thin running line (murid name · periode) so the reader keeps context
+   across pages. The full kop does NOT repeat.
 
 ## Changes
 
@@ -40,6 +50,12 @@ materi immediately.
   tema-grouping loop. No migration; the store already loads the column.
 - `internal/handler/laporan_xlsx.go` — Kurikulum sheet gains a
   "Kelompok" column between Sub-Tema and Materi (adjust widths).
+- `internal/handler/laporan.go` (instansiMap) — read two more settings
+  keys and add them to the `instansi` block: `instansi_alamat` →
+  `alamat`, `instansi_title` → `title`. Best-effort, empty string on
+  missing/err (same pattern as `instansi_name`/`instansi_logo`). The
+  settings store is generic key/value with no allowlist, so no
+  schema/handler change is needed for the new keys.
 
 ### Frontend
 
@@ -67,7 +83,45 @@ materi immediately.
     printout.
 - `web/app/src/locales/{id,en}.json` — new keys under
   `achievement.laporan.*`: `bukaSemua`, `tutupSemua` (and a count label
-  if needed). Status-count labels reuse existing keys. id/en parity.
+  if needed). New keys under `instansi.*` for the two new settings
+  fields (`alamatLabel`, `alamatHint`, `reportTitleLabel`,
+  `reportTitleHint`). Status-count labels reuse existing keys. id/en
+  parity.
+
+### Letterhead (custom kop) in Settings
+
+- `web/app/src/pages/sections/InstansiSection.tsx` — add two inputs to
+  the existing form and include them in the single batch
+  `updateSettings` call:
+  - **Alamat** (`instansi_alamat`) — multiline textarea, free text.
+  - **Judul laporan** (`instansi_title`) — single-line text, the title
+    line printed on the report kop. Empty → kop simply omits the title
+    line.
+  No new API client work: `getSettings`/`updateSettings` already pass
+  arbitrary keys.
+
+### Report kop + print pagination
+
+- `web/app/src/components/LaporanRapor.tsx` — kop renders, in order:
+  logo, `GNRS {instansi.name}`, `instansi.alamat` (small, muted, only
+  if present), then `instansi.title` (only if present) and the period
+  label + date range. Existing layout otherwise unchanged.
+- **Slim running header**: a `.laporan-running-head` element (murid name
+  · periode) that is `display:none` on screen and `position: fixed;
+  top: 0` only under `@media print`. Use the opaque-cover technique so
+  it does not double up on page 1: the in-flow full kop has a solid
+  white background and sits above the fixed running head on page 1;
+  on pages 2+ (no in-flow kop) only the running head shows. Reserve top
+  space on continued pages via `@page { margin-top }` / content padding
+  so body text never slides under the fixed line.
+- Page numbers are left to the browser's own print footer (the 🖨 Print
+  button calls `window.print()`, and Chrome's CSS `counter(page)` is not
+  available outside page-margin boxes). The running header carries
+  context (name · periode), not a page count. Document this in the PR so
+  it is a known, intentional limitation, and tune the exact print CSS
+  during the browser test pass (print preview is part of the loop).
+- New print CSS lives in `web/app/src/index.css` next to the existing
+  `#laporan-print-area` rules.
 
 ## Out of scope
 
@@ -75,7 +129,11 @@ materi immediately.
 - Refactoring the Curriculum tab or extracting a shared tree component.
   Only the pure grouping helper may be shared if it extracts trivially;
   the two render paths stay separate.
-- Any change to endpoint shape beyond the one additive field.
+- Any change to endpoint shape beyond additive fields (`kelompokMateri`
+  on items; `alamat` + `title` inside the existing `instansi` object).
+- Per-report free-text header override (rejected in favor of the shared
+  Settings letterhead). Printed page numbers via CSS (left to the
+  browser print footer).
 
 ## Edge cases
 
@@ -104,3 +162,8 @@ materi immediately.
     column.
   - Switching murid/period resets the open state to the new
     changed-in-period default.
+  - Pengaturan → Instansi: set Alamat + Judul laporan, save, reload the
+    report → kop shows the new address and title line.
+  - Print preview of a multi-page report: page 1 has the full kop;
+    pages 2+ show only the slim running header (murid · periode), no
+    full-kop repeat and no double header on page 1.
