@@ -13,6 +13,7 @@ export type LaporanKehadiran = {
 export type LaporanItem = {
   materi: string
   subTema: string
+  kelompokMateri?: string
   status: 'belum' | 'proses' | 'tuntas'
   changedInPeriod: boolean
   tanggal?: string | null
@@ -31,7 +32,7 @@ export type LaporanLibrary = {
 export type LaporanResponse = {
   murid: { id: string; name: string; nickname: string | null; userCode: string | null; level?: string | null; kelompok: string | null }
   kelas: { id: string; nama: string; tingkat: string; tahun: number; waliName: string | null } | null
-  instansi: { name: string; logo: string }
+  instansi: { name: string; logo: string; alamat?: string; title?: string }
   periode: { from: string; to: string }
   kehadiran: LaporanKehadiran
   kurikulum: LaporanTema[]
