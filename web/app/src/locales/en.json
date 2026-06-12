@@ -1039,6 +1039,10 @@
       "pctHadir": "% Present",
       "kurikulum": "Curriculum Achievement",
       "legend": "achieved/changed within this period",
+      "bukaSemua": "Expand all",
+      "tutupSemua": "Collapse all",
+      "changedCount": "{{n}} changed",
+      "countLine": "{{tuntas}} done · {{proses}} in progress · {{belum}} not started",
       "ringkasan": "Summary",
       "ringkasanLine": "{{tuntas}} completed · {{proses}} in progress · {{belum}} not started · {{pct}}% completed",
       "library": "Library Achievement",
@@ -1429,6 +1433,12 @@
     "namaLabel": "Organization name",
     "namaHint": "Appears after the word GNRS — e.g. US, PPG Surabaya, etc.",
     "namaPh": "US",
+    "alamatLabel": "Address",
+    "alamatHint": "Printed on the report letterhead, below the institution name.",
+    "alamatPh": "123 Example St, City, Province",
+    "reportTitleLabel": "Report title",
+    "reportTitleHint": "Title line on the report letterhead — e.g. LAPORAN HASIL BELAJAR.",
+    "reportTitlePh": "LAPORAN HASIL BELAJAR",
     "previewLabel": "Header preview"
   },
   "kurikulum": {

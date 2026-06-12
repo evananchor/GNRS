@@ -29,12 +29,16 @@ export function InstansiSection() {
 
   const [nama, setNama] = useState('')
   const [logoData, setLogoData] = useState<string>('')
+  const [alamat, setAlamat] = useState('')
+  const [reportTitle, setReportTitle] = useState('')
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setNama(settings.instansi_name ?? '')
     setLogoData(settings.instansi_logo ?? '')
-  }, [settings.instansi_name, settings.instansi_logo])
+    setAlamat(settings.instansi_alamat ?? '')
+    setReportTitle(settings.instansi_title ?? '')
+  }, [settings.instansi_name, settings.instansi_logo, settings.instansi_alamat, settings.instansi_title])
 
   const mut = useMutation({
     mutationFn: (updates: Record<string, string>) => updateSettings(updates),
@@ -63,6 +67,8 @@ export function InstansiSection() {
     mut.mutate({
       instansi_name: nama.trim(),
       instansi_logo: logoData,
+      instansi_alamat: alamat.trim(),
+      instansi_title: reportTitle.trim(),
     })
   }
 
@@ -129,6 +135,34 @@ export function InstansiSection() {
               onChange={(e) => setNama(e.target.value)}
               placeholder={t('instansi.namaPh')}
               maxLength={100}
+            />
+          </Field>
+          <Field
+            label={t('instansi.alamatLabel')}
+            htmlFor="instansi-alamat"
+            hint={t('instansi.alamatHint')}
+          >
+            <textarea
+              id="instansi-alamat"
+              value={alamat}
+              onChange={(e) => setAlamat(e.target.value)}
+              placeholder={t('instansi.alamatPh')}
+              maxLength={200}
+              rows={2}
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+            />
+          </Field>
+          <Field
+            label={t('instansi.reportTitleLabel')}
+            htmlFor="instansi-title"
+            hint={t('instansi.reportTitleHint')}
+          >
+            <Input
+              id="instansi-title"
+              value={reportTitle}
+              onChange={(e) => setReportTitle(e.target.value)}
+              placeholder={t('instansi.reportTitlePh')}
+              maxLength={120}
             />
           </Field>
           <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2">

@@ -91,14 +91,14 @@ func (h *Laporan) writeXlsx(w http.ResponseWriter, rep *laporanResponse) {
 		}
 		kr++
 	}
-	kset("Tema", "Sub Tema", "Materi", "Status", "Berubah Dlm Periode", "Tanggal")
+	kset("Tema", "Sub Tema", "Kelompok", "Materi", "Status", "Berubah Dlm Periode", "Tanggal")
 	for _, tema := range rep.Kurikulum {
 		for _, it := range tema.Items {
 			tgl := ""
 			if it.Tanggal != nil {
 				tgl = *it.Tanggal
 			}
-			kset(tema.Tema, it.SubTema, it.Materi, it.Status, it.ChangedInPeriod, tgl)
+			kset(tema.Tema, it.SubTema, it.KelompokMateri, it.Materi, it.Status, it.ChangedInPeriod, tgl)
 		}
 	}
 
