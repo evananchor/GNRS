@@ -11,6 +11,10 @@ import {
   type PencapaianStatus,
 } from '@/api/pencapaian'
 import { LibraryRefLabel } from '@/components/LibraryRefLabel'
+import { getLaporanMurid, laporanXlsxUrl, type LaporanParams } from '@/api/laporan'
+import { listTahunAjaran, type TahunAjaran } from '@/api/tahunAjaran'
+import { LaporanRapor } from '@/components/LaporanRapor'
+import { Button } from '@/components/Button'
 import { listBacaan } from '@/api/bacaan'
 import { listDoa } from '@/api/doa'
 import { listKitab } from '@/api/hadits'
@@ -58,7 +62,7 @@ const STATUS_CYCLE: PencapaianStatus[] = ['belum', 'proses', 'tuntas']
 
 export function AchievementPage() {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<'kurikulum' | 'library'>('kurikulum')
+  const [tab, setTab] = useState<'kurikulum' | 'library' | 'laporan'>('kurikulum')
   return (
     <PageShell
       header={
@@ -75,8 +79,11 @@ export function AchievementPage() {
         <TabButton active={tab === 'library'} onClick={() => setTab('library')}>
           {t('achievement.tabLibrary')}
         </TabButton>
+        <TabButton active={tab === 'laporan'} onClick={() => setTab('laporan')}>
+          {t('achievement.tabLaporan')}
+        </TabButton>
       </div>
-      {tab === 'kurikulum' ? <KurikulumTab /> : <LibraryTab />}
+      {tab === 'kurikulum' ? <KurikulumTab /> : tab === 'library' ? <LibraryTab /> : <LaporanTab />}
     </PageShell>
   )
 }
@@ -1504,6 +1511,179 @@ function DonutChart({ pct, centerLabel }: { pct: number; centerLabel: string }) 
       <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-emerald-900">
         {centerLabel}
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+// Semester date range from a tahun ajaran's start months. Sem 1 runs from
+// semester1StartMonth to the month before semester2StartMonth (wrapping the
+// year when s2 <= s1); Sem 2 runs from semester2StartMonth to the month
+// before the NEXT semester 1. Base year comes from tanggalMulai.
+function semesterRange(ta: TahunAjaran, sem: 1 | 2): { from: string; to: string } {
+  const baseYear = ta.tanggalMulai ? Number(ta.tanggalMulai.slice(0, 4)) : new Date().getFullYear()
+  const s1 = ta.semester1StartMonth || 7
+  const s2 = ta.semester2StartMonth || 1
+  const abs = (y: number, m: number) => y * 12 + (m - 1)
+  const s1Abs = abs(baseYear, s1)
+  const s2Abs = s2 <= s1 ? abs(baseYear + 1, s2) : abs(baseYear, s2)
+  const nextS1Abs = abs(baseYear + 1, s1)
+  const [fromAbs, toAbs] = sem === 1 ? [s1Abs, s2Abs - 1] : [s2Abs, nextS1Abs - 1]
+  const toDate = (a: number, end: boolean) => {
+    const y = Math.floor(a / 12)
+    const m = (a % 12) + 1
+    const d = end ? new Date(y, m, 0).getDate() : 1
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  }
+  return { from: toDate(fromAbs, false), to: toDate(toAbs, true) }
+}
+
+function LaporanTab() {
+  const { t, i18n } = useTranslation()
+  const { user } = useAuth()
+  const isMurid = user?.role === 'murid'
+
+  const [muridUserId, setMuridUserId] = useState<string>(isMurid ? user!.id : '')
+  const now = new Date()
+  const [jenis, setJenis] = useState<'bulanan' | 'sem1' | 'sem2'>('bulanan')
+  const [bulan, setBulan] = useState(now.getMonth() + 1) // 1-12
+  const [tahun, setTahun] = useState(now.getFullYear())
+  const [taId, setTaId] = useState('')
+
+  const { data: students } = useQuery({
+    queryKey: ['students', { all: true }],
+    queryFn: () => listStudents({ status: 'active', limit: 500 }),
+    enabled: !isMurid,
+    staleTime: 60_000,
+  })
+  const { data: tingkatList = [] } = useQuery({
+    queryKey: ['tingkat'],
+    queryFn: listTingkat,
+    staleTime: 5 * 60_000,
+  })
+  const { data: taList = [] } = useQuery({
+    queryKey: ['tahun-ajaran'],
+    queryFn: listTahunAjaran,
+    staleTime: 5 * 60_000,
+  })
+
+  const activeTa = useMemo(() => taList.find((x) => x.active) ?? taList[0], [taList])
+  const pickedTa = useMemo(() => taList.find((x) => x.id === taId) ?? activeTa, [taList, taId, activeTa])
+
+  const periode = useMemo((): { from: string; to: string } | null => {
+    if (jenis === 'bulanan') {
+      const last = new Date(tahun, bulan, 0).getDate()
+      const mm = String(bulan).padStart(2, '0')
+      return { from: `${tahun}-${mm}-01`, to: `${tahun}-${mm}-${String(last).padStart(2, '0')}` }
+    }
+    if (!pickedTa) return null
+    return semesterRange(pickedTa, jenis === 'sem1' ? 1 : 2)
+  }, [jenis, bulan, tahun, pickedTa])
+
+  const params = useMemo((): LaporanParams | null => {
+    if (!periode) return null
+    const p: LaporanParams = { ...periode }
+    const student = students?.items.find((s) => s.id === muridUserId)
+    const tk = student?.level
+      ? tingkatList.find((x) => x.nama.toLowerCase() === String(student.level).toLowerCase() && x.umur != null)
+      : undefined
+    if (tk?.umur != null) {
+      p.fromUmur = tk.umur
+      p.toUmur = tk.umur
+      if (jenis !== 'bulanan') {
+        p.fromSem = jenis === 'sem1' ? 1 : 2
+        p.toSem = p.fromSem
+      }
+    }
+    return p
+  }, [periode, students, muridUserId, tingkatList, jenis])
+
+  const { data, isFetching, isError } = useQuery({
+    queryKey: ['laporan', muridUserId, params],
+    queryFn: () => getLaporanMurid(muridUserId, params!),
+    enabled: Boolean(muridUserId && params),
+  })
+
+  const BULAN = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(i18n.language, { month: 'long' })
+    return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(2000, i, 1)))
+  }, [i18n.language])
+
+  const periodeLabel =
+    jenis === 'bulanan'
+      ? t('achievement.laporan.titleBulanan', { bulan: BULAN[bulan - 1], tahun })
+      : t('achievement.laporan.titleSemester', { sem: jenis === 'sem1' ? 1 : 2, ta: pickedTa?.nama ?? '' })
+
+  return (
+    <div className="space-y-4 p-4 md:p-6">
+      <div className="flex flex-wrap items-end gap-3 print:hidden">
+        {!isMurid ? (
+          <label className="text-sm">
+            <span className="mb-1 block text-xs font-medium text-slate-600">{t('achievement.laporan.murid')}</span>
+            <select
+              value={muridUserId}
+              onChange={(e) => setMuridUserId(e.target.value)}
+              className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
+            >
+              <option value="">{t('common.selectPrompt')}</option>
+              {(students?.items ?? []).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}{s.nickname ? ` (${s.nickname})` : ''}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
+        <label className="text-sm">
+          <span className="mb-1 block text-xs font-medium text-slate-600">{t('achievement.laporan.jenis')}</span>
+          <select value={jenis} onChange={(e) => setJenis(e.target.value as typeof jenis)} className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm">
+            <option value="bulanan">{t('achievement.laporan.bulanan')}</option>
+            <option value="sem1" disabled={!pickedTa}>{t('achievement.laporan.semester1')}</option>
+            <option value="sem2" disabled={!pickedTa}>{t('achievement.laporan.semester2')}</option>
+          </select>
+        </label>
+
+        {jenis === 'bulanan' ? (
+          <>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-slate-600">{t('achievement.laporan.bulan')}</span>
+              <select value={bulan} onChange={(e) => setBulan(Number(e.target.value))} className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm">
+                {BULAN.map((b, i) => <option key={i} value={i + 1}>{b}</option>)}
+              </select>
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-slate-600">{t('achievement.laporan.tahun')}</span>
+              <input type="number" value={tahun} onChange={(e) => setTahun(Number(e.target.value) || now.getFullYear())} className="h-9 w-24 rounded-md border border-slate-300 bg-white px-2 text-sm" />
+            </label>
+          </>
+        ) : (
+          <label className="text-sm">
+            <span className="mb-1 block text-xs font-medium text-slate-600">{t('achievement.laporan.tahunAjaran')}</span>
+            <select value={pickedTa?.id ?? ''} onChange={(e) => setTaId(e.target.value)} className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm">
+              {taList.map((x) => <option key={x.id} value={x.id}>{x.nama}{x.active ? ' ✓' : ''}</option>)}
+            </select>
+          </label>
+        )}
+
+        <div className="ml-auto flex gap-2">
+          <Button variant="secondary" size="sm" disabled={!data} onClick={() => window.print()}>
+            🖨 {t('achievement.laporan.cetak')}
+          </Button>
+          <Button size="sm" disabled={!muridUserId || !params} onClick={() => { if (params) window.open(laporanXlsxUrl(muridUserId, params), '_blank') }}>
+            ⬇ {t('achievement.laporan.unduhExcel')}
+          </Button>
+        </div>
+      </div>
+
+      {!muridUserId ? (
+        <p className="py-10 text-center text-sm text-slate-500">{t('achievement.laporan.pickMuridHint')}</p>
+      ) : isFetching ? (
+        <p className="py-10 text-center text-sm text-slate-500">{t('common.loading')}</p>
+      ) : isError ? (
+        <p className="py-10 text-center text-sm text-rose-600">{t('achievement.laporan.loadFailed')}</p>
+      ) : data ? (
+        <LaporanRapor data={data} periodeLabel={periodeLabel} />
+      ) : null}
     </div>
   )
 }
