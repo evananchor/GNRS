@@ -69,3 +69,33 @@
     }
   }
 }
+
+/* Laporan rapor print isolation: print ONLY the report area, A4-friendly. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #laporan-print-area,
+  #laporan-print-area * {
+    visibility: visible;
+  }
+  #laporan-print-area {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    max-width: none;
+    overflow: visible;
+  }
+  /* The app shell is height-locked + overflow-hidden for iOS; undo for print
+     so multi-page reports paginate instead of clipping to one viewport. */
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
