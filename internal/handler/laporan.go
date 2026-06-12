@@ -67,6 +67,7 @@ type laporanKehadiran struct {
 type laporanItem struct {
 	Materi          string  `json:"materi"`
 	SubTema         string  `json:"subTema"`
+	KelompokMateri  string  `json:"kelompokMateri,omitempty"`
 	Status          string  `json:"status"` // belum|proses|tuntas
 	ChangedInPeriod bool    `json:"changedInPeriod"`
 	Tanggal         *string `json:"tanggal,omitempty"`
@@ -165,13 +166,19 @@ func (h *Laporan) assemble(r *http.Request, muridID, from, to string) (*laporanR
 	// Instansi settings (best-effort — empty string on error).
 	instansiName := ""
 	instansiLogo := ""
+	instansiAlamat := ""
+	instansiTitle := ""
 	if cfg, err := h.settings.GetAll(r.Context()); err == nil {
 		instansiName = cfg["instansi_name"]
 		instansiLogo = cfg["instansi_logo"]
+		instansiAlamat = cfg["instansi_alamat"]
+		instansiTitle = cfg["instansi_title"]
 	}
 	instansiMap := map[string]any{
-		"name": instansiName,
-		"logo": instansiLogo,
+		"name":   instansiName,
+		"logo":   instansiLogo,
+		"alamat": instansiAlamat,
+		"title":  instansiTitle,
 	}
 
 	periodeMap := map[string]any{
@@ -248,9 +255,14 @@ func (h *Laporan) assemble(r *http.Request, muridID, from, to string) (*laporanR
 			tanggal = it.Pencapaian.Tanggal
 		}
 
+		kelompok := ""
+		if it.Materi.KelompokMateri != nil {
+			kelompok = strings.TrimSpace(*it.Materi.KelompokMateri)
+		}
 		temaMap[tema].Items = append(temaMap[tema].Items, laporanItem{
 			Materi:          it.Materi.DetailMateri,
 			SubTema:         it.Materi.SubTema,
+			KelompokMateri:  kelompok,
 			Status:          status,
 			ChangedInPeriod: inPeriod(it.Pencapaian, from, to),
 			Tanggal:         tanggal,
