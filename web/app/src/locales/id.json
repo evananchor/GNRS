@@ -1428,6 +1428,12 @@
     "namaLabel": "Nama instansi",
     "namaHint": "Muncul setelah kata GNRS — contoh: US, PPG Surabaya, dst.",
     "namaPh": "US",
+    "alamatLabel": "Alamat",
+    "alamatHint": "Dicetak di kop laporan, di bawah nama instansi.",
+    "alamatPh": "Jl. Contoh No. 1, Kota, Provinsi",
+    "reportTitleLabel": "Judul laporan",
+    "reportTitleHint": "Baris judul pada kop laporan — contoh: LAPORAN HASIL BELAJAR.",
+    "reportTitlePh": "LAPORAN HASIL BELAJAR",
     "previewLabel": "Preview header"
   },
   "kurikulum": {

@@ -1429,6 +1429,12 @@
     "namaLabel": "Organization name",
     "namaHint": "Appears after the word GNRS — e.g. US, PPG Surabaya, etc.",
     "namaPh": "US",
+    "alamatLabel": "Address",
+    "alamatHint": "Printed on the report letterhead, below the institution name.",
+    "alamatPh": "123 Example St, City, Province",
+    "reportTitleLabel": "Report title",
+    "reportTitleHint": "Title line on the report letterhead — e.g. LAPORAN HASIL BELAJAR.",
+    "reportTitlePh": "LAPORAN HASIL BELAJAR",
     "previewLabel": "Header preview"
   },
   "kurikulum": {
