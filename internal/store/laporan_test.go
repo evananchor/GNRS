@@ -59,12 +59,18 @@ func TestAttendanceCountForStudent(t *testing.T) {
 	seed("A1", "2026-06-01", "hadir")
 	seed("A2", "2026-06-08", "hadir")
 	seed("A3", "2026-06-15", "alfa")
-	seed("A4", "2026-07-01", "hadir") // outside range
+	seed("A4", "2026-07-01", "hadir") // outside range (after `to`)
+	// Live rows are written via Create as a time.Time, which go-sqlite3 stores
+	// as "YYYY-MM-DD 00:00:00+00:00". One sits exactly on the `to` boundary and
+	// one on the `from` boundary — both MUST be counted (regression guard for
+	// the raw-string vs date() comparison bug).
+	seed("A5", "2026-06-30 00:00:00+00:00", "hadir") // to-boundary, timestamp form
+	seed("A6", "2026-06-01 00:00:00+00:00", "izin_murid")
 	counts, err := at.CountForStudent(context.Background(), "MURID01", "2026-06-01", "2026-06-30")
 	if err != nil {
 		t.Fatalf("count: %v", err)
 	}
-	if counts["hadir"] != 2 || counts["alfa"] != 1 || counts["izin_murid"] != 0 {
+	if counts["hadir"] != 3 || counts["alfa"] != 1 || counts["izin_murid"] != 1 {
 		t.Fatalf("bad counts: %+v", counts)
 	}
 }
