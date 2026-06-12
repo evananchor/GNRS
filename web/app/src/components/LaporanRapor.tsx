@@ -86,7 +86,7 @@ export function LaporanRapor({ data, periodeLabel }: { data: LaporanResponse; pe
               <table className="w-full border-collapse text-sm">
                 <tbody>
                   {tema.items.map((it, i) => (
-                    <tr key={i} className="border-b border-slate-100">
+                    <tr key={`${it.materi}-${it.subTema}-${i}`} className="border-b border-slate-100">
                       <td className="px-2 py-1">
                         {it.changedInPeriod ? <span className="mr-1 text-emerald-600">●</span> : null}
                         {it.materi}
@@ -130,7 +130,7 @@ export function LaporanRapor({ data, periodeLabel }: { data: LaporanResponse; pe
             </thead>
             <tbody>
               {data.library.map((l, i) => (
-                <tr key={i}>
+                <tr key={`${l.kind}-${l.ref}-${i}`}>
                   <td className="border border-slate-200 px-2 py-1 capitalize">{l.changedInPeriod ? <span className="mr-1 text-emerald-600">●</span> : null}{l.kind}</td>
                   <td className="border border-slate-200 px-2 py-1">{l.aspect ?? '—'}</td>
                   <td className="border border-slate-200 px-2 py-1">{l.ref}</td>
@@ -151,7 +151,7 @@ export function LaporanRapor({ data, periodeLabel }: { data: LaporanResponse; pe
         <div className="grid grid-cols-2 gap-8 text-center text-sm">
           <div>
             <div className="mb-14">{t('achievement.laporan.ttdWali')}</div>
-            <div className="border-t border-dotted border-slate-400 pt-1 text-xs text-slate-500">{data.kelas?.waliName || '(' + t('achievement.laporan.nama') + ')'}</div>
+            <div className="border-t border-dotted border-slate-400 pt-1 text-xs text-slate-500">{data.kelas?.waliName ?? '(' + t('achievement.laporan.nama') + ')'}</div>
           </div>
           <div>
             <div className="mb-14">{t('achievement.laporan.ttdOrtu')}</div>
