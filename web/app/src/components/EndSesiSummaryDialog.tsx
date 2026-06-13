@@ -7,6 +7,7 @@ import { endSesi, type Sesi } from '@/api/sesi'
 import {
   listDiajarkan,
   updateDiajarkan,
+  deleteDiajarkan,
   type MateriDiajarkan,
 } from '@/api/diajarkan'
 import { listAnggota } from '@/api/kelas'
@@ -100,18 +101,6 @@ export function EndSesiSummaryDialog({
   })()
 
   // Localized helpers (depend on t).
-  const fmtDuration = (startedAt: string | null | undefined, endedAt: string | null | undefined) => {
-    if (!startedAt) return t('sesiDialog.summary.durationNone')
-    const start = new Date(startedAt).getTime()
-    const end = endedAt ? new Date(endedAt).getTime() : Date.now()
-    if (Number.isNaN(start) || Number.isNaN(end)) return t('sesiDialog.summary.durationNone')
-    const sec = Math.max(0, Math.floor((end - start) / 1000))
-    const h = Math.floor(sec / 3600)
-    const m = Math.floor((sec % 3600) / 60)
-    if (h > 0) return t('sesiDialog.summary.durationHM', { h, m })
-    return t('sesiDialog.summary.durationM', { m })
-  }
-
   const labelFor = (it: MateriDiajarkan): string => {
     if (it.label) return it.label
     if (it.ref) return `${it.kind}:${it.ref}`
@@ -204,6 +193,35 @@ export function EndSesiSummaryDialog({
     onError: (e: any) => toast(e?.message ?? t('sesiDialog.summary.saveFailed'), 'error'),
   })
 
+  // Remove a not-done materi row -----------------------------------------
+  const removeMut = useMutation({
+    mutationFn: (itemId: string) => deleteDiajarkan(sesi.id, itemId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['diajarkan', sesi.id] }),
+    onError: (e: any) => toast(e?.message ?? t('sesiDialog.summary.removeFailed'), 'error'),
+  })
+
+  // Editable duration (minutes) ------------------------------------------
+  const computeDefaultMin = () => {
+    if (!sesi.startedAt) return 0
+    const start = new Date(sesi.startedAt).getTime()
+    const end = sesi.endedAt ? new Date(sesi.endedAt).getTime() : Date.now()
+    if (Number.isNaN(start) || Number.isNaN(end)) return 0
+    return Math.max(0, Math.round((end - start) / 60000))
+  }
+  const [durasiMenit, setDurasiMenit] = useState<number>(() => computeDefaultMin())
+
+  useEffect(() => {
+    setDurasiMenit(computeDefaultMin())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesi.startedAt, sesi.endedAt])
+
+  const fmtDurationFromMin = (min: number) => {
+    const h = Math.floor(min / 60)
+    const m = min % 60
+    if (h > 0) return t('sesiDialog.summary.durationHM', { h, m })
+    return t('sesiDialog.summary.durationM', { m })
+  }
+
   // Build WA message for one student ---------------------------------------
   const messageFor = (murid: ManagedUser | null | undefined): { url: string | null; preview: string } => {
     if (!murid) return { url: null, preview: '' }
@@ -211,7 +229,11 @@ export function EndSesiSummaryDialog({
     const materiList =
       diajarkan.length === 0
         ? t('sesiDialog.summary.noMateriRecorded')
-        : diajarkan.map((it) => `• ${labelFor(it)}`).join('\n')
+        : diajarkan.map((it) =>
+            it.completed
+              ? `• ${labelFor(it)}`
+              : `• ${labelFor(it)} (${t('sesiDialog.summary.notDoneTag')})`
+          ).join('\n')
     const reviewItems = diajarkan
       .map((it) => ({ ...it, ...(edits[it.id] ?? { review: it.needsParentReview, note: it.parentNote ?? '' }) }))
       .filter((it) => it.review)
@@ -228,7 +250,7 @@ export function EndSesiSummaryDialog({
       murid_name: murid.name,
       topik: sesi.topik,
       tanggal: fmtDate(sesi.tanggal, months),
-      durasi: fmtDuration(sesi.startedAt, sesi.endedAt),
+      durasi: fmtDurationFromMin(durasiMenit),
       materi_list: materiList,
       review_section: reviewSection,
     })
@@ -252,9 +274,20 @@ export function EndSesiSummaryDialog({
               {t('sesiDialog.summary.subtitle', {
                 topik: sesi.topik,
                 date: fmtDate(sesi.tanggal, months),
-                durasi: fmtDuration(sesi.startedAt, sesi.endedAt),
+                durasi: fmtDurationFromMin(durasiMenit),
               })}
             </p>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className="text-xs text-slate-500">{t('sesiDialog.summary.durationEditLabel')}</span>
+              <input
+                type="number"
+                min={0}
+                value={durasiMenit}
+                onChange={(e) => setDurasiMenit(Math.max(0, Number(e.target.value) || 0))}
+                className="h-7 w-16 rounded-md border border-slate-300 px-2 text-xs"
+              />
+              <span className="text-xs text-slate-500">{t('sesiDialog.summary.minuteUnit')}</span>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -282,13 +315,32 @@ export function EndSesiSummaryDialog({
                   const e = edits[it.id] ?? { review: it.needsParentReview, note: it.parentNote ?? '' }
                   return (
                     <li key={it.id} className="rounded-lg border border-slate-200 p-3">
-                      <div className="mb-2 flex items-baseline gap-2">
+                      <div className="mb-2 flex items-center gap-2">
                         <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
                           {kindLabel(it.kind)}
                         </span>
-                        <span className="text-sm font-medium text-slate-900">
+                        <span className="flex-1 text-sm font-medium text-slate-900">
                           {labelFor(it)}
                         </span>
+                        {it.completed ? (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                            ✓ {t('sesiDialog.summary.statusDone')}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+                              ○ {t('sesiDialog.summary.statusNotDone')}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeMut.mutate(it.id)}
+                              disabled={removeMut.isPending}
+                              className="text-xs text-rose-600 hover:underline disabled:opacity-50"
+                            >
+                              {t('sesiDialog.summary.removeItem')}
+                            </button>
+                          </>
+                        )}
                       </div>
                       <label className="mb-2 flex items-center gap-2 text-sm text-slate-700">
                         <input

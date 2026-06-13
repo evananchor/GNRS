@@ -617,6 +617,13 @@
       "kindHadits": "Hadits",
       "kindTilawati": "Tilawati",
       "kindDoa": "Do'a",
+      "statusDone": "Done",
+      "statusNotDone": "Not done",
+      "removeItem": "Remove",
+      "removeFailed": "Failed to remove item",
+      "notDoneTag": "not done",
+      "durationEditLabel": "Duration",
+      "minuteUnit": "min",
       "monthsShort": [
         "Jan",
         "Feb",

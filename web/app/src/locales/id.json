@@ -616,6 +616,13 @@
       "kindHadits": "Hadits",
       "kindTilawati": "Tilawati",
       "kindDoa": "Do'a",
+      "statusDone": "Selesai",
+      "statusNotDone": "Belum selesai",
+      "removeItem": "Hapus",
+      "removeFailed": "Gagal menghapus materi",
+      "notDoneTag": "belum selesai",
+      "durationEditLabel": "Durasi",
+      "minuteUnit": "menit",
       "monthsShort": [
         "Jan",
         "Feb",
