@@ -32,6 +32,7 @@ export type MateriDiajarkanUpdate = {
   needsParentReview?: boolean
   parentNote?: string | null
   completed?: boolean
+  ref?: string | null
 }
 
 export function listDiajarkan(sesiId: string) {

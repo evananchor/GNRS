@@ -69,6 +69,7 @@ type diajarkanUpdateBody struct {
 	NeedsParentReview *bool   `json:"needsParentReview,omitempty"`
 	ParentNote        *string `json:"parentNote,omitempty"`
 	Completed         *bool   `json:"completed,omitempty"`
+	Ref               *string `json:"ref,omitempty"`
 }
 
 func (h *Diajarkan) Update(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +86,10 @@ func (h *Diajarkan) Update(w http.ResponseWriter, r *http.Request) {
 	if b.ParentNote != nil {
 		s := strings.TrimSpace(*b.ParentNote)
 		in.ParentNote = &s
+	}
+	if b.Ref != nil {
+		s := strings.TrimSpace(*b.Ref)
+		in.Ref = &s
 	}
 	v, err := h.s.Update(r.Context(), id, in)
 	if err != nil {
