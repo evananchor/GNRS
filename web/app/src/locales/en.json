@@ -804,7 +804,28 @@
       "doaTitle": "Prayers",
       "doaSub": "Daily prayers, memorization, and dzikir",
       "tilawatiTitle": "Tilawati",
-      "tilawatiSub": "6 volumes of the Qur'an-reading method"
+      "tilawatiSub": "6 volumes of the Qur'an-reading method",
+      "mediaTitle": "Media",
+      "mediaSub": "Learning slides & videos"
+    },
+    "media": {
+      "title": "Media",
+      "subtitle": "Learning slides and videos. Click \"Open\" to view in a new tab.",
+      "addBtn": "Add media",
+      "empty": "No media yet.",
+      "typeLabel": "Type",
+      "typePpt": "PPT",
+      "typeVideo": "Video",
+      "judulLabel": "Title",
+      "urlLabel": "URL",
+      "urlPlaceholder": "https://…",
+      "descLabel": "Description",
+      "openBtn": "Open",
+      "editBtn": "Edit",
+      "deleteBtn": "Delete",
+      "removeConfirmTitle": "Delete media",
+      "removeConfirmMsg": "Delete media \"{{name}}\"?",
+      "saveFailed": "Failed to save"
     },
     "asmaul": {
       "title": "Asmaul Husna",

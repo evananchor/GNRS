@@ -803,7 +803,28 @@
       "doaTitle": "Kumpulan Doa",
       "doaSub": "Doa-doa harian, hafalan, dan dzikir",
       "tilawatiTitle": "Tilawati",
-      "tilawatiSub": "6 jilid metode belajar baca Al-Qur'an"
+      "tilawatiSub": "6 jilid metode belajar baca Al-Qur'an",
+      "mediaTitle": "Media",
+      "mediaSub": "PPT & video pembelajaran"
+    },
+    "media": {
+      "title": "Media",
+      "subtitle": "Materi PPT dan video pembelajaran. Klik \"Buka\" untuk menampilkan di tab baru.",
+      "addBtn": "Tambah media",
+      "empty": "Belum ada media.",
+      "typeLabel": "Tipe",
+      "typePpt": "PPT",
+      "typeVideo": "Video",
+      "judulLabel": "Judul",
+      "urlLabel": "URL",
+      "urlPlaceholder": "https://…",
+      "descLabel": "Deskripsi",
+      "openBtn": "Buka",
+      "editBtn": "Ubah",
+      "deleteBtn": "Hapus",
+      "removeConfirmTitle": "Hapus media",
+      "removeConfirmMsg": "Hapus media \"{{name}}\"?",
+      "saveFailed": "Gagal simpan"
     },
     "asmaul": {
       "title": "Asmaul Husna",

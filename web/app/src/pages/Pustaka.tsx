@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Book, BookHeart, BookOpen, Sparkles, Star } from 'lucide-react'
+import { Book, BookHeart, BookOpen, Presentation, Sparkles, Star } from 'lucide-react'
 
 import { PageShell, PageHeader } from '@/components/PageShell'
 
@@ -63,6 +63,13 @@ export function PustakaPage() {
           title={t('pustaka.hub.tilawatiTitle')}
           sub={t('pustaka.hub.tilawatiSub')}
           accent="bg-orange-50 text-orange-700"
+        />
+        <BigCard
+          to="/pustaka/media"
+          icon={<Presentation size={20} />}
+          title={t('pustaka.hub.mediaTitle')}
+          sub={t('pustaka.hub.mediaSub')}
+          accent="bg-indigo-50 text-indigo-700"
         />
       </div>
     </PageShell>
