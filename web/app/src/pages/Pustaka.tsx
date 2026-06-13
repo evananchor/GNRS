@@ -87,7 +87,7 @@ function BigCard({
   const inner = (
     <div
       className={
-        'flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition ' +
+        'flex h-full items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition ' +
         (disabled ? 'opacity-60' : 'hover:border-slate-300 hover:shadow-md')
       }
     >
@@ -102,7 +102,7 @@ function BigCard({
   )
   if (disabled) return inner
   return (
-    <Link to={to} className="block">
+    <Link to={to} className="block h-full">
       {inner}
     </Link>
   )
