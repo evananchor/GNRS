@@ -184,6 +184,7 @@ type MateriDiajarkanUpdate struct {
 	NeedsParentReview *bool
 	ParentNote        *string
 	Completed         *bool
+	Ref               *string
 }
 
 func (s *DiajarkanStore) Update(ctx context.Context, id string, in MateriDiajarkanUpdate) (*MateriDiajarkan, error) {
@@ -218,6 +219,14 @@ func (s *DiajarkanStore) Update(ctx context.Context, id string, in MateriDiajark
 			args = append(args, now)
 		} else {
 			args = append(args, nil)
+		}
+	}
+	if in.Ref != nil {
+		sets = append(sets, "ref = ?")
+		if *in.Ref == "" {
+			args = append(args, nil)
+		} else {
+			args = append(args, *in.Ref)
 		}
 	}
 	if len(sets) == 0 {
