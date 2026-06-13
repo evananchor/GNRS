@@ -1187,7 +1187,7 @@ function AyahPopup({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="my-2 w-full max-w-2xl rounded-lg bg-white shadow-xl sm:my-8">
+      <div className="my-2 w-full max-w-2xl rounded-lg bg-white text-slate-900 shadow-xl sm:my-8">
         <div className="flex items-center justify-between border-b border-slate-200 bg-amber-50 px-4 py-3">
           <h3 className="text-base font-semibold">QS {ayah.kunciAyat}</h3>
           <button
