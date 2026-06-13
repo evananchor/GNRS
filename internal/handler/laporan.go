@@ -71,6 +71,8 @@ type laporanItem struct {
 	Status          string  `json:"status"` // belum|proses|tuntas
 	ChangedInPeriod bool    `json:"changedInPeriod"`
 	Tanggal         *string `json:"tanggal,omitempty"`
+	NilaiAngka      *int    `json:"nilaiAngka,omitempty"`
+	NilaiHuruf      string  `json:"nilaiHuruf,omitempty"`
 }
 
 type laporanTema struct {
@@ -87,10 +89,11 @@ type laporanLibrary struct {
 }
 
 type laporanRingkasan struct {
-	Tuntas    int     `json:"tuntas"`
-	Proses    int     `json:"proses"`
-	Belum     int     `json:"belum"`
-	PctTuntas float64 `json:"pctTuntas"`
+	Tuntas    int      `json:"tuntas"`
+	Proses    int      `json:"proses"`
+	Belum     int      `json:"belum"`
+	PctTuntas float64  `json:"pctTuntas"`
+	RataNilai *float64 `json:"rataNilai,omitempty"`
 }
 
 type laporanResponse struct {
@@ -229,6 +232,7 @@ func (h *Laporan) assemble(r *http.Request, muridID, from, to string) (*laporanR
 	temaOrder := []string{}
 	temaMap := map[string]*laporanTema{}
 	var tuntas, proses, belum int
+	nilaiSum, nilaiCount := 0, 0
 
 	for _, it := range items {
 		status := "belum"
@@ -255,6 +259,19 @@ func (h *Laporan) assemble(r *http.Request, muridID, from, to string) (*laporanR
 			tanggal = it.Pencapaian.Tanggal
 		}
 
+		var nilaiAngka *int
+		nilaiHuruf := ""
+		if it.Pencapaian != nil {
+			nilaiAngka = it.Pencapaian.NilaiAngka
+			if it.Pencapaian.NilaiHuruf != nil {
+				nilaiHuruf = *it.Pencapaian.NilaiHuruf
+			}
+		}
+		if nilaiAngka != nil {
+			nilaiSum += *nilaiAngka
+			nilaiCount++
+		}
+
 		kelompok := ""
 		if it.Materi.KelompokMateri != nil {
 			kelompok = strings.TrimSpace(*it.Materi.KelompokMateri)
@@ -266,6 +283,8 @@ func (h *Laporan) assemble(r *http.Request, muridID, from, to string) (*laporanR
 			Status:          status,
 			ChangedInPeriod: inPeriod(it.Pencapaian, from, to),
 			Tanggal:         tanggal,
+			NilaiAngka:      nilaiAngka,
+			NilaiHuruf:      nilaiHuruf,
 		})
 	}
 
@@ -279,11 +298,17 @@ func (h *Laporan) assemble(r *http.Request, muridID, from, to string) (*laporanR
 	if totalItems > 0 {
 		pctTuntas = float64(tuntas) * 100.0 / float64(totalItems)
 	}
+	var rataNilai *float64
+	if nilaiCount > 0 {
+		v := float64(int(float64(nilaiSum)/float64(nilaiCount)*10+0.5)) / 10
+		rataNilai = &v
+	}
 	ringkasan := laporanRingkasan{
 		Tuntas:    tuntas,
 		Proses:    proses,
 		Belum:     belum,
 		PctTuntas: pctTuntas,
+		RataNilai: rataNilai,
 	}
 
 	// Library pencapaian.

@@ -17,6 +17,8 @@ export type LaporanItem = {
   status: 'belum' | 'proses' | 'tuntas'
   changedInPeriod: boolean
   tanggal?: string | null
+  nilaiAngka?: number | null
+  nilaiHuruf?: string | null
 }
 
 export type LaporanTema = { tema: string; items: LaporanItem[] }
@@ -37,7 +39,7 @@ export type LaporanResponse = {
   kehadiran: LaporanKehadiran
   kurikulum: LaporanTema[]
   library: LaporanLibrary[]
-  ringkasan: { tuntas: number; proses: number; belum: number; pctTuntas: number }
+  ringkasan: { tuntas: number; proses: number; belum: number; pctTuntas: number; rataNilai?: number | null }
 }
 
 export type LaporanParams = {

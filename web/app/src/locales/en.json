@@ -1052,6 +1052,7 @@
       "countLine": "{{tuntas}} done · {{proses}} in progress · {{belum}} not started",
       "ringkasan": "Summary",
       "ringkasanLine": "{{tuntas}} completed · {{proses}} in progress · {{belum}} not started · {{pct}}% completed",
+      "rataNilai": "Average score",
       "library": "Library Achievement",
       "jenisCol": "Kind",
       "aspek": "Aspect",
@@ -1116,7 +1117,8 @@
     "unitAyat": "verses",
     "unitHalaman": "pages",
     "unitDoa": "prayer(s)",
-    "saveFailed": "Failed to save"
+    "saveFailed": "Failed to save",
+    "nilai": { "label": "Score" }
   },
   "libraryShell": {
     "backToAria": "Back to {{label}}",

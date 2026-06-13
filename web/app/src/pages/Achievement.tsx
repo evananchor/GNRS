@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, ChevronRight, Minus, Search, X } from 'lucide-react'
 
+import { hurufFromAngka } from '@/lib/nilai'
 import {
   listLibraryPencapaian,
   listPencapaian,
@@ -785,6 +786,33 @@ function MateriRow({
     mut.mutate(STATUS_CYCLE[(i + 1) % STATUS_CYCLE.length])
   }
 
+  const curNilai = row.pencapaian?.nilaiAngka ?? null
+  const [nilaiInput, setNilaiInput] = useState<string>(curNilai != null ? String(curNilai) : '')
+  useEffect(() => { setNilaiInput(curNilai != null ? String(curNilai) : '') }, [curNilai])
+
+  const nilaiMut = useMutation({
+    mutationFn: (angka: number | null) =>
+      upsertPencapaian({
+        muridUserId,
+        materiAjarId: m.id,
+        status,
+        nilaiAngka: angka,
+        nilaiHuruf: angka == null ? null : hurufFromAngka(angka),
+        tanggal: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pencapaian', muridUserId] }),
+    onError: (e) => toast(e instanceof ApiError ? e.message : t('achievement.saveFailed'), 'error'),
+  })
+
+  const commitNilai = () => {
+    const trimmed = nilaiInput.trim()
+    if (trimmed === '') { if (curNilai != null) nilaiMut.mutate(null); return }
+    let n = Math.round(Number(trimmed))
+    if (Number.isNaN(n)) { setNilaiInput(curNilai != null ? String(curNilai) : ''); return }
+    n = Math.max(0, Math.min(100, n))
+    if (n !== curNilai) nilaiMut.mutate(n)
+  }
+
   return (
     <li>
       <div className="flex items-start gap-3 px-9 py-1.5 text-sm">
@@ -823,6 +851,24 @@ function MateriRow({
             <div className="mt-0.5 text-xs text-slate-500">{row.pencapaian.catatan}</div>
           ) : null}
         </div>
+        {canEdit ? (
+          <div className="ml-auto flex flex-shrink-0 items-center gap-1.5">
+            <input
+              type="number" min={0} max={100} inputMode="numeric"
+              value={nilaiInput}
+              onChange={(e) => setNilaiInput(e.target.value)}
+              onBlur={commitNilai}
+              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+              placeholder={t('achievement.nilai.label')}
+              disabled={nilaiMut.isPending}
+              className="h-7 w-14 rounded-md border border-slate-300 px-1.5 text-right text-xs tabular-nums"
+              title={t('achievement.nilai.label')}
+            />
+            {nilaiInput.trim() !== '' && !Number.isNaN(Number(nilaiInput)) ? (
+              <span className="text-[10px] font-medium text-slate-500">{hurufFromAngka(Math.max(0, Math.min(100, Math.round(Number(nilaiInput)))))}</span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </li>
   )
