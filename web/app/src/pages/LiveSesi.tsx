@@ -63,6 +63,41 @@ function kindLabelKey(k: DiajarkanKind) {
   return `live.kind.${k}` as const
 }
 
+const PROGRESSABLE = new Set(['quran', 'hadits', 'tilawati'])
+
+// Pull the "from/to" portion out of an existing ref for prefill.
+function parseRange(kind: string, ref: string | null | undefined): { from: string; to: string } {
+  const r = ref ?? ''
+  if (kind === 'quran') {
+    const after = r.includes(':') ? r.split(':')[1] : ''
+    const [f, t] = after.split('-')
+    return { from: f ?? '', to: t ?? '' }
+  }
+  if (kind === 'tilawati') {
+    const after = r.includes('/') ? r.split('/')[1] : ''
+    const [f, t] = (after ?? '').split('-')
+    return { from: f ?? '', to: t ?? '' }
+  }
+  // hadits — free range like "from-to" or single
+  const [f, t] = r.split('-')
+  return { from: f ?? '', to: t ?? '' }
+}
+
+// Rebuild a ref string for the kind from from/to, preserving the surah/jilid prefix.
+function buildRange(kind: string, ref: string | null | undefined, from: string, to: string): string {
+  const f = from.trim(), t = to.trim()
+  const range = t ? `${f}-${t}` : f
+  if (kind === 'quran') {
+    const surah = (ref ?? '').split(':')[0] || (ref ?? '')
+    return `${surah}:${range}`
+  }
+  if (kind === 'tilawati') {
+    const jilid = (ref ?? '').split('/')[0] || (ref ?? '')
+    return `${jilid}/${range}`
+  }
+  return range
+}
+
 const AUTO_HIDE_KEY = 'gnrs.live.autoHideChrome'
 const EDGE_REVEAL_PX = 36 // pointer within this many px of the top/bottom edge reveals that bar
 const TOUCH_REVEAL_MS = 3500 // touch has no hover-out, so an edge-tapped bar re-hides after this
@@ -194,6 +229,21 @@ export function LiveSesiPage() {
     mutationFn: (itemId: string) =>
       updateDiajarkan(sesiId!, itemId, { completed: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['diajarkan', sesiId] }),
+    onError: (e: any) => toast(e?.message ?? t('live.markCompleteFailed'), 'error'),
+  })
+
+  const [rangeItem, setRangeItem] = useState<MateriDiajarkan | null>(null)
+  const [rangeFrom, setRangeFrom] = useState('')
+  const [rangeTo, setRangeTo] = useState('')
+
+  const completeWithRange = useMutation({
+    mutationFn: ({ id, ref }: { id: string; ref: string }) =>
+      updateDiajarkan(sesiId!, id, { completed: true, ref }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['diajarkan', sesiId] })
+      setRangeItem(null)
+      setPickerOpen(true)
+    },
     onError: (e: any) => toast(e?.message ?? t('live.markCompleteFailed'), 'error'),
   })
 
@@ -462,9 +512,17 @@ export function LiveSesiPage() {
             setPickerOpen(true)
           }}
           onSelesai={() => {
-            markComplete.mutate(current.id)
-            setReplaceConfirm(false)
-            setPickerOpen(true)
+            if (PROGRESSABLE.has(current.kind)) {
+              const { from, to } = parseRange(current.kind, current.ref)
+              setRangeFrom(from)
+              setRangeTo(to)
+              setRangeItem(current)
+              setReplaceConfirm(false)
+            } else {
+              markComplete.mutate(current.id)
+              setReplaceConfirm(false)
+              setPickerOpen(true)
+            }
           }}
         />
       ) : null}
@@ -490,6 +548,57 @@ export function LiveSesiPage() {
           }}
         />
       )}
+
+      {rangeItem ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setRangeItem(null) }}
+        >
+          <div className="w-full max-w-sm rounded-lg bg-white text-slate-900 p-4 shadow-xl">
+            <h3 className="mb-3 text-base font-semibold">{t('live.markRangeTitle')}</h3>
+            <div className="mb-3 text-sm text-slate-500">{rangeItem.label ?? rangeItem.ref}</div>
+            <div className="flex gap-3">
+              <label className="flex-1 text-sm">
+                <span className="mb-1 block text-xs font-medium text-slate-600">{t('live.rangeFrom')}</span>
+                <input
+                  value={rangeFrom}
+                  onChange={(e) => setRangeFrom(e.target.value)}
+                  className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm"
+                />
+              </label>
+              <label className="flex-1 text-sm">
+                <span className="mb-1 block text-xs font-medium text-slate-600">{t('live.rangeTo')}</span>
+                <input
+                  value={rangeTo}
+                  onChange={(e) => setRangeTo(e.target.value)}
+                  className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm"
+                />
+              </label>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRangeItem(null)}
+                className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                {t('live.rangeCancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => completeWithRange.mutate({
+                  id: rangeItem.id,
+                  ref: buildRange(rangeItem.kind, rangeItem.ref, rangeFrom, rangeTo),
+                })}
+                className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500"
+              >
+                {t('live.rangeConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

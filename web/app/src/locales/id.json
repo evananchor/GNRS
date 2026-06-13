@@ -1163,6 +1163,11 @@
     "changeModeFailed": "Gagal mengubah mode",
     "addMateriFailed": "Gagal menambah materi",
     "markCompleteFailed": "Gagal menandai selesai",
+    "markRangeTitle": "Sampai mana materi ini?",
+    "rangeFrom": "Dari",
+    "rangeTo": "Sampai",
+    "rangeConfirm": "Tandai selesai",
+    "rangeCancel": "Batal",
     "kind": {
       "kurikulum": "Kurikulum",
       "quran": "Al-Qur'an",
