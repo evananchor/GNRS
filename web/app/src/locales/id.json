@@ -1051,6 +1051,7 @@
       "countLine": "{{tuntas}} tuntas · {{proses}} proses · {{belum}} belum",
       "ringkasan": "Ringkasan",
       "ringkasanLine": "{{tuntas}} tuntas · {{proses}} proses · {{belum}} belum · {{pct}}% tuntas",
+      "rataNilai": "Rata-rata nilai",
       "library": "Pencapaian Library",
       "jenisCol": "Jenis",
       "aspek": "Aspek",

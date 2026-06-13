@@ -79,6 +79,11 @@ function ItemRow({ it }: { it: LaporanItem }) {
         <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', STATUS_CHIP[it.status])}>
           {t(`achievement.laporan.status.${it.status}`)}
         </span>
+        {it.nilaiAngka != null ? (
+          <span className="ml-1 text-[10px] font-semibold text-slate-700">
+            {it.nilaiAngka}{it.nilaiHuruf ? ` (${it.nilaiHuruf})` : ''}
+          </span>
+        ) : null}
       </td>
     </tr>
   )
@@ -290,6 +295,9 @@ export function LaporanRapor({ data, periodeLabel }: { data: LaporanResponse; pe
             tuntas: data.ringkasan.tuntas, proses: data.ringkasan.proses,
             belum: data.ringkasan.belum, pct: data.ringkasan.pctTuntas.toFixed(1),
           })}
+          {data.ringkasan.rataNilai != null ? (
+            <span className="ml-2">· {t('achievement.laporan.rataNilai')}: <span className="font-semibold">{data.ringkasan.rataNilai}</span></span>
+          ) : null}
         </div>
       </section>
 

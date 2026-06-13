@@ -1052,6 +1052,7 @@
       "countLine": "{{tuntas}} done · {{proses}} in progress · {{belum}} not started",
       "ringkasan": "Summary",
       "ringkasanLine": "{{tuntas}} completed · {{proses}} in progress · {{belum}} not started · {{pct}}% completed",
+      "rataNilai": "Average score",
       "library": "Library Achievement",
       "jenisCol": "Kind",
       "aspek": "Aspect",
