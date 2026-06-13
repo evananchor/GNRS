@@ -87,7 +87,7 @@ function BigCard({
   const inner = (
     <div
       className={
-        'flex h-full items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition ' +
+        'flex h-full min-h-[6.5rem] items-start gap-3 overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition ' +
         (disabled ? 'opacity-60' : 'hover:border-slate-300 hover:shadow-md')
       }
     >
@@ -95,8 +95,8 @@ function BigCard({
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="font-semibold text-slate-900">{title}</div>
-        <div className="mt-0.5 text-sm text-slate-500">{sub}</div>
+        <div className="line-clamp-1 font-semibold text-slate-900">{title}</div>
+        <div className="mt-0.5 line-clamp-2 text-sm text-slate-500">{sub}</div>
       </div>
     </div>
   )
