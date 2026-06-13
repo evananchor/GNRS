@@ -22,6 +22,7 @@ import {
   addDiajarkan,
   listDiajarkan,
   updateDiajarkan,
+  deleteDiajarkan,
   type DiajarkanKind,
   type MateriDiajarkan,
   type MateriDiajarkanInput,
@@ -34,6 +35,7 @@ import { PustakaTilawatiPage } from '@/pages/PustakaTilawati'
 import { MateriPicker } from '@/components/MateriPicker'
 import { LibraryRefLabel } from '@/components/LibraryRefLabel'
 import { EndSesiSummaryDialog } from '@/components/EndSesiSummaryDialog'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useToast } from '@/lib/toast'
 
 type DisplayMode = 'full' | 'title' | 'hidden'
@@ -229,6 +231,13 @@ export function LiveSesiPage() {
     mutationFn: (itemId: string) =>
       updateDiajarkan(sesiId!, itemId, { completed: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['diajarkan', sesiId] }),
+    onError: (e: any) => toast(e?.message ?? t('live.markCompleteFailed'), 'error'),
+  })
+
+  const [historyConfirmId, setHistoryConfirmId] = useState<string | null>(null)
+  const removeDiajarkanMut = useMutation({
+    mutationFn: (itemId: string) => deleteDiajarkan(sesiId!, itemId),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['diajarkan', sesiId] }); setHistoryConfirmId(null) },
     onError: (e: any) => toast(e?.message ?? t('live.markCompleteFailed'), 'error'),
   })
 
@@ -500,8 +509,19 @@ export function LiveSesiPage() {
           items={diajarkan}
           currentId={current?.id ?? null}
           onClose={() => setHistoryOpen(false)}
+          onRemove={(id) => setHistoryConfirmId(id)}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={historyConfirmId != null}
+        title={t('live.removeConfirmTitle')}
+        message={t('live.removeConfirmMsg')}
+        confirmLabel={t('live.removeItem')}
+        busy={removeDiajarkanMut.isPending}
+        onCancel={() => setHistoryConfirmId(null)}
+        onConfirm={() => { if (historyConfirmId) removeDiajarkanMut.mutate(historyConfirmId) }}
+      />
 
       {replaceConfirm && current ? (
         <ReplaceConfirmDialog
@@ -860,10 +880,12 @@ function HistoryPanel({
   items,
   currentId,
   onClose,
+  onRemove,
 }: {
   items: MateriDiajarkan[]
   currentId: string | null
   onClose: () => void
+  onRemove: (id: string) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -920,6 +942,13 @@ function HistoryPanel({
                   {t('live.itemNotDone')}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={() => onRemove(it.id)}
+                className="text-xs text-rose-600 hover:underline"
+              >
+                {t('live.removeItem')}
+              </button>
             </li>
           )
         })}

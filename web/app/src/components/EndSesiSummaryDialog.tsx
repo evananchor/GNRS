@@ -13,6 +13,7 @@ import {
 import { listAnggota } from '@/api/kelas'
 import { getUser, type ManagedUser } from '@/api/users'
 import { apiFetch } from '@/api/client'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useToast } from '@/lib/toast'
 
 /**
@@ -199,6 +200,7 @@ export function EndSesiSummaryDialog({
     onSuccess: () => qc.invalidateQueries({ queryKey: ['diajarkan', sesi.id] }),
     onError: (e: any) => toast(e?.message ?? t('sesiDialog.summary.removeFailed'), 'error'),
   })
+  const [confirmId, setConfirmId] = useState<string | null>(null)
 
   // Editable duration (minutes) ------------------------------------------
   const computeDefaultMin = () => {
@@ -327,20 +329,18 @@ export function EndSesiSummaryDialog({
                             ✓ {t('sesiDialog.summary.statusDone')}
                           </span>
                         ) : (
-                          <>
-                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
-                              ○ {t('sesiDialog.summary.statusNotDone')}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeMut.mutate(it.id)}
-                              disabled={removeMut.isPending}
-                              className="text-xs text-rose-600 hover:underline disabled:opacity-50"
-                            >
-                              {t('sesiDialog.summary.removeItem')}
-                            </button>
-                          </>
+                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+                            ○ {t('sesiDialog.summary.statusNotDone')}
+                          </span>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setConfirmId(it.id)}
+                          disabled={removeMut.isPending}
+                          className="text-xs text-rose-600 hover:underline disabled:opacity-50"
+                        >
+                          {t('sesiDialog.summary.removeItem')}
+                        </button>
                       </div>
                       <label className="mb-2 flex items-center gap-2 text-sm text-slate-700">
                         <input
@@ -510,6 +510,19 @@ export function EndSesiSummaryDialog({
           )
         })()}
       </div>
+
+      <ConfirmDialog
+        open={confirmId != null}
+        title={t('sesiDialog.summary.removeConfirmTitle')}
+        message={t('sesiDialog.summary.removeConfirmMsg')}
+        confirmLabel={t('sesiDialog.summary.removeItem')}
+        busy={removeMut.isPending}
+        onCancel={() => setConfirmId(null)}
+        onConfirm={() => {
+          if (confirmId) removeMut.mutate(confirmId)
+          setConfirmId(null)
+        }}
+      />
     </div>
   )
 }
