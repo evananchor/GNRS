@@ -449,10 +449,12 @@ func (h *Sesi) maybeLogQuranBacaan(ctx context.Context, s *store.Sesi) {
 }
 
 // SetLive accepts a sparse PATCH-style body to update the live-stage
-// projection state (current materi + display mode) while a sesi is running.
+// projection state (current materi + display mode + media) while a sesi is
+// running.
 type sesiLiveBody struct {
 	LiveMateriID    *string `json:"liveMateriId,omitempty"`
 	LiveDisplayMode *string `json:"liveDisplayMode,omitempty" validate:"omitempty,oneof=full title hidden"`
+	LiveMediaID     *string `json:"liveMediaId,omitempty"`
 }
 
 func (h *Sesi) SetLive(w http.ResponseWriter, r *http.Request) {
@@ -466,7 +468,7 @@ func (h *Sesi) SetLive(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	v, err := h.s.SetLive(r.Context(), id, b.LiveMateriID, b.LiveDisplayMode)
+	v, err := h.s.SetLive(r.Context(), id, b.LiveMateriID, b.LiveDisplayMode, b.LiveMediaID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			httpx.Error(w, http.StatusNotFound, "not_found", "Sesi tidak ditemukan")
