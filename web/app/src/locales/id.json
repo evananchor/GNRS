@@ -1196,6 +1196,11 @@
     "rangeTo": "Sampai",
     "rangeConfirm": "Tandai selesai",
     "rangeCancel": "Batal",
+    "showMedia": "Tampilkan media",
+    "closeMedia": "Tutup media",
+    "pickMedia": "Pilih media (PPT/Video)",
+    "setMediaFailed": "Gagal menampilkan media",
+    "noMedia": "Belum ada media di Library.",
     "kind": {
       "kurikulum": "Kurikulum",
       "quran": "Al-Qur'an",

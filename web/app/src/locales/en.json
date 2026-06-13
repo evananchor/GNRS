@@ -1197,6 +1197,11 @@
     "rangeTo": "To",
     "rangeConfirm": "Mark done",
     "rangeCancel": "Cancel",
+    "showMedia": "Show media",
+    "closeMedia": "Close media",
+    "pickMedia": "Pick media (PPT/Video)",
+    "setMediaFailed": "Failed to show media",
+    "noMedia": "No media in the Library yet.",
     "kind": {
       "kurikulum": "Curriculum",
       "quran": "Qur'an",

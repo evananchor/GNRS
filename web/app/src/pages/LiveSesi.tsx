@@ -6,16 +6,20 @@ import {
   CheckCircle2,
   ChevronLeft,
   EyeOff,
+  FileText,
   History,
   LayoutPanelTop,
   Maximize2,
   Minimize2,
+  MonitorPlay,
   PanelTopClose,
   PanelTopOpen,
   Radio,
   Replace,
   Square,
   Type,
+  Video,
+  X,
 } from 'lucide-react'
 
 import {
@@ -28,6 +32,7 @@ import {
   type MateriDiajarkanInput,
 } from '@/api/diajarkan'
 import { getSesi, setSesiLive } from '@/api/sesi'
+import { listMedia, type LibraryMedia } from '@/api/media'
 import { getDoa } from '@/api/doa'
 import { getMateriAjar } from '@/api/kurikulum'
 import { PustakaQuranMushafPage } from '@/pages/PustakaQuranMushaf'
@@ -221,6 +226,15 @@ export function LiveSesiPage() {
     onError: (e: any) => toast(e?.message ?? t('live.changeModeFailed'), 'error'),
   })
 
+  // Ad-hoc media (PPT/Video) overlaid on the stage. An empty string clears it
+  // server-side (→ NULL). Like setMode, the response is the updated sesi, so we
+  // prime the cache directly; the 5s sesi poll mirrors it to all viewers.
+  const setMedia = useMutation({
+    mutationFn: (mediaId: string | null) => setSesiLive(sesiId!, { liveMediaId: mediaId ?? '' }),
+    onSuccess: (data) => qc.setQueryData(['sesi', sesiId], data),
+    onError: (e: any) => toast(e?.message ?? t('live.setMediaFailed'), 'error'),
+  })
+
   const add = useMutation({
     mutationFn: (input: MateriDiajarkanInput) => addDiajarkan(sesiId!, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['diajarkan', sesiId] }),
@@ -269,6 +283,7 @@ export function LiveSesiPage() {
   }
 
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false)
   const [endOpen, setEndOpen] = useState(false)
   const [replaceConfirm, setReplaceConfirm] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -305,7 +320,7 @@ export function LiveSesiPage() {
         ? 'live'
         : 'pre'
 
-  const anyOverlayOpen = pickerOpen || endOpen || replaceConfirm || historyOpen
+  const anyOverlayOpen = pickerOpen || mediaPickerOpen || endOpen || replaceConfirm || historyOpen
   const edge = useEdgeChrome({
     enabled: autoHide,
     suspended: !current || anyOverlayOpen,
@@ -409,12 +424,16 @@ export function LiveSesiPage() {
 
       {/* Stage */}
       <main className={overlay ? 'absolute inset-0 overflow-hidden' : 'relative flex-1 overflow-hidden'}>
-        <Stage
-          mode={displayMode}
-          current={current}
-          onPick={requestPickMateri}
-          canEdit={liveStatus === 'live'}
-        />
+        {sesi.liveMediaId ? (
+          <MediaStage mediaId={sesi.liveMediaId} />
+        ) : (
+          <Stage
+            mode={displayMode}
+            current={current}
+            onPick={requestPickMateri}
+            canEdit={liveStatus === 'live'}
+          />
+        )}
       </main>
 
       {/* Bottom toolbar */}
@@ -445,6 +464,28 @@ export function LiveSesiPage() {
           <Replace size={14} />
           <span className="hidden sm:inline">{current ? t('live.replaceMateri') : t('live.pickMateri')}</span>
         </button>
+        <button
+          onClick={() => setMediaPickerOpen(true)}
+          disabled={liveStatus !== 'live'}
+          title={t('live.showMedia')}
+          aria-label={t('live.showMedia')}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-xs font-medium hover:bg-neutral-800 disabled:opacity-50 sm:px-3"
+        >
+          <MonitorPlay size={14} />
+          <span className="hidden sm:inline">{t('live.showMedia')}</span>
+        </button>
+        {sesi.liveMediaId ? (
+          <button
+            onClick={() => setMedia.mutate(null)}
+            disabled={liveStatus !== 'live' || setMedia.isPending}
+            title={t('live.closeMedia')}
+            aria-label={t('live.closeMedia')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-600/60 bg-amber-500/15 px-2.5 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 disabled:opacity-50 sm:px-3"
+          >
+            <X size={14} />
+            <span className="hidden sm:inline">{t('live.closeMedia')}</span>
+          </button>
+        ) : null}
         <div className="flex items-center gap-0.5 rounded-lg border border-neutral-700 p-0.5">
           <ModeBtn
             active={displayMode === 'full'}
@@ -554,6 +595,16 @@ export function LiveSesiPage() {
           onPick={(input) => {
             add.mutate(input)
             setPickerOpen(false)
+          }}
+        />
+      )}
+
+      {mediaPickerOpen && (
+        <MediaPicker
+          onClose={() => setMediaPickerOpen(false)}
+          onPick={(id) => {
+            setMedia.mutate(id)
+            setMediaPickerOpen(false)
           }}
         />
       )}
@@ -821,6 +872,115 @@ function DoaStage({ item }: { item: MateriDiajarkan }) {
 
 function Centered({ children }: { children: React.ReactNode }) {
   return <div className="grid h-full place-items-center text-neutral-500">{children}</div>
+}
+
+// MediaStage — full-screen embed of an ad-hoc PPT/Video from the Library. Shown
+// in place of the materi when the sesi has a liveMediaId; mirrored to all
+// viewers via the 5s sesi poll. Resolves the media from the shared
+// ['library-media'] cache that the picker also fills.
+function MediaStage({ mediaId }: { mediaId: string }) {
+  const { t } = useTranslation()
+  const { data: media = [] } = useQuery({
+    queryKey: ['library-media'],
+    queryFn: listMedia,
+    staleTime: 60_000,
+  })
+  const m = media.find((x) => x.id === mediaId)
+  if (!m) {
+    return (
+      <div className="flex h-full items-center justify-center text-neutral-400">
+        {t('live.loadingMateri')}
+      </div>
+    )
+  }
+  return (
+    <div className="h-full w-full bg-black">
+      <iframe
+        src={m.embedUrl}
+        title={m.title}
+        className="h-full w-full border-0"
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  )
+}
+
+// MediaPicker — light dialog (the stage is dark) listing Library media so the
+// teacher can push one onto the stage. Styled like the rangeItem dialog above.
+function MediaPicker({
+  onClose,
+  onPick,
+}: {
+  onClose: () => void
+  onPick: (id: string) => void
+}) {
+  const { t } = useTranslation()
+  const { data: media = [], isLoading } = useQuery({
+    queryKey: ['library-media'],
+    queryFn: listMedia,
+    staleTime: 60_000,
+  })
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-lg bg-white text-slate-900 shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <h3 className="text-base font-semibold">{t('live.pickMedia')}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+            aria-label={t('common.cancel')}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          {isLoading ? (
+            <div className="py-8 text-center text-sm text-slate-500">{t('live.loadingMateri')}</div>
+          ) : media.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-500">{t('live.noMedia')}</div>
+          ) : (
+            <ul className="space-y-1">
+              {media.map((m: LibraryMedia) => (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(m.id)}
+                    className="flex w-full items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-left hover:border-emerald-400 hover:bg-emerald-50"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500">
+                      {m.type === 'video' ? <Video size={18} /> : <FileText size={18} />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-slate-900">{m.title}</span>
+                      <span className="block text-xs uppercase tracking-wide text-slate-400">{m.type}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="flex justify-end border-t border-slate-200 px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            {t('live.rangeCancel')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // Replace confirm — ditampilkan saat guru mengklik "Ganti Materi" dan
