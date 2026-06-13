@@ -186,6 +186,7 @@ func run() error {
 	settings := store.NewSettings(db)
 	attendances := store.NewAttendances(db)
 	diajarkan := store.NewDiajarkan(db)
+	libraryMedia := store.NewLibraryMedia(db)
 	wilayah := store.NewWilayah(db)
 
 	if err := store.SeedKarakter(context.Background(), db); err != nil {
@@ -331,6 +332,12 @@ func run() error {
 			p.Get("/quran/surahs", quranH.Surahs)
 			p.Get("/quran/surahs/{id}", quranH.Surah)
 			p.Get("/quran/pages/{n}", quranH.Page)
+
+			mediaH := handler.NewMedia(libraryMedia)
+			p.Get("/library/media", mediaH.List)
+			p.Post("/library/media", mediaH.Create)
+			p.Patch("/library/media/{id}", mediaH.Update)
+			p.Delete("/library/media/{id}", mediaH.Delete)
 
 			doaH := handler.NewDoa(doaStore)
 			p.Get("/compact-ajar", doaH.List)

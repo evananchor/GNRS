@@ -30,6 +30,7 @@ export type Sesi = {
   endedAt?: string | null
   liveMateriId?: string | null
   liveDisplayMode?: 'full' | 'title' | 'hidden' | null
+  liveMediaId?: string | null
   createdBy?: string | null
   jadwalId?: string | null
   createdAt: string
@@ -99,6 +100,7 @@ export function endSesi(id: string) {
 export type SesiLiveInput = {
   liveMateriId?: string | null
   liveDisplayMode?: 'full' | 'title' | 'hidden' | null
+  liveMediaId?: string | null
 }
 
 export function setSesiLive(id: string, input: SesiLiveInput) {

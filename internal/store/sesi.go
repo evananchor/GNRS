@@ -32,6 +32,7 @@ type Sesi struct {
 	EndedAt       *string  `json:"endedAt,omitempty"`
 	LiveMateriID    *string `json:"liveMateriId,omitempty"`
 	LiveDisplayMode *string `json:"liveDisplayMode,omitempty"`
+	LiveMediaID     *string `json:"liveMediaId,omitempty"`
 	CreatedBy     *string  `json:"createdBy,omitempty"`
 	CreatedAt     string   `json:"createdAt"`
 	UpdatedAt     string   `json:"updatedAt"`
@@ -89,7 +90,7 @@ func (s *SesiStore) AttachRencana(r *RencanaStore) { s.rencana = r }
 
 const sesiCols = `id, tanggal, mulai, selesai, topik, catatan, tingkat,
 	materi_ajar_id, guru_id, kelas_id, library_kind, library_aspect, library_ref,
-	started_at, ended_at, live_materi_id, live_display_mode,
+	started_at, ended_at, live_materi_id, live_display_mode, live_media_id,
 	created_by, created_at, updated_at, jadwal_id`
 
 // loadMateriIDs fills MateriAjarIDs on every sesi in the slice. Uses a
@@ -423,9 +424,9 @@ func (s *SesiStore) Create(ctx context.Context, in SesiInput, createdBy string) 
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO sesi (id, tanggal, mulai, selesai, topik, catatan, tingkat,
 		   materi_ajar_id, guru_id, kelas_id, library_kind, library_aspect, library_ref,
-		   started_at, ended_at, live_materi_id, live_display_mode,
+		   started_at, ended_at, live_materi_id, live_display_mode, live_media_id,
 		   created_by, created_at, updated_at, jadwal_id)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?)`,
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, ?, ?)`,
 		id, in.Tanggal, in.Mulai, in.Selesai, in.Topik, in.Catatan, in.Tingkat,
 		primary, in.GuruID, in.KelasID,
 		in.LibraryKind, in.LibraryAspect, in.LibraryRef,
@@ -551,7 +552,7 @@ func (s *SesiStore) SetEnded(ctx context.Context, id string) (*Sesi, error) {
 	now := time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	res, err := s.db.ExecContext(ctx,
 		`UPDATE sesi SET ended_at = COALESCE(ended_at, ?),
-		   live_materi_id = NULL, live_display_mode = NULL,
+		   live_materi_id = NULL, live_display_mode = NULL, live_media_id = NULL,
 		   updated_at = ? WHERE id = ?`,
 		now, now, id,
 	)
@@ -564,10 +565,10 @@ func (s *SesiStore) SetEnded(ctx context.Context, id string) (*Sesi, error) {
 	return s.Get(ctx, id)
 }
 
-// SetLive updates which materi is currently being shown on the live stage
-// and the display mode. Pointers are sparse — nil means "leave unchanged".
-// Pass empty-string pointers to clear a column.
-func (s *SesiStore) SetLive(ctx context.Context, id string, materiID, displayMode *string) (*Sesi, error) {
+// SetLive updates which materi / media is currently being shown on the live
+// stage and the display mode. Pointers are sparse — nil means "leave
+// unchanged". Pass empty-string pointers to clear a column.
+func (s *SesiStore) SetLive(ctx context.Context, id string, materiID, displayMode, mediaID *string) (*Sesi, error) {
 	sets := []string{}
 	args := []any{}
 	if materiID != nil {
@@ -584,6 +585,14 @@ func (s *SesiStore) SetLive(ctx context.Context, id string, materiID, displayMod
 			args = append(args, nil)
 		} else {
 			args = append(args, *displayMode)
+		}
+	}
+	if mediaID != nil {
+		sets = append(sets, "live_media_id = ?")
+		if *mediaID == "" {
+			args = append(args, nil)
+		} else {
+			args = append(args, *mediaID)
 		}
 	}
 	if len(sets) == 0 {
@@ -611,7 +620,7 @@ func scanSesi(s scanner) (*Sesi, error) {
 		&v.MateriAjarID, &v.GuruID, &v.KelasID,
 		&v.LibraryKind, &v.LibraryAspect, &v.LibraryRef,
 		&v.StartedAt, &v.EndedAt,
-		&v.LiveMateriID, &v.LiveDisplayMode,
+		&v.LiveMateriID, &v.LiveDisplayMode, &v.LiveMediaID,
 		&v.CreatedBy,
 		&v.CreatedAt, &v.UpdatedAt, &v.JadwalID,
 	); err != nil {

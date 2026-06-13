@@ -19,6 +19,7 @@ import { PustakaHaditsPage } from '@/pages/PustakaHadits'
 import { PustakaKitabDetailPage } from '@/pages/PustakaKitabDetail'
 import { PustakaDoaPage } from '@/pages/PustakaDoa'
 import { PustakaTilawatiPage } from '@/pages/PustakaTilawati'
+import { PustakaMediaPage } from '@/pages/PustakaMedia'
 import { AchievementPage } from '@/pages/Achievement'
 import { UsersPage } from '@/pages/Users'
 import { UserNewPage } from '@/pages/UserNew'
@@ -78,6 +79,7 @@ export function App() {
         {/* Maktabah hidden: redirect to Hadits Himpunan. */}
         <Route path="/pustaka/maktabah" element={<Navigate to="/pustaka/hadits-himpunan" replace />} />
         <Route path="/pustaka/kitab/:slug" element={<PustakaKitabDetailPage />} />
+        <Route path="/pustaka/media" element={<PustakaMediaPage />} />
         <Route path="/achievement" element={<AchievementPage />} />
 
         {/* Pengaturan: tabbed layout for Pengguna + Kurikulum (single page). */}
