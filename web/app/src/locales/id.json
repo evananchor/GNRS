@@ -1115,7 +1115,8 @@
     "unitAyat": "ayat",
     "unitHalaman": "halaman",
     "unitDoa": "doa",
-    "saveFailed": "Gagal simpan"
+    "saveFailed": "Gagal simpan",
+    "nilai": { "label": "Nilai" }
   },
   "libraryShell": {
     "backToAria": "Kembali ke {{label}}",
