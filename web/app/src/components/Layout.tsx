@@ -5,7 +5,6 @@ import {
   BookOpenCheck,
   CalendarCheck,
   ChevronLeft,
-  ChevronRight,
   LayoutDashboard,
   LogOut,
   School,
@@ -189,22 +188,32 @@ export function Layout() {
             collapsed ? 'flex-col items-center gap-2 px-2 py-4' : 'items-center justify-between px-5 py-4',
           )}
         >
-          <Link
-            to="/dashboard"
-            className="text-base font-semibold"
-            title={collapsed ? 'GNRS' : undefined}
-          >
-            <Brand collapsed={collapsed} />
-          </Link>
-          <button
-            type="button"
-            onClick={() => setCollapsed((v) => !v)}
-            className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            aria-label={collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
-            title={collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              className="rounded-md p-0.5 text-slate-700 transition hover:bg-slate-100"
+              aria-label={t('nav.expandSidebar')}
+              title={t('nav.expandSidebar')}
+            >
+              <Brand collapsed />
+            </button>
+          ) : (
+            <>
+              <Link to="/dashboard" className="text-base font-semibold">
+                <Brand />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                aria-label={t('nav.collapseSidebar')}
+                title={t('nav.collapseSidebar')}
+              >
+                <ChevronLeft size={16} />
+              </button>
+            </>
+          )}
         </div>
         <nav className={cn('flex-1 space-y-1', collapsed ? 'p-2' : 'p-3')}>
           {items.map((it) => (
