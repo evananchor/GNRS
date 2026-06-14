@@ -96,6 +96,10 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Headline numbers show active students and teachers only.",
+    "liveNow": {
+      "title": "Live session now",
+      "join": "Join"
+    },
     "loadFailed": "Failed to load dashboard data.",
     "activeStudents": "Active students",
     "activeTeachers": "Active teachers",

@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { GraduationCap, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, GraduationCap, Radio, Users } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -15,8 +17,11 @@ import {
 
 import { getDashboardStats, type Bucket, type LevelKelompokCell } from '@/api/stats'
 import { STUDENT_KELOMPOKS, STUDENT_LEVELS } from '@/api/types'
+import { listSesi } from '@/api/sesi'
+import { listAnggota, listKelas } from '@/api/kelas'
 import { StudentLocationMap } from '@/components/StudentLocationMap'
 import { PageShell, PageHeader } from '@/components/PageShell'
+import { useAuth } from '@/lib/auth'
 
 const GENDER_COLORS: Record<string, string> = {
   female: '#ec4899',
@@ -55,6 +60,7 @@ export function DashboardPage() {
   return (
     <PageShell header={header}>
       <div className="space-y-6">
+      <LiveNowCard />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <KPICard
           icon={<Users size={20} />}
@@ -94,6 +100,78 @@ export function DashboardPage() {
       </ChartCard>
       </div>
     </PageShell>
+  )
+}
+
+// LiveNowCard surfaces an in-progress session for a murid/ortu so they can
+// join the live stage straight from the dashboard. Backend has no "my live
+// sesi" endpoint, so we bound a ±1-day sesi list, keep the ones that are
+// started-but-not-ended, and confirm membership via the kelas anggota list
+// (usually 0-1 live sessions, so the per-sesi anggota fetch is cheap). Renders
+// nothing for presenters or when no live session involves this user.
+function LiveNowCard() {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+  const isViewer = user?.role === 'murid' || user?.role === 'ortu'
+
+  const range = useMemo(() => {
+    const p = (n: number) => String(n).padStart(2, '0')
+    const fmt = (d: Date) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+    const now = new Date()
+    const from = new Date(now)
+    from.setDate(from.getDate() - 1)
+    const to = new Date(now)
+    to.setDate(to.getDate() + 1)
+    return { from: fmt(from), to: fmt(to) }
+  }, [])
+
+  const { data: sesi } = useQuery({
+    queryKey: ['my-live-sesi', user?.id, range.from, range.to],
+    enabled: !!user?.id && isViewer,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const sesis = await listSesi({ from: range.from, to: range.to })
+      const live = sesis.filter((s) => s.startedAt && !s.endedAt && s.kelasId)
+      for (const s of live) {
+        const anggota = await listAnggota(s.kelasId!)
+        if (anggota.some((a) => a.muridUserId === user!.id)) return s
+      }
+      return null
+    },
+  })
+
+  const { data: kelasList = [] } = useQuery({
+    queryKey: ['kelas'],
+    queryFn: () => listKelas({}),
+    enabled: !!sesi,
+    staleTime: 60_000,
+  })
+
+  if (!isViewer || !sesi) return null
+  const kelasName = sesi.kelasId ? kelasList.find((k) => k.id === sesi.kelasId)?.nama : null
+
+  return (
+    <Link
+      to={`/kelas/${sesi.kelasId ?? ''}/sesi/${sesi.id}/live`}
+      className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 transition hover:bg-red-100"
+    >
+      <span className="relative flex h-3 w-3 shrink-0">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+        <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-red-700">
+          <Radio size={15} /> {t('dashboard.liveNow.title')}
+        </div>
+        <div className="mt-0.5 truncate text-sm text-slate-700">
+          {kelasName ? `${kelasName} · ` : ''}
+          {sesi.topik}
+        </div>
+      </div>
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white">
+        {t('dashboard.liveNow.join')} <ArrowRight size={15} />
+      </span>
+    </Link>
   )
 }
 

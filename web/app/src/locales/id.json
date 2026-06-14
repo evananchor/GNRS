@@ -96,6 +96,10 @@
   "dashboard": {
     "title": "Dasbor",
     "subtitle": "Angka utama menampilkan Generus dan Pengajar yang masih aktif.",
+    "liveNow": {
+      "title": "Sesi live sekarang",
+      "join": "Gabung"
+    },
     "loadFailed": "Gagal memuat data dasbor.",
     "activeStudents": "Generus aktif",
     "activeTeachers": "Pengajar aktif",
