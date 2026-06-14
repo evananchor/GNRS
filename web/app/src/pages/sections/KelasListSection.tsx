@@ -448,6 +448,12 @@ function KelasFormDialog({
     staleTime: 60_000,
   })
   const guruOptions = gurus?.items ?? []
+  const [guruSearch, setGuruSearch] = useState('')
+  const filteredGuru = useMemo(() => {
+    const q = guruSearch.trim().toLowerCase()
+    if (!q) return guruOptions
+    return guruOptions.filter((g) => g.name.toLowerCase().includes(q))
+  }, [guruOptions, guruSearch])
 
   const [muridSearch, setMuridSearch] = useState('')
   const { data: studentsRes } = useQuery({
@@ -573,13 +579,26 @@ function KelasFormDialog({
           htmlFor="kelas-guru"
           hint={t('kelasSection.list.form.guruHint')}
         >
+          {guruOptions.length > 0 ? (
+            <Input
+              id="kelas-guru"
+              placeholder={t('kelasSection.list.form.guruSearchPh')}
+              value={guruSearch}
+              onChange={(e) => setGuruSearch(e.target.value)}
+              className="mb-2"
+            />
+          ) : null}
           <div className="max-h-44 overflow-y-auto rounded-md border border-slate-300 bg-white">
             {guruOptions.length === 0 ? (
               <p className="px-3 py-2 text-xs text-slate-500">
                 {t('kelasSection.list.form.guruEmpty')}
               </p>
+            ) : filteredGuru.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                {t('kelasSection.list.form.guruNoMatch')}
+              </p>
             ) : (
-              guruOptions.map((g) => {
+              filteredGuru.map((g) => {
                 const checked = pickedGuru.includes(g.id)
                 const isPrimary = pickedGuru[0] === g.id
                 return (

@@ -350,6 +350,8 @@
         "guru": "Guru pengajar",
         "guruHint": "Bisa pilih lebih dari satu — guru pertama menjadi wali kelas.",
         "guruEmpty": "Belum ada user dengan role guru.",
+        "guruSearchPh": "Cari nama guru…",
+        "guruNoMatch": "Tidak ada guru yang cocok.",
         "guruWali": "wali",
         "muridLabel": "Murid ({{count}} dipilih)",
         "muridHint": "Pilih generus aktif. Tingkat akan menyesuaikan murid pertama bila kosong.",
