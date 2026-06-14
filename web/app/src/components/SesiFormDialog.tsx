@@ -251,11 +251,15 @@ export function SesiFormDialog({
           </select>
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('sesiDialog.form.tanggalLabel')} htmlFor="sesi-tanggal" error={errors.tanggal?.message}>
+        {/* Date / Start / End share a compact 3-col row on mobile; on desktop
+            the `order`/`col-span` reflows back to the original Date+Topic and
+            Start+End pairs. Topic stays full-width on mobile (room to type). */}
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-2 sm:gap-4">
+          <Field className="order-1" label={t('sesiDialog.form.tanggalLabel')} htmlFor="sesi-tanggal" error={errors.tanggal?.message}>
             <Input id="sesi-tanggal" type="date" {...register('tanggal')} />
           </Field>
           <Field
+            className="order-4 col-span-3 sm:order-2 sm:col-span-1"
             label={t('sesiDialog.form.topikLabel')}
             htmlFor="sesi-topik"
             error={errors.topik?.message}
@@ -273,11 +277,9 @@ export function SesiFormDialog({
               {...register('topik')}
             />
           </Field>
-        </div>
-
-        {/* Simple time inputs + dial popup. */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('sesiDialog.form.mulaiLabel')} htmlFor="sesi-mulai">
+          {/* Time inputs + dial popup. The dial button is hidden on mobile (the
+              native time picker covers it) so the 3-col row stays uncramped. */}
+          <Field className="order-2 sm:order-3" label={t('sesiDialog.form.mulaiLabel')} htmlFor="sesi-mulai">
             <div className="flex items-center gap-1">
               <Input
                 id="sesi-mulai"
@@ -290,7 +292,7 @@ export function SesiFormDialog({
                 type="button"
                 onClick={() => setDialOpenFor('start')}
                 disabled={pending}
-                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                className="hidden h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 sm:inline-flex"
                 aria-label={t('sesiDialog.form.dialMulaiAria')}
                 title={t('sesiDialog.form.dialTitle')}
               >
@@ -298,7 +300,7 @@ export function SesiFormDialog({
               </button>
             </div>
           </Field>
-          <Field label={t('sesiDialog.form.selesaiLabel')} htmlFor="sesi-selesai">
+          <Field className="order-3 sm:order-4" label={t('sesiDialog.form.selesaiLabel')} htmlFor="sesi-selesai">
             <div className="flex items-center gap-1">
               <Input
                 id="sesi-selesai"
@@ -311,7 +313,7 @@ export function SesiFormDialog({
                 type="button"
                 onClick={() => setDialOpenFor('end')}
                 disabled={pending}
-                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                className="hidden h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 sm:inline-flex"
                 aria-label={t('sesiDialog.form.dialSelesaiAria')}
                 title={t('sesiDialog.form.dialTitle')}
               >

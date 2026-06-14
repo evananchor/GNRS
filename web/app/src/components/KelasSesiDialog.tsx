@@ -79,7 +79,7 @@ export function KelasSesiDialog({
   }
 
   const { user } = useAuth()
-  const canManage = isAdmin || (user?.id != null && k.guruUserId === user.id)
+  const canManage = isAdmin || (user?.id != null && (k.guruUserIds ?? []).includes(user.id))
 
   // Auto-generate recurring sesi when an admin/wali opens the class (rolling,
   // idempotent). Best-effort: no schedule or no permission → silently ignored.
@@ -142,7 +142,7 @@ export function KelasSesiDialog({
             {t('kelasSection.list.cardSubtitle', { tingkat: k.tingkat, tahun: k.tahun })}
           </p>
         </div>
-        {isAdmin ? (
+        {canManage ? (
           <Button size="sm" onClick={() => setAddingSesi(true)}>
             <Plus size={14} className="mr-1" /> {t('kelasSection.list.addSesi')}
           </Button>
@@ -167,7 +167,7 @@ export function KelasSesiDialog({
                 </div>
                 <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
                   {buckets[st].map((s) => {
-                    const canResched = isAdmin && !s.endedAt && (st === 'upcoming' || st === 'missed' || st === 'ongoing')
+                    const canResched = canManage && !s.endedAt && (st === 'upcoming' || st === 'missed' || st === 'ongoing')
                     return (
                       <li key={s.id} className="flex items-center gap-1.5 px-3 py-2">
                         {s.endedAt ? (
@@ -201,7 +201,7 @@ export function KelasSesiDialog({
                             </div>
                           </div>
                         )}
-                        {isAdmin ? (
+                        {canManage ? (
                           <>
                             {!s.startedAt ? (
                               <button

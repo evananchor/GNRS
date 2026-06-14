@@ -351,6 +351,8 @@
         "guru": "Teachers",
         "guruHint": "Can pick more than one — the first teacher becomes the homeroom.",
         "guruEmpty": "No users with the teacher role yet.",
+        "guruSearchPh": "Search teacher name…",
+        "guruNoMatch": "No matching teachers.",
         "guruWali": "homeroom",
         "muridLabel": "Students ({{count}} selected)",
         "muridHint": "Pick active students. Level will match the first student if blank.",
