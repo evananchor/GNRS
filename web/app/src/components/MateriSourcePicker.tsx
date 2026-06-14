@@ -13,6 +13,7 @@ import { Button } from '@/components/Button'
 import { Dialog } from '@/components/Dialog'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/Input'
+import { LibraryRefLabel } from '@/components/LibraryRefLabel'
 
 /**
  * MateriSourcePicker — choose what content the sesi will cover. The user
@@ -210,7 +211,13 @@ export function MateriSourcePicker({
                     {KIND_LABEL[it.libraryKind]}
                     {it.libraryAspect ? ` · ${ASPECT_LABEL[it.libraryAspect]}` : ''}
                   </div>
-                  <div className="text-sm font-medium text-slate-800">{it.libraryRef}</div>
+                  <LibraryRefLabel
+                    libraryKind={it.libraryKind}
+                    libraryRef={it.libraryRef}
+                    libraryAspect={it.libraryAspect}
+                    showKind={false}
+                    className="text-sm font-medium text-slate-800"
+                  />
                 </div>
                 <button
                   type="button"
