@@ -1149,6 +1149,7 @@
   },
   "live": {
     "statusLive": "Live",
+    "viewerHint": "Anda menonton",
     "statusDone": "Selesai",
     "statusPre": "Belum dimulai",
     "endSesi": "Akhiri",

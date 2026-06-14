@@ -42,6 +42,7 @@ import { LibraryRefLabel } from '@/components/LibraryRefLabel'
 import { EndSesiSummaryDialog } from '@/components/EndSesiSummaryDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useToast } from '@/lib/toast'
+import { useAuth } from '@/lib/auth'
 
 type DisplayMode = 'full' | 'title' | 'hidden'
 
@@ -195,6 +196,14 @@ export function LiveSesiPage() {
   const toast = useToast()
   const qc = useQueryClient()
   const { t } = useTranslation()
+  const { user } = useAuth()
+  // Presenters (guru/admin/staff/pengurus) drive the stage; everyone else
+  // (murid, ortu) gets a read-only viewer mirroring what the presenter shows.
+  const canPresent =
+    user?.role === 'admin' ||
+    user?.role === 'staff' ||
+    user?.role === 'pengurus' ||
+    user?.role === 'guru'
 
   const sesiQ = useQuery({
     queryKey: ['sesi', sesiId],
@@ -412,7 +421,7 @@ export function LiveSesiPage() {
         <div className="font-mono text-sm tabular-nums text-neutral-300">
           {formatElapsed(sesi.startedAt, now)}
         </div>
-        {liveStatus === 'live' && (
+        {canPresent && liveStatus === 'live' && (
           <button
             onClick={() => setEndOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
@@ -431,7 +440,7 @@ export function LiveSesiPage() {
             mode={displayMode}
             current={current}
             onPick={requestPickMateri}
-            canEdit={liveStatus === 'live'}
+            canEdit={canPresent && liveStatus === 'live'}
           />
         )}
       </main>
@@ -454,6 +463,8 @@ export function LiveSesiPage() {
             : footerBase
         }
       >
+        {canPresent && (
+          <>
         <button
           onClick={requestPickMateri}
           disabled={liveStatus !== 'live'}
@@ -509,6 +520,13 @@ export function LiveSesiPage() {
             icon={<EyeOff size={14} />}
           />
         </div>
+          </>
+        )}
+        {!canPresent && (
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] text-neutral-400">
+            <Radio size={14} /> {t('live.viewerHint')}
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-2">
           {diajarkan.length > 0 ? (
             <button
@@ -549,6 +567,7 @@ export function LiveSesiPage() {
         <HistoryPanel
           items={diajarkan}
           currentId={current?.id ?? null}
+          canRemove={canPresent}
           onClose={() => setHistoryOpen(false)}
           onRemove={(id) => setHistoryConfirmId(id)}
         />
@@ -1039,11 +1058,13 @@ function ReplaceConfirmDialog({
 function HistoryPanel({
   items,
   currentId,
+  canRemove,
   onClose,
   onRemove,
 }: {
   items: MateriDiajarkan[]
   currentId: string | null
+  canRemove: boolean
   onClose: () => void
   onRemove: (id: string) => void
 }) {
@@ -1102,13 +1123,15 @@ function HistoryPanel({
                   {t('live.itemNotDone')}
                 </span>
               )}
-              <button
-                type="button"
-                onClick={() => onRemove(it.id)}
-                className="text-xs text-rose-600 hover:underline"
-              >
-                {t('live.removeItem')}
-              </button>
+              {canRemove ? (
+                <button
+                  type="button"
+                  onClick={() => onRemove(it.id)}
+                  className="text-xs text-rose-600 hover:underline"
+                >
+                  {t('live.removeItem')}
+                </button>
+              ) : null}
             </li>
           )
         })}

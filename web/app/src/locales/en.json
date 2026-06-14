@@ -1150,6 +1150,7 @@
   },
   "live": {
     "statusLive": "Live",
+    "viewerHint": "You're watching",
     "statusDone": "Finished",
     "statusPre": "Not started",
     "endSesi": "End",
