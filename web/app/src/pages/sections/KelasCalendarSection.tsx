@@ -837,6 +837,20 @@ function DayPopup({
                           <Trash2 size={16} />
                         </button>
                       </div>
+                    ) : s.startedAt && !s.endedAt ? (
+                      <Link
+                        to={`/kelas/${s.kelasId ?? ''}/sesi/${s.id}/live`}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                        aria-label={t('kelasSection.calendar.liveStage')}
+                        title={t('kelasSection.calendar.openLive')}
+                      >
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                        </span>
+                        <Radio size={13} />
+                        Live
+                      </Link>
                     ) : null}
                   </li>
                 )
