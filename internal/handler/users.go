@@ -144,9 +144,12 @@ func (h *Users) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if u.Role == model.RoleMurid {
-		if links, err2 := h.users.GetMuridOrtu(r.Context(), id); err2 == nil {
-			u.Ortu = links
+		links, err2 := h.users.GetMuridOrtu(r.Context(), id)
+		if err2 != nil {
+			httpx.Error(w, http.StatusInternalServerError, "ortu_fetch", err2.Error())
+			return
 		}
+		u.Ortu = links
 	}
 	httpx.JSON(w, http.StatusOK, u)
 }
@@ -225,14 +228,23 @@ func (h *Users) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if model.Role(b.Role) == model.RoleMurid {
 		if b.AyahID != nil && *b.AyahID != "" {
-			_ = h.users.SetMuridOrtu(r.Context(), u.ID, "ayah", *b.AyahID)
+			if err2 := h.users.SetMuridOrtu(r.Context(), u.ID, "ayah", *b.AyahID); err2 != nil {
+				httpx.Error(w, http.StatusInternalServerError, "ortu_link", err2.Error())
+				return
+			}
 		}
 		if b.IbuID != nil && *b.IbuID != "" {
-			_ = h.users.SetMuridOrtu(r.Context(), u.ID, "ibu", *b.IbuID)
+			if err2 := h.users.SetMuridOrtu(r.Context(), u.ID, "ibu", *b.IbuID); err2 != nil {
+				httpx.Error(w, http.StatusInternalServerError, "ortu_link", err2.Error())
+				return
+			}
 		}
-		if links, err2 := h.users.GetMuridOrtu(r.Context(), u.ID); err2 == nil {
-			u.Ortu = links
+		links, err2 := h.users.GetMuridOrtu(r.Context(), u.ID)
+		if err2 != nil {
+			httpx.Error(w, http.StatusInternalServerError, "ortu_fetch", err2.Error())
+			return
 		}
+		u.Ortu = links
 	}
 	httpx.JSON(w, http.StatusCreated, u)
 }
@@ -392,9 +404,12 @@ func (h *Users) Update(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		if links, err2 := h.users.GetMuridOrtu(r.Context(), id); err2 == nil {
-			u.Ortu = links
+		links, err2 := h.users.GetMuridOrtu(r.Context(), id)
+		if err2 != nil {
+			httpx.Error(w, http.StatusInternalServerError, "ortu_fetch", err2.Error())
+			return
 		}
+		u.Ortu = links
 	}
 	httpx.JSON(w, http.StatusOK, u)
 }

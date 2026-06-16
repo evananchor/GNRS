@@ -539,7 +539,15 @@ func nullableLevel(l *model.StudentLevel) any {
 // Returns an empty slice (not an error) when the murid has no linked ortu.
 func (u *Users) GetMuridOrtu(ctx context.Context, muridID string) ([]model.OrtuLink, error) {
 	rows, err := u.db.QueryContext(ctx,
-		`SELECT mo.relation, `+userColumns+`
+		`SELECT mo.relation,
+		 ou.id, ou.email, ou.username, ou.password, ou.name, ou.role, ou.active,
+		 ou.nickname, ou.date_of_birth, ou.gender, ou.no_hp, ou.alamat, ou.kelompok,
+		 ou.level, ou.phone_region,
+		 ou.desa, ou.daerah, ou.notes,
+		 ou.photo_path, ou.timezone,
+		 ou.user_code, ou.tempat_lahir, ou.pendidikan, ou.pekerjaan,
+		 ou.urutan, ou.hide_dob, ou.tgl_daftar,
+		 ou.created_at, ou.updated_at
 		 FROM murid_ortu mo
 		 JOIN users ou ON ou.id = mo.ortu_id
 		 WHERE mo.murid_id = ?
