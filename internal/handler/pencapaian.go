@@ -48,13 +48,17 @@ func (h *Pencapaian) canSeeMurid(r *http.Request, muridUserID string) bool {
 	case "admin", "pengurus", "guru":
 		return true
 	case "ortu":
-		// Match by parent_email.
-		m, err := h.users.FindByID(r.Context(), muridUserID)
+		// Check if caller is linked as ortu (ayah/ibu) for this murid.
+		links, err := h.users.GetMuridOrtu(r.Context(), muridUserID)
 		if err != nil {
 			return false
 		}
-		return m.ParentEmail != nil &&
-			strings.EqualFold(strings.TrimSpace(*m.ParentEmail), strings.TrimSpace(caller.Email))
+		for _, l := range links {
+			if l.User.ID == caller.ID {
+				return true
+			}
+		}
+		return false
 	case "murid":
 		return caller.ID == muridUserID
 	default:

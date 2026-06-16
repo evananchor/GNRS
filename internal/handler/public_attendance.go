@@ -141,16 +141,14 @@ func (h *PublicAttendance) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	normalizedPhone := messaging.Normalize(b.SubmittedPhone)
-	phonePtr := &normalizedPhone
 
 	att, err := h.attendances.Create(r.Context(), store.AttendanceInput{
-		Date:           date,
-		DurationMin:    b.DurationMin,
-		TeacherID:      b.TeacherID,
-		StudentID:      b.StudentID,
-		Status:         model.AttendanceStatus(b.Status),
-		Materi:         trimPtr(b.Materi),
-		SubmittedPhone: phonePtr,
+		Date:        date,
+		DurationMin: b.DurationMin,
+		TeacherID:   b.TeacherID,
+		StudentID:   b.StudentID,
+		Status:      model.AttendanceStatus(b.Status),
+		Materi:      trimPtr(b.Materi),
 	})
 	if err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal menyimpan kehadiran")
