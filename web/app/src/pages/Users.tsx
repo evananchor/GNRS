@@ -32,6 +32,7 @@ import { PhotoUploader } from '@/components/PhotoUploader'
 import { RowActions } from '@/components/RowActions'
 import { PageShell } from '@/components/PageShell'
 import { WilayahPicker } from '@/components/WilayahPicker'
+import { OrtuPicker } from '@/components/OrtuPicker'
 
 const PAGE_SIZE = 25
 
@@ -648,6 +649,18 @@ function UserEditForm({
     setF((p) => ({ ...p, [k]: v }))
   const apiError = error instanceof ApiError ? error.message : null
 
+  const [ayahId, setAyahId] = useState<string | null>(
+    initial.ortu?.find((o) => o.relation === 'ayah')?.user.id ?? null,
+  )
+  const [ibuId, setIbuId] = useState<string | null>(
+    initial.ortu?.find((o) => o.relation === 'ibu')?.user.id ?? null,
+  )
+  const [clearAyah, setClearAyah] = useState(false)
+  const [clearIbu, setClearIbu] = useState(false)
+
+  const linkedAyah = initial.ortu?.find((o) => o.relation === 'ayah')?.user
+  const linkedIbu = initial.ortu?.find((o) => o.relation === 'ibu')?.user
+
   const selectCls =
     'h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400'
 
@@ -675,6 +688,12 @@ function UserEditForm({
           daerah: f.daerah.trim(),
           desa: f.desa.trim(),
           kelompok: f.kelompok.trim(),
+          ...(f.role === 'murid' ? {
+            ayahId: ayahId ?? undefined,
+            clearAyahId: clearAyah,
+            ibuId: ibuId ?? undefined,
+            clearIbuId: clearIbu,
+          } : {}),
         })
       }}
     >
@@ -746,6 +765,36 @@ function UserEditForm({
           onChange={(v) => setF((p) => ({ ...p, ...v }))}
         />
       </section>
+
+      {(f.role === 'murid') && (
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700">
+            {t('users.ortu.sectionTitle')}
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-slate-600">{t('users.ortu.ayah')}</p>
+              <OrtuPicker
+                relation="ayah"
+                linked={clearAyah ? undefined : (ayahId ? linkedAyah : undefined)}
+                onLink={(id) => { setAyahId(id); setClearAyah(false) }}
+                onUnlink={() => { setAyahId(null); setClearAyah(true) }}
+                disabled={pending}
+              />
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-slate-600">{t('users.ortu.ibu')}</p>
+              <OrtuPicker
+                relation="ibu"
+                linked={clearIbu ? undefined : (ibuId ? linkedIbu : undefined)}
+                onLink={(id) => { setIbuId(id); setClearIbu(false) }}
+                onUnlink={() => { setIbuId(null); setClearIbu(true) }}
+                disabled={pending}
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       {apiError ? <p className="text-sm text-red-600">{apiError}</p> : null}
       <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-3">
