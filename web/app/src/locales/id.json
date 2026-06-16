@@ -629,7 +629,8 @@
         "Okt",
         "Nov",
         "Des"
-      ]
+      ],
+      "noPhone": "Belum ada nomor WA"
     }
   },
   "materiComp": {
@@ -1324,15 +1325,7 @@
         "leaveReason": "Keterangan"
       },
       "murid": {
-        "level": "Jenjang",
-        "parentTitle": "Sebutan orang tua",
-        "parentTitleHint": "Mis. Bapak, Ibu, Ayahnya, Bunda…",
-        "parentTitlePh": "Bapak",
-        "parentName": "Nama orang tua",
-        "parentPhone": "Nomor WhatsApp orang tua",
-        "parentPhoneRO": "WhatsApp orang tua",
-        "parentPhonePh": "81234567890",
-        "parentEmail": "Email orang tua"
+        "level": "Jenjang"
       },
       "guru": {
         "desa": "Desa",
@@ -1350,6 +1343,19 @@
         "saved": "Kata sandi diperbarui.",
         "submit": "Ganti kata sandi"
       }
+    },
+    "ortu": {
+      "sectionTitle": "Identitas Orang Tua",
+      "ayah": "Ayah",
+      "ibu": "Ibu",
+      "searchPh": "Cari {{label}}…",
+      "createNew": "Tambah \"{{name}}\" sebagai akun ortu baru",
+      "createTitle": "Buat akun {{label}} baru",
+      "nameLabel": "Nama",
+      "phoneLabel": "No. HP",
+      "regionLabel": "Region",
+      "saveNew": "Simpan & Hubungkan",
+      "unlinkTitle": "Hapus link {{label}}"
     }
   },
   "pengaturan": {
