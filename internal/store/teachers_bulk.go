@@ -26,7 +26,7 @@ func (b *TeachersBulk) Name() string { return "teachers" }
 func (b *TeachersBulk) Headers() []string {
 	return []string{
 		"name", "nickname", "kelompok", "desa", "daerah",
-		"joinedAt", "retiredAt", "status", "notes",
+		"status", "notes",
 	}
 }
 
@@ -47,15 +47,6 @@ func (b *TeachersBulk) ParseRow(rec map[string]string) (TeacherInput, error) {
 	}
 	nickname := pickFirst(rec, "nickname", "Nama Panggilan")
 
-	joined, err := bulk.ParseIndoDate(pickFirst(rec, "joinedAt", "Tanggal Masuk"))
-	if err != nil {
-		return TeacherInput{}, fmt.Errorf("joinedAt: %w", err)
-	}
-	retired, err := bulk.ParseIndoDate(pickFirst(rec, "retiredAt", "Tanggal Purna"))
-	if err != nil {
-		return TeacherInput{}, fmt.Errorf("retiredAt: %w", err)
-	}
-
 	statusRaw := strings.ToLower(strings.TrimSpace(pickFirst(rec, "status")))
 	keterangan := strings.TrimSpace(pickFirst(rec, "Keterangan"))
 	status := model.TeacherActive
@@ -73,15 +64,13 @@ func (b *TeachersBulk) ParseRow(rec map[string]string) (TeacherInput, error) {
 	}
 
 	return TeacherInput{
-		Name:      name,
-		Nickname:  nilIfEmpty(nickname),
-		Kelompok:  kelompok,
-		Desa:      desa,
-		Daerah:    daerah,
-		JoinedAt:  joined,
-		RetiredAt: retired,
-		Status:    status,
-		Notes:     notes,
+		Name:     name,
+		Nickname: nilIfEmpty(nickname),
+		Kelompok: kelompok,
+		Desa:     desa,
+		Daerah:   daerah,
+		Status:   status,
+		Notes:    notes,
 	}, nil
 }
 
@@ -133,8 +122,6 @@ func (b *TeachersBulk) StreamRows(ctx context.Context, q url.Values, write func(
 				t.Kelompok,
 				t.Desa,
 				t.Daerah,
-				bulk.FormatDateOrEmpty(t.JoinedAt),
-				bulk.FormatDateOrEmpty(t.RetiredAt),
 				string(t.Status),
 				strOrEmpty(t.Notes),
 			}); err != nil {
@@ -181,7 +168,7 @@ func (b *TeachersBulk) BulkDelete(ctx context.Context, ids []string, mode bulk.D
 // Multiple matches return the lowest id so upserts converge.
 func (t *Teachers) findOneByNaturalKey(ctx context.Context, name, kelompok, desa, daerah string) (*model.Teacher, error) {
 	row := t.db.QueryRowContext(ctx,
-		selectTeacher+` WHERE name = ? AND kelompok = ? AND desa = ? AND daerah = ? ORDER BY id ASC LIMIT 1`,
+		`SELECT `+selectTeacherCols+` FROM users WHERE role = 'guru' AND name = ? AND kelompok = ? AND desa = ? AND daerah = ? ORDER BY id ASC LIMIT 1`,
 		name, kelompok, desa, daerah)
 	tt, err := readTeacher(row)
 	if err != nil {
@@ -196,7 +183,7 @@ func (t *Teachers) findOneByNaturalKey(ctx context.Context, name, kelompok, desa
 // archive flips status to 'retired' without touching other columns.
 func (t *Teachers) archive(ctx context.Context, id string) error {
 	res, err := t.db.ExecContext(ctx,
-		`UPDATE teachers SET status = 'retired', updated_at = ? WHERE id = ?`,
+		`UPDATE users SET active = 0, updated_at = ? WHERE id = ? AND role = 'guru'`,
 		time.Now().UTC(), id)
 	if err != nil {
 		return err

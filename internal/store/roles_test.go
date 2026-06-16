@@ -64,7 +64,7 @@ func TestRolesBindingPrimaryMirror(t *testing.T) {
 	r, u := newRolesDB(t)
 	ctx := context.Background()
 
-	user, err := u.Create(ctx, "u1@example.com", nil, "secret123", "Foo", "staff")
+	user, err := u.Create(ctx, UserCreateInput{Email: "u1@example.com", Password: "secret123", Name: "Foo", Role: "staff"})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}

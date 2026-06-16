@@ -25,9 +25,8 @@ func (b *StudentsBulk) Name() string { return "students" }
 
 func (b *StudentsBulk) Headers() []string {
 	return []string{
-		"name", "nickname", "dateOfBirth", "gender", "level", "kelompok", "city",
-		"joinedAt", "leftAt", "leaveReason", "status",
-		"parentName", "parentPhone", "parentEmail",
+		"name", "nickname", "dateOfBirth", "gender", "level", "kelompok",
+		"status",
 	}
 }
 
@@ -36,18 +35,20 @@ func (b *StudentsBulk) ParseRow(rec map[string]string) (StudentInput, error) {
 	if name == "" {
 		return StudentInput{}, errors.New("name is empty")
 	}
-	kelompok := pickFirst(rec, "kelompok", "Kelompok")
-	if kelompok == "" {
+	kelompokStr := pickFirst(rec, "kelompok", "Kelompok")
+	if kelompokStr == "" {
 		return StudentInput{}, errors.New("kelompok is empty")
 	}
+	kelompok := &kelompokStr
 	levelRaw := pickFirst(rec, "level", "Level", "Tingkat")
 	if levelRaw == "" {
 		return StudentInput{}, errors.New("level is empty")
 	}
-	level, err := normaliseStudentLevel(levelRaw)
+	levelVal, err := normaliseStudentLevel(levelRaw)
 	if err != nil {
 		return StudentInput{}, err
 	}
+	level := &levelVal
 
 	gender := strings.ToLower(strings.TrimSpace(pickFirst(rec, "gender", "Gender", "JenisKelamin")))
 	if gender != "" && gender != "male" && gender != "female" {
@@ -57,14 +58,6 @@ func (b *StudentsBulk) ParseRow(rec map[string]string) (StudentInput, error) {
 	dob, err := bulk.ParseIndoDate(pickFirst(rec, "dateOfBirth", "TanggalLahir", "Tanggal Lahir"))
 	if err != nil {
 		return StudentInput{}, fmt.Errorf("dateOfBirth: %w", err)
-	}
-	joined, err := bulk.ParseIndoDate(pickFirst(rec, "joinedAt", "Tanggal Masuk"))
-	if err != nil {
-		return StudentInput{}, fmt.Errorf("joinedAt: %w", err)
-	}
-	left, err := bulk.ParseIndoDate(pickFirst(rec, "leftAt", "Tanggal Keluar"))
-	if err != nil {
-		return StudentInput{}, fmt.Errorf("leftAt: %w", err)
 	}
 
 	statusRaw := strings.ToLower(strings.TrimSpace(pickFirst(rec, "status")))
@@ -82,27 +75,24 @@ func (b *StudentsBulk) ParseRow(rec map[string]string) (StudentInput, error) {
 		Gender:      gender,
 		Level:       level,
 		Kelompok:    kelompok,
-		City:        nilIfEmpty(pickFirst(rec, "city", "Kota")),
-		JoinedAt:    joined,
-		LeftAt:      left,
-		LeaveReason: nilIfEmpty(pickFirst(rec, "leaveReason", "Alasan Keluar")),
 		Status:      status,
-		ParentName:  nilIfEmpty(pickFirst(rec, "parentName", "Nama Wali")),
-		ParentPhone: nilIfEmpty(pickFirst(rec, "parentPhone", "No HP Wali")),
-		ParentEmail: nilIfEmpty(pickFirst(rec, "parentEmail", "Email Wali")),
 	}, nil
 }
 
 // Upsert matches on (name, kelompok, dateOfBirth) when DOB is set, falling
 // back to (name, kelompok) when DOB is nil.
 func (b *StudentsBulk) Upsert(ctx context.Context, in StudentInput, mode bulk.Mode) (string, bool, error) {
-	existing, err := b.students.findOneByNaturalKey(ctx, in.Name, in.Kelompok, in.DateOfBirth)
+	kelompokVal := ""
+	if in.Kelompok != nil {
+		kelompokVal = *in.Kelompok
+	}
+	existing, err := b.students.findOneByNaturalKey(ctx, in.Name, kelompokVal, in.DateOfBirth)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return "", false, err
 	}
 	if existing != nil {
 		if mode != bulk.ModeUpsert {
-			return "", false, fmt.Errorf("duplicate student %q in %s", in.Name, in.Kelompok)
+			return "", false, fmt.Errorf("duplicate student %q in %s", in.Name, strOrEmpty(in.Kelompok))
 		}
 		if _, err := b.students.Update(ctx, existing.ID, in); err != nil {
 			return "", false, err
@@ -131,21 +121,18 @@ func (b *StudentsBulk) StreamRows(ctx context.Context, q url.Values, write func(
 			return err
 		}
 		for _, s := range res.Items {
+			levelStr := ""
+			if s.Level != nil {
+				levelStr = string(*s.Level)
+			}
 			if err := write([]string{
 				s.Name,
 				strOrEmpty(s.Nickname),
 				bulk.FormatDateOrEmpty(s.DateOfBirth),
 				s.Gender,
-				string(s.Level),
-				s.Kelompok,
-				strOrEmpty(s.City),
-				bulk.FormatDateOrEmpty(s.JoinedAt),
-				bulk.FormatDateOrEmpty(s.LeftAt),
-				strOrEmpty(s.LeaveReason),
+				levelStr,
+				strOrEmpty(s.Kelompok),
 				string(s.Status),
-				strOrEmpty(s.ParentName),
-				strOrEmpty(s.ParentPhone),
-				strOrEmpty(s.ParentEmail),
 			}); err != nil {
 				return err
 			}
@@ -183,14 +170,15 @@ func (b *StudentsBulk) BulkDelete(ctx context.Context, ids []string, mode bulk.D
 // findOneByNaturalKey matches on (name, kelompok, dob) when dob is non-nil,
 // otherwise (name, kelompok). Lowest id wins so upserts converge.
 func (s *Students) findOneByNaturalKey(ctx context.Context, name, kelompok string, dob *time.Time) (*model.Student, error) {
+	base := `SELECT ` + selectStudentCols + ` FROM users WHERE role = 'murid'`
 	var row *sql.Row
 	if dob == nil {
 		row = s.db.QueryRowContext(ctx,
-			selectStudent+` WHERE name = ? AND kelompok = ? AND date_of_birth IS NULL ORDER BY id ASC LIMIT 1`,
+			base+` AND name = ? AND kelompok = ? AND date_of_birth IS NULL ORDER BY id ASC LIMIT 1`,
 			name, kelompok)
 	} else {
 		row = s.db.QueryRowContext(ctx,
-			selectStudent+` WHERE name = ? AND kelompok = ? AND date_of_birth = ? ORDER BY id ASC LIMIT 1`,
+			base+` AND name = ? AND kelompok = ? AND date_of_birth = ? ORDER BY id ASC LIMIT 1`,
 			name, kelompok, dob.UTC())
 	}
 	st, err := readStudent(row)
@@ -206,7 +194,7 @@ func (s *Students) findOneByNaturalKey(ctx context.Context, name, kelompok strin
 // archive flips status to 'left' without touching other columns.
 func (s *Students) archive(ctx context.Context, id string) error {
 	res, err := s.db.ExecContext(ctx,
-		`UPDATE students SET status = 'left', updated_at = ? WHERE id = ?`,
+		`UPDATE users SET active = 0, updated_at = ? WHERE id = ? AND role = 'murid'`,
 		time.Now().UTC(), id)
 	if err != nil {
 		return err
