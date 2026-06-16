@@ -14,6 +14,9 @@ import (
 	"github.com/fadhilkurnia/ppg-dashboard/internal/model"
 )
 
+// NOTE: List, Update, and SetPassword were removed from this file — they are
+// defined in users.go. The versions here were stale legacy methods.
+
 type UserStatus string
 
 const (
@@ -84,125 +87,6 @@ func (u *Users) CreateWithBinding(ctx context.Context, in CreateUserInput) (*mod
 		return nil, err
 	}
 	return u.FindByID(ctx, id)
-}
-
-func (u *Users) List(ctx context.Context, f ListUsersFilter) (*UserListResult, error) {
-	if f.Limit <= 0 || f.Limit > 200 {
-		f.Limit = 50
-	}
-	if f.Offset < 0 {
-		f.Offset = 0
-	}
-
-	status := f.Status
-	if status == "" {
-		status = "active"
-	}
-
-	var clauses []string
-	var args []any
-	clauses = append(clauses, "u.status = ?")
-	args = append(args, status)
-
-	if f.Role != "" {
-		clauses = append(clauses, "u.role = ?")
-		args = append(args, f.Role)
-	}
-	if q := strings.TrimSpace(f.Query); q != "" {
-		clauses = append(clauses, "(u.name LIKE ? OR u.email LIKE ? OR u.username LIKE ?)")
-		like := "%" + q + "%"
-		args = append(args, like, like, like)
-	}
-
-	where := " WHERE " + strings.Join(clauses, " AND ")
-
-	var total int
-	if err := u.db.QueryRowContext(ctx,
-		`SELECT COUNT(u.id) FROM users u`+where, args...).Scan(&total); err != nil {
-		return nil, fmt.Errorf("count users: %w", err)
-	}
-
-	listArgs := append(append([]any{}, args...), f.Limit, f.Offset)
-	rows, err := u.db.QueryContext(ctx,
-		`SELECT u.id, u.email, u.username, u.password, u.name, u.role, u.created_at, u.updated_at
-		   FROM users u`+where+
-			` ORDER BY u.name ASC LIMIT ? OFFSET ?`,
-		listArgs...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	items := []model.User{}
-	for rows.Next() {
-		var us model.User
-		var role string
-		if err := rows.Scan(&us.ID, &us.Email, &us.Username, &us.Password,
-			&us.Name, &role, &us.CreatedAt, &us.UpdatedAt); err != nil {
-			return nil, err
-		}
-		us.Role = model.Role(role)
-		us.Password = ""
-		items = append(items, us)
-	}
-	return &UserListResult{Items: items, Total: total}, rows.Err()
-}
-
-func (u *Users) Update(ctx context.Context, id string, in UpdateUserInput) (*model.User, error) {
-	cur, err := u.FindByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	name := cur.Name
-	email := cur.Email
-	username := cur.Username
-	if in.Name != nil {
-		name = strings.TrimSpace(*in.Name)
-	}
-	if in.Email != nil {
-		email = strings.ToLower(strings.TrimSpace(*in.Email))
-	}
-	if in.Username != nil {
-		v := strings.TrimSpace(*in.Username)
-		if v == "" {
-			username = nil
-		} else {
-			username = &v
-		}
-	}
-	res, err := u.db.ExecContext(ctx,
-		`UPDATE users SET name = ?, email = ?, username = ?, updated_at = ?
-		  WHERE id = ?`,
-		name, email, username, time.Now().UTC(), id)
-	if err != nil {
-		return nil, err
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return nil, ErrNotFound
-	}
-	return u.FindByID(ctx, id)
-}
-
-func (u *Users) SetPassword(ctx context.Context, id, newPassword string) error {
-	if len(newPassword) < 8 {
-		return errors.New("password must be at least 8 characters")
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("hash password: %w", err)
-	}
-	res, err := u.db.ExecContext(ctx,
-		`UPDATE users SET password = ?, refresh_jti = NULL, updated_at = ? WHERE id = ?`,
-		string(hash), time.Now().UTC(), id)
-	if err != nil {
-		return err
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return ErrNotFound
-	}
-	return nil
 }
 
 func (u *Users) Archive(ctx context.Context, id string) error {

@@ -27,7 +27,7 @@ func NewUsers(db *sql.DB) *Users {
 // Column list used by every SELECT against users. Order matches scanUserRow.
 const userColumns = `id, email, username, password, name, role, active,
 	nickname, date_of_birth, gender, no_hp, alamat, kelompok,
-	level, parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
+	level, phone_region,
 	desa, daerah, notes,
 	photo_path, timezone,
 	user_code, tempat_lahir, pendidikan, pekerjaan,
@@ -73,15 +73,11 @@ type UserCreateInput struct {
 	Alamat      *string
 	Kelompok    *string
 
-	// Murid
-	Level             *model.StudentLevel
-	ParentName        *string
-	ParentTitle       *string
-	ParentPhone       *string
-	ParentPhoneRegion *string
-	ParentEmail       *string
+	// Education + phone region
+	Level       *model.StudentLevel
+	PhoneRegion string // "ID" | "SG" | "US" | "CA"; defaults to "ID" if empty
 
-	// Guru
+	// Locality + free-form notes
 	Desa   *string
 	Daerah *string
 	Notes  *string
@@ -121,21 +117,21 @@ func (u *Users) createWithHash(ctx context.Context, in UserCreateInput, hash str
 		`INSERT INTO users (
 		   id, email, username, password, name, role, active,
 		   nickname, date_of_birth, gender, no_hp, alamat, kelompok,
-		   level, parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
+		   level, phone_region,
 		   desa, daerah, notes,
 		   user_code, tempat_lahir, pendidikan, pekerjaan,
 		   urutan, hide_dob, tgl_daftar,
 		   created_at, updated_at
 		 ) VALUES (?, ?, ?, ?, ?, ?, 1,
 		           ?, ?, ?, ?, ?, ?,
-		           ?, ?, ?, ?, ?, ?,
+		           ?, ?,
 		           ?, ?, ?,
 		           ?, ?, ?, ?,
 		           ?, ?, ?,
 		           ?, ?)`,
 		id, in.Email, in.Username, hash, in.Name, string(in.Role),
 		in.Nickname, nullableDate(in.DateOfBirth), in.Gender, in.NoHP, in.Alamat, in.Kelompok,
-		nullableLevel(in.Level), in.ParentName, in.ParentTitle, in.ParentPhone, in.ParentPhoneRegion, in.ParentEmail,
+		nullableLevel(in.Level), in.PhoneRegion,
 		in.Desa, in.Daerah, in.Notes,
 		in.UserCode, in.TempatLahir, in.Pendidikan, in.Pekerjaan,
 		in.Urutan, hideDobInt, nullableDate(in.TglDaftar),
@@ -165,16 +161,12 @@ type UserUpdateInput struct {
 	Kelompok         *string
 	Level            *model.StudentLevel
 	ClearLevel       bool
-	ParentName        *string
-	ParentTitle       *string
-	ParentPhone       *string
-	ParentPhoneRegion *string
-	ParentEmail       *string
-	Desa          *string
-	Daerah        *string
-	Notes         *string
-	Timezone      *string
-	ClearTimezone bool
+	PhoneRegion      *string // set to update, nil to leave unchanged
+	Desa             *string
+	Daerah           *string
+	Notes            *string
+	Timezone         *string
+	ClearTimezone    bool
 
 	// Taaruf-style biodata.
 	UserCode      *string
@@ -250,11 +242,7 @@ func (u *Users) Update(ctx context.Context, id string, in UserUpdateInput) (*mod
 		sets = append(sets, "level = ?")
 		args = append(args, string(*in.Level))
 	}
-	addStr("parent_name", in.ParentName)
-	addStr("parent_title", in.ParentTitle)
-	addStr("parent_phone", in.ParentPhone)
-	addStr("parent_phone_region", in.ParentPhoneRegion)
-	addStr("parent_email", in.ParentEmail)
+	addStr("phone_region", in.PhoneRegion)
 	addStr("desa", in.Desa)
 	addStr("daerah", in.Daerah)
 	addStr("notes", in.Notes)
@@ -511,7 +499,7 @@ func readUserRow(s scanner) (*model.User, error) {
 	if err := s.Scan(
 		&u.ID, &u.Email, &u.Username, &u.Password, &u.Name, &role, &active,
 		&u.Nickname, &dob, &u.Gender, &u.NoHP, &u.Alamat, &u.Kelompok,
-		&level, &u.ParentName, &u.ParentTitle, &u.ParentPhone, &u.ParentPhoneRegion, &u.ParentEmail,
+		&level, &u.PhoneRegion,
 		&u.Desa, &u.Daerah, &u.Notes,
 		&u.PhotoPath, &u.Timezone,
 		&u.UserCode, &u.TempatLahir, &u.Pendidikan, &u.Pekerjaan,
@@ -544,6 +532,85 @@ func nullableLevel(l *model.StudentLevel) any {
 		return nil
 	}
 	return string(*l)
+}
+
+// GetMuridOrtu returns the ortu accounts linked to a murid user.
+// The returned slice has at most 2 entries (ayah, ibu).
+// Returns an empty slice (not an error) when the murid has no linked ortu.
+func (u *Users) GetMuridOrtu(ctx context.Context, muridID string) ([]model.OrtuLink, error) {
+	rows, err := u.db.QueryContext(ctx,
+		`SELECT mo.relation, `+userColumns+`
+		 FROM murid_ortu mo
+		 JOIN users ou ON ou.id = mo.ortu_id
+		 WHERE mo.murid_id = ?
+		 ORDER BY mo.relation`, muridID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []model.OrtuLink
+	for rows.Next() {
+		var relation string
+		var ou model.User
+		var role string
+		var active int
+		var dob sql.NullTime
+		var level sql.NullString
+		var hideDob int
+		var tglDaftar sql.NullTime
+		if err := rows.Scan(
+			&relation,
+			&ou.ID, &ou.Email, &ou.Username, &ou.Password, &ou.Name, &role, &active,
+			&ou.Nickname, &dob, &ou.Gender, &ou.NoHP, &ou.Alamat, &ou.Kelompok,
+			&level, &ou.PhoneRegion,
+			&ou.Desa, &ou.Daerah, &ou.Notes,
+			&ou.PhotoPath, &ou.Timezone,
+			&ou.UserCode, &ou.TempatLahir, &ou.Pendidikan, &ou.Pekerjaan,
+			&ou.Urutan, &hideDob, &tglDaftar,
+			&ou.CreatedAt, &ou.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		ou.Role = model.Role(role)
+		ou.Active = active == 1
+		ou.HideDob = hideDob == 1
+		if dob.Valid {
+			v := dob.Time
+			ou.DateOfBirth = &v
+		}
+		if level.Valid {
+			v := model.StudentLevel(level.String)
+			ou.Level = &v
+		}
+		if tglDaftar.Valid {
+			v := tglDaftar.Time
+			ou.TglDaftar = &v
+		}
+		ou.PhotoURL = model.PhotoURL(ou.PhotoPath)
+		ou.Password = "" // never leak
+		out = append(out, model.OrtuLink{Relation: relation, User: ou})
+	}
+	return out, rows.Err()
+}
+
+// SetMuridOrtu links an ortu user to a murid with the given relation ("ayah" or "ibu").
+// Replaces an existing link for the same relation (upsert).
+func (u *Users) SetMuridOrtu(ctx context.Context, muridID, relation, ortuID string) error {
+	_, err := u.db.ExecContext(ctx,
+		`INSERT INTO murid_ortu (murid_id, ortu_id, relation, created_at)
+		 VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT(murid_id, relation) DO UPDATE SET ortu_id = excluded.ortu_id`,
+		muridID, ortuID, relation)
+	return err
+}
+
+// RemoveMuridOrtu removes the ortu link for the given relation from a murid.
+// A no-op if the link does not exist.
+func (u *Users) RemoveMuridOrtu(ctx context.Context, muridID, relation string) error {
+	_, err := u.db.ExecContext(ctx,
+		`DELETE FROM murid_ortu WHERE murid_id = ? AND relation = ?`,
+		muridID, relation)
+	return err
 }
 
 func SeedAdmin(ctx context.Context, users *Users, email, username, password string) error {
