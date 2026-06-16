@@ -30,7 +30,6 @@ const schema = z.object({
   kelompok: z
     .enum([...STUDENT_KELOMPOKS, ''] as [string, ...string[]])
     .refine((v) => v !== '', { message: 'Wajib diisi' }),
-  city: z.string().max(200).optional().or(z.literal('')),
   joinedAt: isoDateOrEmpty,
   leftAt: isoDateOrEmpty,
   leaveReason: z.string().max(500).optional().or(z.literal('')),
@@ -63,7 +62,6 @@ export function StudentForm({ initial, submitLabel, pending, error, onSubmit, on
       gender: initial?.gender ?? 'female',
       level: (initial?.level as FormValues['level']) ?? '',
       kelompok: (initial?.kelompok as FormValues['kelompok']) ?? '',
-      city: initial?.city ?? '',
       joinedAt: initial?.joinedAt?.slice(0, 10) ?? '',
       leftAt: initial?.leftAt?.slice(0, 10) ?? '',
       leaveReason: initial?.leaveReason ?? '',
@@ -83,7 +81,6 @@ export function StudentForm({ initial, submitLabel, pending, error, onSubmit, on
           gender: v.gender,
           level: v.level as StudentInput['level'],
           kelompok: v.kelompok as StudentInput['kelompok'],
-          city: v.city || undefined,
           joinedAt: v.joinedAt || undefined,
           leftAt: v.leftAt || undefined,
           leaveReason: v.leaveReason || undefined,
@@ -150,9 +147,6 @@ export function StudentForm({ initial, submitLabel, pending, error, onSubmit, on
                 </Select>
               )}
             />
-          </Field>
-          <Field label="Kota" htmlFor="city" error={errors.city?.message}>
-            <Input id="city" placeholder="cth. Chicago, Raleigh" {...register('city')} />
           </Field>
         </div>
       </Section>
