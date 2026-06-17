@@ -40,16 +40,11 @@ type TeacherInput struct {
 	Notes  *string
 	// Shared profile + biodata fields (same set as StudentInput per the
 	// unified-user mechanism — these were previously murid-only).
-	DateOfBirth       *time.Time
-	NoHP              *string
-	Alamat            *string
-	Level             *model.StudentLevel
-	ParentName        *string
-	ParentTitle       *string
-	ParentPhone       *string
-	ParentPhoneRegion *string
-	ParentEmail       *string
-	UserCode          *string
+	DateOfBirth *time.Time
+	NoHP        *string
+	Alamat      *string
+	Level       *model.StudentLevel
+	UserCode    *string
 	TempatLahir       *string
 	Pendidikan        *string
 	Pekerjaan         *string
@@ -74,7 +69,7 @@ type TeacherListResult struct {
 const selectTeacherCols = `id, name, nickname, gender, kelompok, desa, daerah,
 	active, notes,
 	date_of_birth, no_hp, alamat,
-	level, parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
+	level,
 	user_code, tempat_lahir, pendidikan, pekerjaan,
 	urutan, hide_dob, tgl_daftar,
 	photo_path, created_at, updated_at`
@@ -114,21 +109,21 @@ func (t *Teachers) Create(ctx context.Context, in TeacherInput) (*model.Teacher,
 		   id, email, password, name, role, active,
 		   nickname, gender, kelompok, desa, daerah, notes,
 		   date_of_birth, no_hp, alamat,
-		   level, parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
+		   level,
 		   user_code, tempat_lahir, pendidikan, pekerjaan,
 		   urutan, hide_dob, tgl_daftar,
 		   created_at, updated_at
 		 ) VALUES (?, ?, ?, ?, 'guru', ?,
 		           ?, ?, ?, ?, ?, ?,
 		           ?, ?, ?,
-		           ?, ?, ?, ?, ?, ?,
+		           ?,
 		           ?, ?, ?, ?,
 		           ?, ?, ?,
 		           ?, ?)`,
 		id, email, string(hash), in.Name, active,
 		in.Nickname, in.Gender, in.Kelompok, in.Desa, in.Daerah, in.Notes,
 		nullableDate(in.DateOfBirth), in.NoHP, in.Alamat,
-		nullableLevel(in.Level), in.ParentName, in.ParentTitle, in.ParentPhone, in.ParentPhoneRegion, in.ParentEmail,
+		nullableLevel(in.Level),
 		in.UserCode, in.TempatLahir, in.Pendidikan, in.Pekerjaan,
 		in.Urutan, hideDobInt, nullableDate(in.TglDaftar),
 		now, now,
@@ -163,7 +158,7 @@ func (t *Teachers) Update(ctx context.Context, id string, in TeacherInput) (*mod
 		   name = ?, nickname = ?, gender = ?, kelompok = ?, desa = ?, daerah = ?,
 		   active = ?, notes = ?,
 		   date_of_birth = ?, no_hp = ?, alamat = ?,
-		   level = ?, parent_name = ?, parent_title = ?, parent_phone = ?, parent_phone_region = ?, parent_email = ?,
+		   level = ?,
 		   user_code = ?, tempat_lahir = ?, pendidikan = ?, pekerjaan = ?,
 		   urutan = ?, hide_dob = ?, tgl_daftar = ?,
 		   updated_at = ?
@@ -171,7 +166,7 @@ func (t *Teachers) Update(ctx context.Context, id string, in TeacherInput) (*mod
 		in.Name, in.Nickname, in.Gender, in.Kelompok, in.Desa, in.Daerah,
 		active, in.Notes,
 		nullableDate(in.DateOfBirth), in.NoHP, in.Alamat,
-		nullableLevel(in.Level), in.ParentName, in.ParentTitle, in.ParentPhone, in.ParentPhoneRegion, in.ParentEmail,
+		nullableLevel(in.Level),
 		in.UserCode, in.TempatLahir, in.Pendidikan, in.Pekerjaan,
 		in.Urutan, hideDobInt, nullableDate(in.TglDaftar),
 		now, id,
@@ -404,7 +399,7 @@ func readTeacher(s scanner) (*model.Teacher, error) {
 		&t.ID, &t.Name, &t.Nickname, &t.Gender, &t.Kelompok, &t.Desa, &t.Daerah,
 		&active, &t.Notes,
 		&dob, &t.NoHP, &t.Alamat,
-		&level, &t.ParentName, &t.ParentTitle, &t.ParentPhone, &t.ParentPhoneRegion, &t.ParentEmail,
+		&level,
 		&t.UserCode, &t.TempatLahir, &t.Pendidikan, &t.Pekerjaan,
 		&t.Urutan, &hideDob, &tglDaftar,
 		&photoPath, &t.CreatedAt, &t.UpdatedAt,

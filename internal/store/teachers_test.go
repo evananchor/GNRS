@@ -81,17 +81,11 @@ func TestTeachersSharedFieldsRoundTrip(t *testing.T) {
 	ctx := context.Background()
 
 	level := model.LevelRemaja
-	parentName := "Pak Budi"
-	parentPhone := "0812345"
-	region := "ID"
 	dob := time.Date(1990, 5, 6, 0, 0, 0, 0, time.UTC)
 	pekerjaan := "Guru"
 
 	in := teacherInput("Shared", "Luwu Timur", model.TeacherActive)
 	in.Level = &level
-	in.ParentName = &parentName
-	in.ParentPhone = &parentPhone
-	in.ParentPhoneRegion = &region
 	in.DateOfBirth = &dob
 	in.Pekerjaan = &pekerjaan
 	in.Urutan = 3
@@ -107,9 +101,6 @@ func TestTeachersSharedFieldsRoundTrip(t *testing.T) {
 	}
 	if got.Level == nil || *got.Level != level {
 		t.Errorf("Level = %v, want %v", got.Level, level)
-	}
-	if got.ParentName == nil || *got.ParentName != parentName {
-		t.Errorf("ParentName = %v, want %q", got.ParentName, parentName)
 	}
 	if got.DateOfBirth == nil || !got.DateOfBirth.Equal(dob) {
 		t.Errorf("DateOfBirth = %v, want %v", got.DateOfBirth, dob)

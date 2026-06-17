@@ -36,11 +36,6 @@ export type Student = {
   leftAt?: string
   leaveReason?: string
   status: StudentStatus
-  parentName?: string
-  parentTitle?: string
-  parentPhone?: string
-  parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
-  parentEmail?: string
   // Shared profile + biodata fields (same set as Teacher per the
   // unified-user mechanism).
   noHp?: string
@@ -76,11 +71,6 @@ export type StudentInput = {
   leftAt?: string
   leaveReason?: string
   status: StudentStatus
-  parentName?: string
-  parentTitle?: string
-  parentPhone?: string
-  parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
-  parentEmail?: string
   noHp?: string
   alamat?: string
   desa?: string
@@ -115,11 +105,6 @@ export type Teacher = {
   noHp?: string
   alamat?: string
   level?: StudentLevel
-  parentName?: string
-  parentTitle?: string
-  parentPhone?: string
-  parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
-  parentEmail?: string
   userCode?: string
   tempatLahir?: string
   pendidikan?: string
@@ -152,11 +137,6 @@ export type TeacherInput = {
   noHp?: string
   alamat?: string
   level?: StudentLevel
-  parentName?: string
-  parentTitle?: string
-  parentPhone?: string
-  parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
-  parentEmail?: string
   userCode?: string
   tempatLahir?: string
   pendidikan?: string

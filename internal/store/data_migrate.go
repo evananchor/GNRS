@@ -86,8 +86,7 @@ func copyStudents(ctx context.Context, db *sql.DB, users *Users, hash string) (i
 	// status as a single `active` boolean, set true here for every
 	// migrated row regardless of the source's membership_status.
 	rows, err := db.QueryContext(ctx,
-		`SELECT id, name, nickname, date_of_birth, gender, level, kelompok,
-		        parent_name, parent_phone, parent_email
+		`SELECT id, name, nickname, date_of_birth, gender, level, kelompok
 		   FROM students_legacy_008`)
 	if err != nil {
 		return 0, err
@@ -95,11 +94,10 @@ func copyStudents(ctx context.Context, db *sql.DB, users *Users, hash string) (i
 	inputs := []UserCreateInput{}
 	for rows.Next() {
 		var id, name, gender string
-		var nickname, kelompok, parentName, parentPhone, parentEmail sql.NullString
+		var nickname, kelompok sql.NullString
 		var level sql.NullString
 		var dob sql.NullTime
-		if err := rows.Scan(&id, &name, &nickname, &dob, &gender, &level, &kelompok,
-			&parentName, &parentPhone, &parentEmail); err != nil {
+		if err := rows.Scan(&id, &name, &nickname, &dob, &gender, &level, &kelompok); err != nil {
 			rows.Close()
 			return 0, err
 		}
@@ -114,9 +112,6 @@ func copyStudents(ctx context.Context, db *sql.DB, users *Users, hash string) (i
 		}
 		in.Nickname = nullPtr(nickname)
 		in.Kelompok = nullPtr(kelompok)
-		in.ParentName = nullPtr(parentName)
-		in.ParentPhone = nullPtr(parentPhone)
-		in.ParentEmail = nullPtr(parentEmail)
 		if dob.Valid {
 			v := dob.Time
 			in.DateOfBirth = &v

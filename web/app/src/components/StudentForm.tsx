@@ -30,14 +30,10 @@ const schema = z.object({
   kelompok: z
     .enum([...STUDENT_KELOMPOKS, ''] as [string, ...string[]])
     .refine((v) => v !== '', { message: 'Wajib diisi' }),
-  city: z.string().max(200).optional().or(z.literal('')),
   joinedAt: isoDateOrEmpty,
   leftAt: isoDateOrEmpty,
   leaveReason: z.string().max(500).optional().or(z.literal('')),
   status: z.enum(['active', 'left']),
-  parentName: z.string().max(200).optional().or(z.literal('')),
-  parentPhone: z.string().max(64).optional().or(z.literal('')),
-  parentEmail: z.string().email('Format email tidak valid').optional().or(z.literal('')),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -66,14 +62,10 @@ export function StudentForm({ initial, submitLabel, pending, error, onSubmit, on
       gender: initial?.gender ?? 'female',
       level: (initial?.level as FormValues['level']) ?? '',
       kelompok: (initial?.kelompok as FormValues['kelompok']) ?? '',
-      city: initial?.city ?? '',
       joinedAt: initial?.joinedAt?.slice(0, 10) ?? '',
       leftAt: initial?.leftAt?.slice(0, 10) ?? '',
       leaveReason: initial?.leaveReason ?? '',
       status: initial?.status ?? 'active',
-      parentName: initial?.parentName ?? '',
-      parentPhone: initial?.parentPhone ?? '',
-      parentEmail: initial?.parentEmail ?? '',
     },
   })
 
@@ -89,14 +81,10 @@ export function StudentForm({ initial, submitLabel, pending, error, onSubmit, on
           gender: v.gender,
           level: v.level as StudentInput['level'],
           kelompok: v.kelompok as StudentInput['kelompok'],
-          city: v.city || undefined,
           joinedAt: v.joinedAt || undefined,
           leftAt: v.leftAt || undefined,
           leaveReason: v.leaveReason || undefined,
           status: v.status,
-          parentName: v.parentName || undefined,
-          parentPhone: v.parentPhone || undefined,
-          parentEmail: v.parentEmail || undefined,
         }),
       )}
       className="space-y-6"
@@ -160,9 +148,6 @@ export function StudentForm({ initial, submitLabel, pending, error, onSubmit, on
               )}
             />
           </Field>
-          <Field label="Kota" htmlFor="city" error={errors.city?.message}>
-            <Input id="city" placeholder="cth. Chicago, Raleigh" {...register('city')} />
-          </Field>
         </div>
       </Section>
 
@@ -193,25 +178,6 @@ export function StudentForm({ initial, submitLabel, pending, error, onSubmit, on
             className="sm:col-span-2"
           >
             <Input id="leaveReason" {...register('leaveReason')} />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Orang Tua (opsional)">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nama Orang Tua" htmlFor="parentName" error={errors.parentName?.message}>
-            <Input id="parentName" {...register('parentName')} />
-          </Field>
-          <Field label="Telepon Orang Tua" htmlFor="parentPhone" error={errors.parentPhone?.message}>
-            <Input id="parentPhone" {...register('parentPhone')} />
-          </Field>
-          <Field
-            label="Email Orang Tua"
-            htmlFor="parentEmail"
-            error={errors.parentEmail?.message}
-            className="sm:col-span-2"
-          >
-            <Input id="parentEmail" type="email" {...register('parentEmail')} />
           </Field>
         </div>
       </Section>

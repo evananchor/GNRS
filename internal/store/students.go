@@ -35,12 +35,7 @@ type StudentInput struct {
 	Kelompok    *string
 	// Status maps to User.Active — "active" → 1, "left" → 0. Joined/left
 	// dates and leave_reason were dropped in migration 041.
-	Status            model.StudentStatus
-	ParentName        *string
-	ParentTitle       *string
-	ParentPhone       *string
-	ParentPhoneRegion *string
-	ParentEmail       *string
+	Status model.StudentStatus
 	// Shared profile + biodata fields (same set as TeacherInput per the
 	// unified-user mechanism).
 	NoHP        *string
@@ -71,7 +66,6 @@ type ListResult struct {
 }
 
 const selectStudentCols = `id, name, nickname, date_of_birth, gender, level, kelompok, active,
-	parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
 	no_hp, alamat, desa, daerah, notes,
 	user_code, tempat_lahir, pendidikan, pekerjaan,
 	urutan, hide_dob, tgl_daftar,
@@ -111,21 +105,21 @@ func (s *Students) Create(ctx context.Context, in StudentInput) (*model.Student,
 		`INSERT INTO users (
 		   id, email, password, name, role, active,
 		   nickname, date_of_birth, gender, kelompok,
-		   level, parent_name, parent_title, parent_phone, parent_phone_region, parent_email,
+		   level,
 		   no_hp, alamat, desa, daerah, notes,
 		   user_code, tempat_lahir, pendidikan, pekerjaan,
 		   urutan, hide_dob, tgl_daftar,
 		   created_at, updated_at
 		 ) VALUES (?, ?, ?, ?, 'murid', ?,
 		           ?, ?, ?, ?,
-		           ?, ?, ?, ?, ?, ?,
+		           ?,
 		           ?, ?, ?, ?, ?,
 		           ?, ?, ?, ?,
 		           ?, ?, ?,
 		           ?, ?)`,
 		id, email, string(hash), in.Name, active,
 		in.Nickname, nullableDate(in.DateOfBirth), in.Gender, in.Kelompok,
-		nullableLevel(in.Level), in.ParentName, in.ParentTitle, in.ParentPhone, in.ParentPhoneRegion, in.ParentEmail,
+		nullableLevel(in.Level),
 		in.NoHP, in.Alamat, in.Desa, in.Daerah, in.Notes,
 		in.UserCode, in.TempatLahir, in.Pendidikan, in.Pekerjaan,
 		in.Urutan, hideDobInt, nullableDate(in.TglDaftar),
@@ -160,7 +154,6 @@ func (s *Students) Update(ctx context.Context, id string, in StudentInput) (*mod
 		`UPDATE users SET
 		   name = ?, nickname = ?, date_of_birth = ?, gender = ?, level = ?, kelompok = ?,
 		   active = ?,
-		   parent_name = ?, parent_title = ?, parent_phone = ?, parent_phone_region = ?, parent_email = ?,
 		   no_hp = ?, alamat = ?, desa = ?, daerah = ?, notes = ?,
 		   user_code = ?, tempat_lahir = ?, pendidikan = ?, pekerjaan = ?,
 		   urutan = ?, hide_dob = ?, tgl_daftar = ?,
@@ -169,7 +162,6 @@ func (s *Students) Update(ctx context.Context, id string, in StudentInput) (*mod
 		in.Name, in.Nickname,
 		nullableDate(in.DateOfBirth), in.Gender, nullableLevel(in.Level), in.Kelompok,
 		active,
-		in.ParentName, in.ParentTitle, in.ParentPhone, in.ParentPhoneRegion, in.ParentEmail,
 		in.NoHP, in.Alamat, in.Desa, in.Daerah, in.Notes,
 		in.UserCode, in.TempatLahir, in.Pendidikan, in.Pekerjaan,
 		in.Urutan, hideDobInt, nullableDate(in.TglDaftar),
@@ -399,7 +391,6 @@ func readStudent(s scanner) (*model.Student, error) {
 	var photoPath *string
 	if err := s.Scan(
 		&st.ID, &st.Name, &st.Nickname, &dob, &st.Gender, &level, &st.Kelompok, &active,
-		&st.ParentName, &st.ParentTitle, &st.ParentPhone, &st.ParentPhoneRegion, &st.ParentEmail,
 		&st.NoHP, &st.Alamat, &st.Desa, &st.Daerah, &st.Notes,
 		&st.UserCode, &st.TempatLahir, &st.Pendidikan, &st.Pekerjaan,
 		&st.Urutan, &hideDob, &tglDaftar,

@@ -204,10 +204,36 @@ export function EndSesiSummaryDialog({
     onError: (e: any) => toast(e?.message ?? t('sesiDialog.summary.saveFailed'), 'error'),
   })
 
-  // Build WA message for one student ---------------------------------------
-  const messageFor = (murid: ManagedUser | null | undefined): { url: string | null; preview: string } => {
+  // per-anggota send targets: Record<muridUserId, Set<'ayah'|'ibu'>>
+  const [sendTargets, setSendTargets] = useState<Record<string, Set<string>>>({})
+
+  const toggleTarget = (muridId: string, relation: string) => {
+    setSendTargets((prev) => {
+      const cur = new Set(prev[muridId] ?? [])
+      if (cur.has(relation)) cur.delete(relation)
+      else cur.add(relation)
+      return { ...prev, [muridId]: cur }
+    })
+  }
+
+  const targetFor = (murid: ManagedUser) => {
+    if (sendTargets[murid.id]) return sendTargets[murid.id]
+    // Default: all ortu with a phone number are checked
+    const defaults = new Set<string>()
+    for (const link of murid.ortu ?? []) {
+      if (link.user.noHp) defaults.add(link.relation)
+    }
+    return defaults
+  }
+
+  // Build WA message for one student + one ortu link -----------------------
+  const messageFor = (
+    murid: ManagedUser | null | undefined,
+    ortuLink: { relation: string; user: { name: string; noHp?: string; phoneRegion?: string } },
+  ): { url: string | null; preview: string } => {
     if (!murid) return { url: null, preview: '' }
-    const phone = toE164(murid.parentPhoneRegion, murid.parentPhone)
+    const phone = toE164(ortuLink.user.phoneRegion, ortuLink.user.noHp)
+    const salutation = ortuLink.relation === 'ayah' ? 'Bapak' : 'Ibu'
     const materiList =
       diajarkan.length === 0
         ? t('sesiDialog.summary.noMateriRecorded')
@@ -223,8 +249,8 @@ export function EndSesiSummaryDialog({
             .map((it) => `• ${labelFor(it)}${it.note ? `\n   ${t('sesiDialog.summary.reviewItemNote', { note: it.note })}` : ''}`)
             .join('\n')
     const msg = buildMessage(waTemplate, {
-      salutation: murid.parentTitle ?? t('sesiDialog.summary.defaultSalutation'),
-      parent_name: murid.parentName ?? '',
+      salutation,
+      parent_name: ortuLink.user.name,
       murid_name: murid.name,
       topik: sesi.topik,
       tanggal: fmtDate(sesi.tanggal, months),
@@ -236,6 +262,7 @@ export function EndSesiSummaryDialog({
     return { url: `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, preview: msg }
   }
 
+  // previewFor: `${muridUserId}:${relation}` or null
   const [previewFor, setPreviewFor] = useState<string | null>(null)
 
   return (
@@ -336,39 +363,68 @@ export function EndSesiSummaryDialog({
                   {t('sesiDialog.summary.noAnggota')}
                 </p>
               ) : (
-                <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200">
+                <div className="space-y-2">
                   {anggota.map((a, idx) => {
-                    const user = userQs[idx]?.data ?? null
-                    const m = messageFor(user)
-                    const hasContact = user?.parentPhone && user?.parentName
+                    const murid = userQs[idx]?.data
+                    if (!murid) return null
+                    const links = murid.ortu ?? []
+                    const targets = targetFor(murid)
                     return (
-                      <li key={a.muridUserId} className="flex items-center gap-2 px-3 py-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-slate-900">{a.muridName}</div>
-                          <div className="truncate text-xs text-slate-500">
-                            {hasContact ? (
-                              <>
-                                {user!.parentTitle ?? ''} {user!.parentName} ·{' '}
-                                +{REGION_DIAL[(user!.parentPhoneRegion ?? 'ID')]}
-                                {(user!.parentPhone ?? '').replace(/^0+/, '')}
-                              </>
-                            ) : (
-                              <span className="text-slate-400">{t('sesiDialog.summary.contactIncomplete')}</span>
-                            )}
+                      <div key={a.muridUserId} className="rounded-lg border border-slate-200 p-3">
+                        <p className="mb-2 text-sm font-medium text-slate-900">{murid.name}</p>
+                        {links.length === 0 ? (
+                          <p className="text-xs text-slate-400">{t('sesiDialog.summary.contactIncomplete')}</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {links.map((link) => {
+                              const { url } = messageFor(murid, link)
+                              const label = link.relation === 'ayah' ? t('users.ortu.ayah') : t('users.ortu.ibu')
+                              const checked = targets.has(link.relation)
+                              return (
+                                <div key={link.relation} className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`wa-${murid.id}-${link.relation}`}
+                                    checked={checked}
+                                    onChange={() => toggleTarget(murid.id, link.relation)}
+                                    disabled={!link.user.noHp}
+                                    className="h-4 w-4 rounded border-slate-300 text-emerald-600"
+                                  />
+                                  <label
+                                    htmlFor={`wa-${murid.id}-${link.relation}`}
+                                    className="flex-1 text-xs text-slate-700"
+                                  >
+                                    {label} — {link.user.name}
+                                    {link.user.noHp
+                                      ? ` · ${link.user.noHp} (${link.user.phoneRegion ?? 'ID'})`
+                                      : ` · ${t('sesiDialog.summary.noPhone')}`}
+                                  </label>
+                                  <button
+                                    onClick={() => setPreviewFor(`${murid.id}:${link.relation}`)}
+                                    title={t('sesiDialog.summary.waTitleSend')}
+                                    className="rounded p-1 text-slate-400 hover:text-slate-700"
+                                  >
+                                    <MessageCircle size={13} />
+                                  </button>
+                                  {url && checked && (
+                                    <a
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="rounded bg-emerald-600 px-2 py-0.5 text-xs text-white hover:bg-emerald-700"
+                                    >
+                                      WA
+                                    </a>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
-                        </div>
-                        <button
-                          onClick={() => setPreviewFor(a.muridUserId)}
-                          disabled={!m.url}
-                          title={m.url ? t('sesiDialog.summary.waTitleSend') : t('sesiDialog.summary.waTitleIncomplete')}
-                          className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <MessageCircle size={13} /> {t('sesiDialog.summary.waBtn')}
-                        </button>
-                      </li>
+                        )}
+                      </div>
                     )
                   })}
-                </ul>
+                </div>
               )}
             </section>
           )}
@@ -405,9 +461,11 @@ export function EndSesiSummaryDialog({
 
         {/* WA preview overlay */}
         {previewFor && (() => {
-          const idx = anggota.findIndex((a) => a.muridUserId === previewFor)
-          const user = idx >= 0 ? userQs[idx]?.data ?? null : null
-          const m = messageFor(user)
+          const [previewMuridId, previewRelation] = previewFor.split(':')
+          const idx = anggota.findIndex((a) => a.muridUserId === previewMuridId)
+          const murid = idx >= 0 ? userQs[idx]?.data ?? null : null
+          const ortuLink = murid?.ortu?.find((l) => l.relation === previewRelation) ?? null
+          const m = murid && ortuLink ? messageFor(murid, ortuLink) : { url: null, preview: '' }
           return (
             <div
               className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
@@ -420,8 +478,8 @@ export function EndSesiSummaryDialog({
                 <div className="mb-2 flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-slate-900">
                     {t('sesiDialog.summary.previewTitle', {
-                      salutation: user?.parentTitle ?? '',
-                      name: user?.parentName ?? '',
+                      salutation: previewRelation === 'ayah' ? 'Bapak' : 'Ibu',
+                      name: ortuLink?.user.name ?? '',
                     })}
                   </h4>
                   <button

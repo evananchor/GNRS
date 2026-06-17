@@ -81,7 +81,13 @@ func (b *UsersBulk) Upsert(ctx context.Context, in UserBulkInput, mode bulk.Mode
 	if in.Password == "" {
 		return "", false, errors.New("password is required to create a new user")
 	}
-	created, err := b.users.Create(ctx, in.Email, in.Username, in.Password, in.Name, in.Role)
+	created, err := b.users.Create(ctx, UserCreateInput{
+		Email:    in.Email,
+		Username: in.Username,
+		Password: in.Password,
+		Name:     in.Name,
+		Role:     in.Role,
+	})
 	if err != nil {
 		return "", false, err
 	}

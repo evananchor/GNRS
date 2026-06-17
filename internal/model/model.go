@@ -96,14 +96,15 @@ type User struct {
 	Alamat      *string    `json:"alamat,omitempty"`
 	Kelompok    *string    `json:"kelompok,omitempty"`
 
-	// Education + family ties (kept available to all roles — same fields
-	// across every membership category per the unified-user mechanism).
-	Level             *StudentLevel `json:"level,omitempty"`
-	ParentName        *string       `json:"parentName,omitempty"`
-	ParentTitle       *string       `json:"parentTitle,omitempty"`
-	ParentPhone       *string       `json:"parentPhone,omitempty"`
-	ParentPhoneRegion *string       `json:"parentPhoneRegion,omitempty"`
-	ParentEmail       *string       `json:"parentEmail,omitempty"`
+	// Education level (murid only).
+	Level *StudentLevel `json:"level,omitempty"`
+
+	// Phone region for E.164 normalization (primarily used by ortu users).
+	// One of: ID, SG, US, CA. Defaults to "ID".
+	PhoneRegion string `json:"phoneRegion"`
+
+	// Ortu links (populated only on single-user GET for murid role).
+	Ortu []OrtuLink `json:"ortu,omitempty"`
 
 	// Locality + free-form notes (kept available to all roles).
 	Desa   *string `json:"desa,omitempty"`
@@ -159,12 +160,7 @@ type Student struct {
 	Kelompok    *string       `json:"kelompok,omitempty"`
 	// Status is synthesised from User.Active after migration 041 dropped
 	// the membership_status column — active=1 → "active", active=0 → "left".
-	Status            StudentStatus `json:"status"`
-	ParentName        *string       `json:"parentName,omitempty"`
-	ParentTitle       *string       `json:"parentTitle,omitempty"`
-	ParentPhone       *string       `json:"parentPhone,omitempty"`
-	ParentPhoneRegion *string       `json:"parentPhoneRegion,omitempty"`
-	ParentEmail       *string       `json:"parentEmail,omitempty"`
+	Status StudentStatus `json:"status"`
 	// Shared profile fields (same set as Teacher per the unified-user
 	// mechanism — these were previously guru-only).
 	NoHP   *string `json:"noHp,omitempty"`
@@ -209,12 +205,7 @@ type Teacher struct {
 	DateOfBirth       *time.Time    `json:"dateOfBirth,omitempty"`
 	NoHP              *string       `json:"noHp,omitempty"`
 	Alamat            *string       `json:"alamat,omitempty"`
-	Level             *StudentLevel `json:"level,omitempty"`
-	ParentName        *string       `json:"parentName,omitempty"`
-	ParentTitle       *string       `json:"parentTitle,omitempty"`
-	ParentPhone       *string       `json:"parentPhone,omitempty"`
-	ParentPhoneRegion *string       `json:"parentPhoneRegion,omitempty"`
-	ParentEmail       *string       `json:"parentEmail,omitempty"`
+	Level *StudentLevel `json:"level,omitempty"`
 	// Taaruf-style biodata (shared by every role).
 	UserCode    *string    `json:"userCode,omitempty"`
 	TempatLahir *string    `json:"tempatLahir,omitempty"`
@@ -226,4 +217,11 @@ type Teacher struct {
 	PhotoURL    *string    `json:"photoUrl,omitempty"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
+}
+
+// OrtuLink represents one parent (ayah or ibu) linked to a murid.
+// Returned by GET /api/users/:id when the user has role=murid.
+type OrtuLink struct {
+	Relation string `json:"relation"` // "ayah" or "ibu"
+	User     User   `json:"user"`
 }

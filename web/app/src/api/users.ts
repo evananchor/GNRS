@@ -1,7 +1,5 @@
 import { apiFetch } from './client'
 
-// Canonical roles (5). Legacy "staff" rows may still exist in the DB; the
-// backend tolerates them but the picker only exposes these five.
 export const USER_ROLES = ['admin', 'pengurus', 'guru', 'ortu', 'murid'] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
@@ -9,6 +7,20 @@ export const STUDENT_LEVELS = ['Caberawit', 'Pra Remaja', 'Remaja', 'Pra Nikah']
 export type StudentLevel = (typeof STUDENT_LEVELS)[number]
 
 export type Gender = 'male' | 'female'
+
+export type PhoneRegion = 'ID' | 'SG' | 'US' | 'CA'
+
+export type OrtuLink = {
+  relation: 'ayah' | 'ibu'
+  user: {
+    id: string
+    name: string
+    noHp?: string
+    phoneRegion?: PhoneRegion
+    email?: string
+    active: boolean
+  }
+}
 
 export type ManagedUser = {
   // Auth
@@ -26,16 +38,13 @@ export type ManagedUser = {
   noHp?: string
   alamat?: string
   kelompok?: string
+  phoneRegion?: PhoneRegion
 
   // Murid
   level?: StudentLevel
-  parentName?: string
-  parentTitle?: string
-  parentPhone?: string
-  parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
-  parentEmail?: string
+  ortu?: OrtuLink[] // linked parent accounts (populated on single-user GET)
 
-  // Locality + free-form notes (kept available to all roles).
+  // Locality + free-form notes
   desa?: string
   daerah?: string
   notes?: string
@@ -68,23 +77,19 @@ export type UserCreateInput = {
   name: string
   password: string
   role: UserRole
-  // optional profile bits
   nickname?: string
   dateOfBirth?: string
   gender?: Gender
   noHp?: string
   alamat?: string
   kelompok?: string
+  phoneRegion?: PhoneRegion
   level?: StudentLevel
-  parentName?: string
-  parentTitle?: string
-  parentPhone?: string
-  parentPhoneRegion?: 'ID' | 'SG' | 'US' | 'CA'
-  parentEmail?: string
+  ayahId?: string
+  ibuId?: string
   desa?: string
   daerah?: string
   notes?: string
-  // Taaruf-style biodata
   userCode?: string
   tempatLahir?: string
   pendidikan?: string
@@ -94,10 +99,10 @@ export type UserCreateInput = {
   tglDaftar?: string
 }
 
-// All fields optional. Pass an empty string to clear nullable fields where
-// the backend supports it (username, level, dateOfBirth, timezone).
 export type UserUpdateInput = Partial<Omit<UserCreateInput, 'password'>> & {
   active?: boolean
+  clearAyahId?: boolean
+  clearIbuId?: boolean
 }
 
 export function listUsers(

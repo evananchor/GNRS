@@ -42,13 +42,15 @@ type userCreateBody struct {
 	Alamat      *string `json:"alamat,omitempty"       validate:"omitempty,max=500"`
 	Kelompok    *string `json:"kelompok,omitempty"     validate:"omitempty,max=200"`
 
-	// Murid
-	Level             *string `json:"level,omitempty"             validate:"omitempty,oneof=Caberawit 'Pra Remaja' Remaja 'Pra Nikah'"`
-	ParentName        *string `json:"parentName,omitempty"        validate:"omitempty,max=200"`
-	ParentTitle       *string `json:"parentTitle,omitempty"       validate:"omitempty,max=80"`
-	ParentPhone       *string `json:"parentPhone,omitempty"       validate:"omitempty,max=64"`
-	ParentPhoneRegion *string `json:"parentPhoneRegion,omitempty" validate:"omitempty,oneof=ID SG US CA"`
-	ParentEmail       *string `json:"parentEmail,omitempty"       validate:"omitempty,email"`
+	// Murid / level
+	Level *string `json:"level,omitempty" validate:"omitempty,oneof=Caberawit 'Pra Remaja' Remaja 'Pra Nikah'"`
+
+	// Phone region for E.164 normalization (primarily ortu users).
+	PhoneRegion *string `json:"phoneRegion,omitempty" validate:"omitempty,oneof=ID SG US CA"`
+
+	// Ortu links (only processed if role=murid).
+	AyahID *string `json:"ayahId,omitempty"`
+	IbuID  *string `json:"ibuId,omitempty"`
 
 	// Locality + free-form notes (kept available to all roles).
 	Desa   *string `json:"desa,omitempty"   validate:"omitempty,max=200"`
@@ -79,12 +81,14 @@ type userUpdateBody struct {
 	Alamat      *string `json:"alamat,omitempty"       validate:"omitempty,max=500"`
 	Kelompok    *string `json:"kelompok,omitempty"     validate:"omitempty,max=200"`
 
-	Level             *string `json:"level,omitempty"             validate:"omitempty"`
-	ParentName        *string `json:"parentName,omitempty"        validate:"omitempty,max=200"`
-	ParentTitle       *string `json:"parentTitle,omitempty"       validate:"omitempty,max=80"`
-	ParentPhone       *string `json:"parentPhone,omitempty"       validate:"omitempty,max=64"`
-	ParentPhoneRegion *string `json:"parentPhoneRegion,omitempty" validate:"omitempty,oneof=ID SG US CA"`
-	ParentEmail       *string `json:"parentEmail,omitempty"       validate:"omitempty"`
+	Level       *string `json:"level,omitempty"       validate:"omitempty"`
+	PhoneRegion *string `json:"phoneRegion,omitempty" validate:"omitempty,oneof=ID SG US CA"`
+
+	// Ortu links (murid only). Set AyahID/IbuID to link; ClearAyahID/ClearIbuID to unlink.
+	AyahID      *string `json:"ayahId,omitempty"`
+	ClearAyahID bool    `json:"clearAyahId,omitempty"`
+	IbuID       *string `json:"ibuId,omitempty"`
+	ClearIbuID  bool    `json:"clearIbuId,omitempty"`
 
 	Desa   *string `json:"desa,omitempty"   validate:"omitempty,max=200"`
 	Daerah *string `json:"daerah,omitempty" validate:"omitempty,max=200"`
@@ -139,6 +143,14 @@ func (h *Users) Get(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal mengambil data pengguna")
 		return
 	}
+	if u.Role == model.RoleMurid {
+		links, err2 := h.users.GetMuridOrtu(r.Context(), id)
+		if err2 != nil {
+			httpx.Error(w, http.StatusInternalServerError, "ortu_fetch", err2.Error())
+			return
+		}
+		u.Ortu = links
+	}
 	httpx.JSON(w, http.StatusOK, u)
 }
 
@@ -173,11 +185,12 @@ func (h *Users) Create(w http.ResponseWriter, r *http.Request) {
 		NoHP:        trimOptional(b.NoHP),
 		Alamat:      trimOptional(b.Alamat),
 		Kelompok:    trimOptional(b.Kelompok),
-		ParentName:        trimOptional(b.ParentName),
-		ParentTitle:       trimOptional(b.ParentTitle),
-		ParentPhone:       trimOptional(b.ParentPhone),
-		ParentPhoneRegion: trimOptional(b.ParentPhoneRegion),
-		ParentEmail:       trimOptional(b.ParentEmail),
+		PhoneRegion: func() string {
+			if b.PhoneRegion != nil && *b.PhoneRegion != "" {
+				return *b.PhoneRegion
+			}
+			return "ID"
+		}(),
 		Desa:   trimOptional(b.Desa),
 		Daerah: trimOptional(b.Daerah),
 		Notes:  trimOptional(b.Notes),
@@ -212,6 +225,26 @@ func (h *Users) Create(w http.ResponseWriter, r *http.Request) {
 		}
 		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal menyimpan pengguna")
 		return
+	}
+	if model.Role(b.Role) == model.RoleMurid {
+		if b.AyahID != nil && *b.AyahID != "" {
+			if err2 := h.users.SetMuridOrtu(r.Context(), u.ID, "ayah", *b.AyahID); err2 != nil {
+				httpx.Error(w, http.StatusInternalServerError, "ortu_link", err2.Error())
+				return
+			}
+		}
+		if b.IbuID != nil && *b.IbuID != "" {
+			if err2 := h.users.SetMuridOrtu(r.Context(), u.ID, "ibu", *b.IbuID); err2 != nil {
+				httpx.Error(w, http.StatusInternalServerError, "ortu_link", err2.Error())
+				return
+			}
+		}
+		links, err2 := h.users.GetMuridOrtu(r.Context(), u.ID)
+		if err2 != nil {
+			httpx.Error(w, http.StatusInternalServerError, "ortu_fetch", err2.Error())
+			return
+		}
+		u.Ortu = links
 	}
 	httpx.JSON(w, http.StatusCreated, u)
 }
@@ -290,12 +323,8 @@ func (h *Users) Update(w http.ResponseWriter, r *http.Request) {
 		NoHP:        b.NoHP,
 		Alamat:      b.Alamat,
 		Kelompok:    b.Kelompok,
-		ParentName:        b.ParentName,
-		ParentTitle:       b.ParentTitle,
-		ParentPhone:       b.ParentPhone,
-		ParentPhoneRegion: b.ParentPhoneRegion,
-		ParentEmail:       b.ParentEmail,
-		Desa:   b.Desa,
+		PhoneRegion: b.PhoneRegion,
+		Desa:        b.Desa,
 		Daerah: b.Daerah,
 		Notes:  b.Notes,
 	}
@@ -357,6 +386,30 @@ func (h *Users) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal memperbarui pengguna")
 		return
+	}
+	if u.Role == model.RoleMurid {
+		if b.ClearAyahID {
+			_ = h.users.RemoveMuridOrtu(r.Context(), id, "ayah")
+		} else if b.AyahID != nil && *b.AyahID != "" {
+			if err2 := h.users.SetMuridOrtu(r.Context(), id, "ayah", *b.AyahID); err2 != nil {
+				httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal menghubungkan ortu ayah")
+				return
+			}
+		}
+		if b.ClearIbuID {
+			_ = h.users.RemoveMuridOrtu(r.Context(), id, "ibu")
+		} else if b.IbuID != nil && *b.IbuID != "" {
+			if err2 := h.users.SetMuridOrtu(r.Context(), id, "ibu", *b.IbuID); err2 != nil {
+				httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal menghubungkan ortu ibu")
+				return
+			}
+		}
+		links, err2 := h.users.GetMuridOrtu(r.Context(), id)
+		if err2 != nil {
+			httpx.Error(w, http.StatusInternalServerError, "ortu_fetch", err2.Error())
+			return
+		}
+		u.Ortu = links
 	}
 	httpx.JSON(w, http.StatusOK, u)
 }

@@ -630,7 +630,8 @@
         "Oct",
         "Nov",
         "Dec"
-      ]
+      ],
+      "noPhone": "No WA number"
     }
   },
   "materiComp": {
@@ -1325,15 +1326,7 @@
         "leaveReason": "Notes"
       },
       "murid": {
-        "level": "Level",
-        "parentTitle": "Parent salutation",
-        "parentTitleHint": "e.g. Mr., Mrs., Mom, Dad…",
-        "parentTitlePh": "Mr.",
-        "parentName": "Parent name",
-        "parentPhone": "Parent WhatsApp number",
-        "parentPhoneRO": "Parent WhatsApp",
-        "parentPhonePh": "81234567890",
-        "parentEmail": "Parent email"
+        "level": "Level"
       },
       "guru": {
         "desa": "Village",
@@ -1351,6 +1344,19 @@
         "saved": "Password updated.",
         "submit": "Change password"
       }
+    },
+    "ortu": {
+      "sectionTitle": "Parent Identity",
+      "ayah": "Father",
+      "ibu": "Mother",
+      "searchPh": "Search {{label}}…",
+      "createNew": "Add \"{{name}}\" as new parent account",
+      "createTitle": "Create new {{label}} account",
+      "nameLabel": "Name",
+      "phoneLabel": "Phone",
+      "regionLabel": "Region",
+      "saveNew": "Save & Link",
+      "unlinkTitle": "Remove {{label}} link"
     }
   },
   "pengaturan": {
