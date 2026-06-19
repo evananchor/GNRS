@@ -1,4 +1,4 @@
-import { ATTENDANCE_STATUS_LABELS, type Attendance } from '@/api/types'
+import { ATTENDANCE_STATUS_LABELS, type Attendance } from '@/api/attendances'
 
 export function AttendanceDetail({ attendance: a }: { attendance: Attendance }) {
   return (

@@ -1,5 +1,5 @@
 import { apiFetch } from './client'
-import type { Attendance, AttendanceStatus } from './types'
+import type { Attendance, AttendanceStatus } from './attendances'
 
 export type PublicOption = {
   id: string
