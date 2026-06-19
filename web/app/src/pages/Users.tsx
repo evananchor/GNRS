@@ -658,6 +658,14 @@ function UserEditForm({
   const [clearAyah, setClearAyah] = useState(false)
   const [clearIbu, setClearIbu] = useState(false)
 
+  // Sync ortu IDs when initial reloads (e.g., after the form is saved).
+  useEffect(() => {
+    setAyahId(initial.ortu?.find((o) => o.relation === 'ayah')?.user.id ?? null)
+    setIbuId(initial.ortu?.find((o) => o.relation === 'ibu')?.user.id ?? null)
+    setClearAyah(false)
+    setClearIbu(false)
+  }, [initial.id, initial.ortu])
+
   const linkedAyah = initial.ortu?.find((o) => o.relation === 'ayah')?.user
   const linkedIbu = initial.ortu?.find((o) => o.relation === 'ibu')?.user
 
