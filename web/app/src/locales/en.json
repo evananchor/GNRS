@@ -41,6 +41,7 @@
     "students": "Students",
     "teachers": "Teachers",
     "kelas": "Classes",
+    "sesi": "Sessions",
     "kehadiran": "Attendance",
     "bacaan": "Reading",
     "pustaka": "Library",
@@ -1554,6 +1555,18 @@
       "durasi": "Session duration (e.g. 1 hr 15 min)",
       "materiList": "List of materials covered (bullet)",
       "reviewSection": "'Needs review' section (empty when none)"
+    }
+  },
+  "sesiList": {
+    "title": "Session History",
+    "subtitle": "All teaching sessions across all classes.",
+    "empty": "No sessions found for this period.",
+    "goLive": "Go Live",
+    "filter": {
+      "week": "This week",
+      "month": "This month",
+      "all": "All",
+      "allKelas": "All classes"
     }
   }
 }

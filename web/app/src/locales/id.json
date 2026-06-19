@@ -41,6 +41,7 @@
     "students": "Generus",
     "teachers": "Pengajar",
     "kelas": "Kelas",
+    "sesi": "Sesi",
     "kehadiran": "Kehadiran",
     "bacaan": "Bacaan",
     "pustaka": "Pustaka",
@@ -1553,6 +1554,18 @@
       "durasi": "Durasi sesi (mis. 1 jam 15 menit)",
       "materiList": "Daftar materi diajarkan (bullet)",
       "reviewSection": "Section 'Perlu Direview' (otomatis kosong jika tidak ada)"
+    }
+  },
+  "sesiList": {
+    "title": "Riwayat Sesi",
+    "subtitle": "Semua sesi pengajian dari seluruh kelas.",
+    "empty": "Tidak ada sesi pada periode ini.",
+    "goLive": "Masuk Live",
+    "filter": {
+      "week": "Minggu ini",
+      "month": "Bulan ini",
+      "all": "Semua",
+      "allKelas": "Semua kelas"
     }
   }
 }
