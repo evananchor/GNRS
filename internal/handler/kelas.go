@@ -65,9 +65,9 @@ type jadwalBody struct {
 	Aktif         bool    `json:"aktif"`
 }
 
-// canManageJadwal loads the kelas and authorizes the caller as admin OR the
+// canManageKelas loads the kelas and authorizes the caller as admin OR the
 // kelas wali (primary guru). On failure it writes the response and returns nil.
-func (h *Kelas) canManageJadwal(w http.ResponseWriter, r *http.Request, id string) *store.Kelas {
+func (h *Kelas) canManageKelas(w http.ResponseWriter, r *http.Request, id string) *store.Kelas {
 	k, err := h.k.Get(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
@@ -90,6 +90,11 @@ func (h *Kelas) canManageJadwal(w http.ResponseWriter, r *http.Request, id strin
 	return k
 }
 
+func isAdminClaims(r *http.Request) bool {
+	c, ok := auth.ClaimsFrom(r.Context())
+	return ok && c != nil && c.Role == model.RoleAdmin
+}
+
 func (h *Kelas) GetJadwal(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	j, err := h.k.GetJadwal(r.Context(), id)
@@ -102,7 +107,7 @@ func (h *Kelas) GetJadwal(w http.ResponseWriter, r *http.Request) {
 
 func (h *Kelas) PutJadwal(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if h.canManageJadwal(w, r, id) == nil {
+	if h.canManageKelas(w, r, id) == nil {
 		return
 	}
 	var b jadwalBody
@@ -134,7 +139,7 @@ func (h *Kelas) PutJadwal(w http.ResponseWriter, r *http.Request) {
 
 func (h *Kelas) DeleteJadwal(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if h.canManageJadwal(w, r, id) == nil {
+	if h.canManageKelas(w, r, id) == nil {
 		return
 	}
 	if err := h.k.DeleteJadwal(r.Context(), id); err != nil {
@@ -146,7 +151,7 @@ func (h *Kelas) DeleteJadwal(w http.ResponseWriter, r *http.Request) {
 
 func (h *Kelas) GenerateJadwal(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if h.canManageJadwal(w, r, id) == nil {
+	if h.canManageKelas(w, r, id) == nil {
 		return
 	}
 	created, err := h.k.GenerateJadwal(r.Context(), id)
@@ -206,10 +211,31 @@ func (h *Kelas) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Kelas) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	existing := h.canManageKelas(w, r, id)
+	if existing == nil {
+		return
+	}
 	in, err := h.parse(r)
 	if err != nil {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
+	}
+	// Non-admins (wali) may not reassign the primary wali. Force the existing
+	// primary and guarantee it stays in the guru set.
+	if !isAdminClaims(r) {
+		in.GuruUserID = existing.GuruUserID
+		if existing.GuruUserID != nil {
+			has := false
+			for _, g := range in.GuruUserIDs {
+				if g == *existing.GuruUserID {
+					has = true
+					break
+				}
+			}
+			if !has {
+				in.GuruUserIDs = append([]string{*existing.GuruUserID}, in.GuruUserIDs...)
+			}
+		}
 	}
 	k, err := h.k.Update(r.Context(), id, in)
 	if err != nil {
@@ -258,6 +284,9 @@ type anggotaBody struct {
 
 func (h *Kelas) AddAnggota(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if h.canManageKelas(w, r, id) == nil {
+		return
+	}
 	var b anggotaBody
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", "Format permintaan tidak valid")
@@ -277,6 +306,9 @@ func (h *Kelas) AddAnggota(w http.ResponseWriter, r *http.Request) {
 
 func (h *Kelas) RemoveAnggota(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if h.canManageKelas(w, r, id) == nil {
+		return
+	}
 	muridID := chi.URLParam(r, "muridId")
 	if err := h.k.RemoveAnggota(r.Context(), id, muridID); err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal menghapus anggota")
@@ -307,6 +339,9 @@ func (h *Kelas) ListGuruAnggota(w http.ResponseWriter, r *http.Request) {
 
 func (h *Kelas) AddGuruAnggota(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if h.canManageKelas(w, r, id) == nil {
+		return
+	}
 	var b guruAnggotaBody
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", "Format permintaan tidak valid")
@@ -331,6 +366,15 @@ func (h *Kelas) AddGuruAnggota(w http.ResponseWriter, r *http.Request) {
 func (h *Kelas) RemoveGuruAnggota(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	guruID := chi.URLParam(r, "guruId")
+	k := h.canManageKelas(w, r, id)
+	if k == nil {
+		return
+	}
+	if !isAdminClaims(r) && k.GuruUserID != nil && *k.GuruUserID == guruID {
+		httpx.Error(w, http.StatusForbidden, "forbidden",
+			"Wali tidak bisa menghapus guru utama kelas")
+		return
+	}
 	if err := h.k.RemoveGuruAnggota(r.Context(), id, guruID); err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			httpx.Error(w, http.StatusNotFound, "not_found", "Kelas tidak ditemukan")

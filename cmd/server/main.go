@@ -19,6 +19,7 @@ import (
 	"github.com/fadhilkurnia/ppg-dashboard/internal/handler"
 	"github.com/fadhilkurnia/ppg-dashboard/internal/httpx"
 	"github.com/fadhilkurnia/ppg-dashboard/internal/importer"
+	"github.com/fadhilkurnia/ppg-dashboard/internal/model"
 	"github.com/fadhilkurnia/ppg-dashboard/internal/store"
 	"github.com/fadhilkurnia/ppg-dashboard/web"
 )
@@ -357,6 +358,15 @@ func run() error {
 			p.Post("/auth/me/photo", photosH.UploadMe)
 			p.Delete("/auth/me/photo", photosH.DeleteMe)
 
+			p.Group(func(mng chi.Router) {
+				mng.Use(auth.RequireAnyRole(model.RoleAdmin, model.RoleGuru))
+				mng.Patch("/kelas/{id}", kelasH.Update)
+				mng.Post("/kelas/{id}/anggota", kelasH.AddAnggota)
+				mng.Delete("/kelas/{id}/anggota/{muridId}", kelasH.RemoveAnggota)
+				mng.Post("/kelas/{id}/guru", kelasH.AddGuruAnggota)
+				mng.Delete("/kelas/{id}/guru/{guruId}", kelasH.RemoveGuruAnggota)
+			})
+
 			p.Group(func(adm chi.Router) {
 				adm.Use(auth.RequireRole("admin"))
 				adm.Post("/students", studentsH.Create)
@@ -401,12 +411,7 @@ func run() error {
 				adm.Delete("/users/{id}/photo", photosH.Delete)
 
 				adm.Post("/kelas", kelasH.Create)
-				adm.Patch("/kelas/{id}", kelasH.Update)
 				adm.Delete("/kelas/{id}", kelasH.Delete)
-				adm.Post("/kelas/{id}/anggota", kelasH.AddAnggota)
-				adm.Delete("/kelas/{id}/anggota/{muridId}", kelasH.RemoveAnggota)
-				adm.Post("/kelas/{id}/guru", kelasH.AddGuruAnggota)
-				adm.Delete("/kelas/{id}/guru/{guruId}", kelasH.RemoveGuruAnggota)
 
 				adm.Post("/rencana-bulanan", rencanaH.Create)
 				adm.Delete("/rencana-bulanan/{id}", rencanaH.Delete)
