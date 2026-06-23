@@ -17,7 +17,7 @@ import {
 } from '@/api/kelas'
 import { listTingkat } from '@/api/kurikulum'
 import { listStudents } from '@/api/students'
-import { listUsers } from '@/api/users'
+import { listTeachers } from '@/api/teachers'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/Button'
 import { Dialog } from '@/components/Dialog'
@@ -443,8 +443,8 @@ function KelasFormDialog({
     staleTime: 5 * 60_000,
   })
   const { data: gurus } = useQuery({
-    queryKey: ['users', 'role-guru'],
-    queryFn: () => listUsers({ role: 'guru', active: true, limit: 200 }),
+    queryKey: ['teachers', 'pick'],
+    queryFn: () => listTeachers({ status: 'active', limit: 200 }),
     staleTime: 60_000,
   })
   const guruOptions = gurus?.items ?? []
