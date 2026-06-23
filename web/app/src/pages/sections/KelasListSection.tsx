@@ -231,19 +231,23 @@ function KelasField({
           <p className="px-1 py-6 text-center text-sm text-slate-500">{t('kelasSection.list.noMatch')}</p>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((k) => (
-              <KelasCard
-                key={k.id}
-                kelas={k}
-                isAdmin={isAdmin}
-                canManageJadwal={isAdmin || (currentUserId != null && k.guruUserId === currentUserId)}
-                onOpen={() => onOpen(k)}
-                onEdit={() => onEdit(k)}
-                onDelete={() => onDelete(k)}
-                onAnggota={() => onAnggota(k)}
-                onJadwal={() => onJadwal(k)}
-              />
-            ))}
+            {filtered.map((k) => {
+              const canManage = isAdmin || (currentUserId != null && k.guruUserId === currentUserId)
+              return (
+                <KelasCard
+                  key={k.id}
+                  kelas={k}
+                  isAdmin={isAdmin}
+                  canManageJadwal={canManage}
+                  canManageKelas={canManage}
+                  onOpen={() => onOpen(k)}
+                  onEdit={() => onEdit(k)}
+                  onDelete={() => onDelete(k)}
+                  onAnggota={() => onAnggota(k)}
+                  onJadwal={() => onJadwal(k)}
+                />
+              )
+            })}
           </div>
         )}
       </div>
@@ -257,6 +261,7 @@ function KelasCard({
   kelas: k,
   isAdmin,
   canManageJadwal,
+  canManageKelas,
   onOpen,
   onEdit,
   onDelete,
@@ -266,6 +271,7 @@ function KelasCard({
   kelas: Kelas
   isAdmin: boolean
   canManageJadwal: boolean
+  canManageKelas: boolean
   onOpen: () => void
   onEdit: () => void
   onDelete: () => void
@@ -284,7 +290,7 @@ function KelasCard({
         onClick={onOpen}
         className={cn(
           'flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-          isAdmin ? 'pr-28' : canManageJadwal && 'pr-10',
+          isAdmin ? 'pr-28' : (canManageKelas ? 'pr-20' : (canManageJadwal ? 'pr-10' : '')),
         )}
       >
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-sky-50 text-lg">
@@ -295,7 +301,7 @@ function KelasCard({
           <div className="truncate text-xs text-slate-500">{subtitle}</div>
         </div>
       </button>
-      {isAdmin || canManageJadwal ? (
+      {isAdmin || canManageJadwal || canManageKelas ? (
         <div className="absolute right-2 top-2 flex items-center gap-1">
           <button
             type="button"
@@ -309,7 +315,7 @@ function KelasCard({
           >
             <CalendarClock size={16} />
           </button>
-          {isAdmin ? (
+          {canManageKelas ? (
             <>
               <button
                 type="button"
@@ -335,19 +341,21 @@ function KelasCard({
               >
                 <Pencil size={16} />
               </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                }}
-                className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-                aria-label={t('kelasSection.list.deleteKelas')}
-                title={t('kelasSection.list.deleteKelas')}
-              >
-                <Trash2 size={16} />
-              </button>
             </>
+          ) : null}
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              className="rounded-md bg-white/80 p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+              aria-label={t('kelasSection.list.deleteKelas')}
+              title={t('kelasSection.list.deleteKelas')}
+            >
+              <Trash2 size={16} />
+            </button>
           ) : null}
         </div>
       ) : null}
