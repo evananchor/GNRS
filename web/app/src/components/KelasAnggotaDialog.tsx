@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Trash2, UserPlus } from 'lucide-react'
+import { Pencil, Trash2, UserPlus } from 'lucide-react'
 
 import {
   addAnggota,
@@ -17,6 +17,7 @@ import { ApiError } from '@/api/client'
 import { Button } from '@/components/Button'
 import { Dialog } from '@/components/Dialog'
 import { Input } from '@/components/Input'
+import { MuridEditDialog } from '@/components/MuridEditDialog'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
@@ -97,6 +98,7 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
   const confirm = useConfirm()
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [editingMuridId, setEditingMuridId] = useState<string | null>(null)
 
   const { data: anggota = [], isPending } = useQuery({
     queryKey: ['kelas-anggota', kelasId],
@@ -162,20 +164,31 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
                 className="flex items-center justify-between gap-3 px-3 py-2"
               >
                 <span className="truncate text-sm">{a.muridName}</span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (await confirm({ message: t('sesiDialog.kelasAnggota.muridConfirmRemove', { name: a.muridName }), danger: true })) {
-                      removeMut.mutate(a.muridUserId)
-                    }
-                  }}
-                  disabled={removeMut.isPending}
-                  className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label={t('sesiDialog.kelasAnggota.muridRemoveAria')}
-                  title={t('sesiDialog.kelasAnggota.muridRemoveTitle')}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMuridId(a.muridUserId)}
+                    className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    aria-label={t('common.edit')}
+                    title={t('common.edit')}
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (await confirm({ message: t('sesiDialog.kelasAnggota.muridConfirmRemove', { name: a.muridName }), danger: true })) {
+                        removeMut.mutate(a.muridUserId)
+                      }
+                    }}
+                    disabled={removeMut.isPending}
+                    className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={t('sesiDialog.kelasAnggota.muridRemoveAria')}
+                    title={t('sesiDialog.kelasAnggota.muridRemoveTitle')}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -240,6 +253,14 @@ function MuridSection({ kelasId, tingkat }: { kelasId: string; tingkat: string }
               : t('sesiDialog.kelasAnggota.addBtn')}
         </Button>
       </div>
+
+      {editingMuridId !== null && (
+        <MuridEditDialog
+          muridId={editingMuridId}
+          kelasId={kelasId}
+          onClose={() => setEditingMuridId(null)}
+        />
+      )}
     </div>
   )
 }

@@ -3,12 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 
-import {
-  listUsers,
-  createUser,
-  type OrtuLink,
-  type PhoneRegion,
-} from '@/api/users'
+import { type OrtuLink, type PhoneRegion } from '@/api/users'
+import { searchOrtu, createOrtu } from '@/api/murid'
 import { Button } from './Button'
 import { Input } from './Input'
 import { Field } from './Field'
@@ -38,20 +34,13 @@ export function OrtuPicker({ relation, linked, onLink, onUnlink, disabled }: Pro
 
   const searchQ = useQuery({
     queryKey: ['ortu-search', query],
-    queryFn: () => listUsers({ role: 'ortu', q: query, limit: 20 }),
+    queryFn: () => searchOrtu(query, 20),
     enabled: query.length >= 1,
   })
 
   const createMut = useMutation({
     mutationFn: () =>
-      createUser({
-        name: newName.trim(),
-        email: `ortu.new.${Date.now()}@placeholder.local`,
-        password: Math.random().toString(36).slice(2, 14),
-        role: 'ortu',
-        noHp: newPhone.trim() || undefined,
-        phoneRegion: newRegion,
-      }),
+      createOrtu({ name: newName.trim(), noHp: newPhone.trim() || undefined, phoneRegion: newRegion }),
     onSuccess: (ortu) => {
       qc.invalidateQueries({ queryKey: ['ortu-search'] })
       setShowCreate(false)

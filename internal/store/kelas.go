@@ -473,3 +473,19 @@ func scanKelas(s scanner) (*Kelas, error) {
 	}
 	return &k, nil
 }
+
+// IsWaliOfMurid reports whether guruID is the primary guru (wali) of any class
+// that muridID is enrolled in.
+func (s *KelasStore) IsWaliOfMurid(ctx context.Context, guruID, muridID string) (bool, error) {
+	var exists int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT EXISTS(
+		   SELECT 1 FROM kelas_anggota a
+		   JOIN kelas k ON k.id = a.kelas_id
+		   WHERE a.murid_user_id = ? AND k.guru_user_id = ?
+		 )`, muridID, guruID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists == 1, nil
+}
