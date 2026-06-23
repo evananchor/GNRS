@@ -11,6 +11,29 @@ import (
 	"github.com/fadhilkurnia/ppg-dashboard/internal/store"
 )
 
+func TestCreateOrtuForcesRole(t *testing.T) {
+	h, _, users := newMuridEnv(t)
+	waliID := mkGuru(t, users, "wali")
+	// Even if the body says role=admin, server forces ortu.
+	r := reqWithClaims("POST", "/api/ortu",
+		map[string]any{"name": "Bunda", "role": "admin", "noHp": "0822", "phoneRegion": "ID"},
+		model.RoleGuru, waliID, nil)
+	rr := httptest.NewRecorder()
+	h.CreateOrtu(rr, r)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("create ortu: got %d body %s", rr.Code, rr.Body.String())
+	}
+	res, _ := users.List(context.Background(), store.UserListParams{Role: "ortu", Limit: 10})
+	if res.Total < 1 {
+		t.Fatalf("ortu not created")
+	}
+	for _, u := range res.Items {
+		if u.Name == "Bunda" && u.Role != model.RoleOrtu {
+			t.Fatalf("role not forced to ortu: %s", u.Role)
+		}
+	}
+}
+
 func newMuridEnv(t *testing.T) (*Murid, *store.KelasStore, *store.Users) {
 	t.Helper()
 	dir := t.TempDir()

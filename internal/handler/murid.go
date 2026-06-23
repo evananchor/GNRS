@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/fadhilkurnia/ppg-dashboard/internal/auth"
 	"github.com/fadhilkurnia/ppg-dashboard/internal/httpx"
@@ -181,4 +184,63 @@ func (h *Murid) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	u.Ortu = links
 	httpx.JSON(w, http.StatusOK, u)
+}
+
+func (h *Murid) SearchOrtu(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	res, err := h.users.List(r.Context(), store.UserListParams{
+		Query: strings.TrimSpace(q.Get("q")),
+		Role:  string(model.RoleOrtu),
+		Limit: limit,
+	})
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal mencari ortu")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, res)
+}
+
+type ortuCreateBody struct {
+	Name        string  `json:"name"                  validate:"required,max=200"`
+	NoHP        *string `json:"noHp,omitempty"        validate:"omitempty,max=64"`
+	PhoneRegion *string `json:"phoneRegion,omitempty" validate:"omitempty,oneof=ID SG US CA"`
+}
+
+func (h *Murid) CreateOrtu(w http.ResponseWriter, r *http.Request) {
+	var b ortuCreateBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "bad_request", "Format permintaan tidak valid")
+		return
+	}
+	b.Name = strings.TrimSpace(b.Name)
+	if err := h.validator.Struct(b); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	region := "ID"
+	if b.PhoneRegion != nil && *b.PhoneRegion != "" {
+		region = *b.PhoneRegion
+	}
+	in := store.UserCreateInput{
+		Email:       "ortu." + ulid.Make().String() + "@placeholder.local",
+		Name:        b.Name,
+		Password:    ulid.Make().String(), // unusable placeholder; ortu has no login UI
+		Role:        model.RoleOrtu,       // forced — never trust the client
+		NoHP:        b.NoHP,
+		PhoneRegion: region,
+	}
+	u, err := h.users.Create(r.Context(), in)
+	if err != nil {
+		if isUniqueConflict(err) {
+			httpx.Error(w, http.StatusConflict, "conflict", "Ortu sudah terdaftar")
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal menyimpan ortu")
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, u)
 }

@@ -368,6 +368,8 @@ func run() error {
 				mng.Delete("/kelas/{id}/guru/{guruId}", kelasH.RemoveGuruAnggota)
 				mng.Get("/murid/{id}", muridH.Get)
 				mng.Patch("/murid/{id}", muridH.Update)
+				mng.Get("/ortu", muridH.SearchOrtu)
+				mng.Post("/ortu", muridH.CreateOrtu)
 			})
 
 			p.Group(func(adm chi.Router) {
