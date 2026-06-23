@@ -55,43 +55,53 @@ Mirror the existing `canManageJadwal()`:
 A murid in multiple classes is manageable by the wali of **any** of those
 classes — acceptable and simplest.
 
-### Backend approach: reuse existing handlers + authz/whitelist layer
+### Backend approach: admin-or-guru route group + dedicated murid/ortu endpoints
 
-Chosen over dedicated `/api/wali/...` endpoints to minimize new code and reuse
-the existing `OrtuPicker` and kelas dialogs. The cost is branching authz on the
-shared user PATCH — handled by a strict, tested field whitelist (below).
+Refined from the original "reuse the `/users/{id}` PATCH with a field
+whitelist" idea: the `/users/*` admin routes stay **fully admin-only**, and the
+wali surface for students lives on **dedicated `/murid` and `/ortu` endpoints**.
+This eliminates the only real risk the original approach carried — branching
+authz on the god-mode user PATCH that can also set role/password — because the
+new endpoints' request DTO physically has no privileged fields. It still reuses
+the `store` layer and the `OrtuPicker`/kelas dialogs, so the code cost is small.
+
+Route grouping: kelas mutation routes and the new murid/ortu routes move into a
+new `mng` group gated `auth.RequireAnyRole(admin, guru)`, with row-level
+ownership enforced inside each handler.
 
 **Kelas** (`internal/handler/kelas.go`, routes in `cmd/server/main.go`):
 
-- Move these OFF the admin-only route group; gate **inside** the handler via
-  `canManageKelas`:
-  - `Update` (PUT/PATCH kelas)
+- Move these OFF the admin-only route group into `mng`; gate **inside** the
+  handler via `canManageKelas`:
+  - `Update` (PATCH kelas)
   - `AddAnggota`, `RemoveAnggota`
   - `AddGuruAnggota`, `RemoveGuruAnggota`
 - Keep admin-only: `Create`, `Delete`.
 - Wali guardrails inside the handlers:
-  - `Update` by a non-admin **ignores/rejects** any change to `guru_user_id`
-    (primary wali reassignment stays admin-only). Descriptive fields only.
-  - `RemoveGuruAnggota` by anyone **rejects removing the primary guru**
-    (`guru_user_id`) — prevents a wali removing themselves/the wali. Admin can
-    reassign via `Update`.
+  - `Update` by a non-admin **forces** `guru_user_id` to the existing primary
+    (primary wali reassignment stays admin-only). Descriptive fields +
+    co-teacher set may change.
+  - `RemoveGuruAnggota` by a non-admin **rejects removing the primary guru**
+    (`guru_user_id`) — prevents a wali removing themselves/the wali.
 
-**Student profile + ortu** (`internal/handler/users.go`):
+**Student profile + ortu** (new `internal/handler/murid.go`, `mng` group):
 
-- `GET /api/users/{id}`: allow wali when `canManageMurid` — needed so the
-  roster can load a student + their ortu links.
-- `PATCH /api/users/{id}`: allow wali when `canManageMurid`, with a **hard
-  field whitelist** applied whenever `claims.Role != admin`:
-  - **Allowed:** name, nickname, date_of_birth, gender, no_hp, phone_region,
-    alamat, level, tempat_lahir, notes, ortu link/unlink (ayahId, ibuId,
-    clearAyahId, clearIbuId).
-  - **Rejected (403/422 if present):** role, password, active, email, username,
-    user_code. Reject the request rather than silently ignore, so escalation
-    attempts are visible.
-- Ortu user **search** (`GET /api/users?role=ortu`) and **create**
-  (`POST /api/users` with `role='ortu'`): allow wali, but force `role='ortu'`
-  and inactive (`active=0`, `password=''`) — matching the mig 048 pattern. Wali
-  cannot create admin/guru/murid users.
+- `GET /api/murid/{id}`: load a student + ortu links. Gate `canManageMurid`;
+  target must be role `murid`.
+- `PATCH /api/murid/{id}`: safe-field profile update + ortu link/unlink. Gate
+  `canManageMurid`. The request DTO (`muridUpdateBody`) **is** the whitelist —
+  it contains only name, nickname, date_of_birth, gender, no_hp, phone_region,
+  alamat, level, tempat_lahir, notes, and ortu links (ayahId, ibuId,
+  clearAyahId, clearIbuId). No role/password/active/email/username/user_code
+  field exists on it, so a wali cannot set them at all.
+- `GET /api/ortu?q=` (search) and `POST /api/ortu` (create): admin-or-guru.
+  `POST /api/ortu` **forces** `role='ortu'` server-side, so a wali cannot mint
+  a privileged user. (Ortu accounts have no login UI; the placeholder password
+  is unusable.)
+
+The admin-only `/api/users/*` routes are unchanged; the admin UI keeps using
+them. The shared `OrtuPicker` is pointed at `/api/ortu` so it works for both
+admin and wali.
 
 ### Frontend (`web/app/src/`)
 
@@ -112,9 +122,10 @@ Entry point is the **Kelas roster**, not the global Users admin page.
 1. Wali = `guru_user_id` only (primary guru), never secondary `kelas_guru`.
 2. Every wali action re-checks ownership server-side (`canManageKelas` /
    `canManageMurid`) — never trust the client's role or a passed kelasId alone.
-3. Non-admin user PATCH field whitelist is the privilege boundary: role,
-   password, active, email, username, user_code are rejected. Covered by a
-   dedicated test.
+3. The `/api/murid/{id}` PATCH DTO is the privilege boundary: it has no
+   role/password/active/email/username/user_code field, so those are
+   unsettable by construction. The admin-only `/api/users/*` routes are never
+   opened to non-admins. Covered by a dedicated test.
 4. Wali cannot reassign primary wali, delete classes, remove the primary guru,
    or create privileged users.
 5. Ortu creation forces `role='ortu'` + inactive server-side regardless of
