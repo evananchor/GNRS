@@ -358,6 +358,7 @@ func run() error {
 			p.Post("/auth/me/photo", photosH.UploadMe)
 			p.Delete("/auth/me/photo", photosH.DeleteMe)
 
+			muridH := handler.NewMurid(users, kelas)
 			p.Group(func(mng chi.Router) {
 				mng.Use(auth.RequireAnyRole(model.RoleAdmin, model.RoleGuru))
 				mng.Patch("/kelas/{id}", kelasH.Update)
@@ -365,6 +366,8 @@ func run() error {
 				mng.Delete("/kelas/{id}/anggota/{muridId}", kelasH.RemoveAnggota)
 				mng.Post("/kelas/{id}/guru", kelasH.AddGuruAnggota)
 				mng.Delete("/kelas/{id}/guru/{guruId}", kelasH.RemoveGuruAnggota)
+				mng.Get("/murid/{id}", muridH.Get)
+				mng.Patch("/murid/{id}", muridH.Update)
 			})
 
 			p.Group(func(adm chi.Router) {
