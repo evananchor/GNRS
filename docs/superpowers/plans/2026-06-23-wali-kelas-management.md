@@ -389,34 +389,29 @@ Expected: FAIL — `h.Update` returns 200 for non-wali / reassigns primary / rem
 
 - [ ] **Step 3: Write minimal implementation**
 
-In `internal/handler/kelas.go` add the helper (next to `canManageJadwal`):
+In `internal/handler/kelas.go`, the existing `canManageJadwal` already performs
+exactly this authz (load kelas → admin-or-primary-guru). **Do not duplicate it.**
+Rename it to `canManageKelas` and reuse it for both jadwal and kelas mutations:
+
+- Rename the function `canManageJadwal` → `canManageKelas` (line ~70) and update
+  its doc comment to say "kelas management" rather than "jadwal".
+- Update its three existing callers in `PutJadwal`, `DeleteJadwal`,
+  `GenerateJadwal` (lines ~105/137/149): `h.canManageJadwal(w, r, id)` →
+  `h.canManageKelas(w, r, id)`.
+
+The renamed helper (unchanged body):
 
 ```go
 // canManageKelas loads the kelas and authorizes the caller as admin OR the
 // kelas wali (primary guru). On failure it writes the response and returns nil.
 func (h *Kelas) canManageKelas(w http.ResponseWriter, r *http.Request, id string) *store.Kelas {
-	k, err := h.k.Get(r.Context(), id)
-	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			httpx.Error(w, http.StatusNotFound, "not_found", "Kelas tidak ditemukan")
-		} else {
-			httpx.Error(w, http.StatusInternalServerError, "internal", "Gagal mengambil kelas")
-		}
-		return nil
-	}
-	claims, ok := auth.ClaimsFrom(r.Context())
-	if !ok || claims == nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized", "Sesi tidak ditemukan")
-		return nil
-	}
-	isWali := k.GuruUserID != nil && *k.GuruUserID == claims.UserID
-	if claims.Role != model.RoleAdmin && !isWali {
-		httpx.Error(w, http.StatusForbidden, "forbidden", "Akses tidak diizinkan")
-		return nil
-	}
-	return k
+	// ...body identical to the former canManageJadwal...
 }
+```
 
+Add the small admin-check helper used by the wali guardrails:
+
+```go
 func isAdminClaims(r *http.Request) bool {
 	c, ok := auth.ClaimsFrom(r.Context())
 	return ok && c != nil && c.Role == model.RoleAdmin
