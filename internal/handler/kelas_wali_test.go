@@ -95,9 +95,12 @@ func TestWaliUpdateCannotReassignPrimary(t *testing.T) {
 	h, ks, users := newKelasEnv(t)
 	waliID := mkGuru(t, users, "wali")
 	thiefTarget := mkGuru(t, users, "target")
-	k, _ := ks.Create(context.Background(), store.KelasInput{
+	k, err := ks.Create(context.Background(), store.KelasInput{
 		Nama: "Kelas B", Tingkat: "PAUD", Tahun: 2026, GuruUserID: &waliID,
 	})
+	if err != nil {
+		t.Fatalf("create kelas: %v", err)
+	}
 
 	// Wali tries to set a different primary guru — backend keeps original.
 	r := reqWithClaims("PATCH", "/api/kelas/"+k.ID,
@@ -117,9 +120,12 @@ func TestWaliUpdateCannotReassignPrimary(t *testing.T) {
 func TestWaliCannotRemovePrimaryGuru(t *testing.T) {
 	h, ks, users := newKelasEnv(t)
 	waliID := mkGuru(t, users, "wali")
-	k, _ := ks.Create(context.Background(), store.KelasInput{
+	k, err := ks.Create(context.Background(), store.KelasInput{
 		Nama: "Kelas C", Tingkat: "PAUD", Tahun: 2026, GuruUserID: &waliID,
 	})
+	if err != nil {
+		t.Fatalf("create kelas: %v", err)
+	}
 	r := reqWithClaims("DELETE", "/api/kelas/"+k.ID+"/guru/"+waliID, nil,
 		model.RoleGuru, waliID, map[string]string{"id": k.ID, "guruId": waliID})
 	rr := httptest.NewRecorder()
