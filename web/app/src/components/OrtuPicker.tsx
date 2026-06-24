@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
@@ -11,11 +11,15 @@ import { Field } from './Field'
 
 const PHONE_REGIONS: PhoneRegion[] = ['ID', 'SG', 'US', 'CA']
 
+type LinkedUser = OrtuLink['user']
+
 type Props = {
   /** "ayah" or "ibu" */
   relation: 'ayah' | 'ibu'
-  /** Currently linked ortu user, if any */
-  linked?: OrtuLink['user']
+  /** Externally known linked ortu (from saved data). The picker manages
+   *  its own local state so the card shows immediately after picking or
+   *  creating — before the parent form is saved and the user data reloads. */
+  linked?: LinkedUser
   /** Called when user picks an existing ortu or creates a new one */
   onLink: (ortuId: string) => void
   /** Called when user clicks unlink */
@@ -31,6 +35,14 @@ export function OrtuPicker({ relation, linked, onLink, onUnlink, disabled }: Pro
   const [newName, setNewName] = useState('')
   const [newPhone, setNewPhone] = useState('')
   const [newRegion, setNewRegion] = useState<PhoneRegion>('ID')
+
+  // Local copy of the linked user — updated immediately when the user picks
+  // or creates an ortu, without waiting for the parent form to save and reload.
+  const [localLinked, setLocalLinked] = useState<LinkedUser | undefined>(linked)
+  const linkedId = linked?.id
+  useEffect(() => {
+    setLocalLinked(linked)
+  }, [linkedId])
 
   const searchQ = useQuery({
     queryKey: ['ortu-search', query],
@@ -48,26 +60,38 @@ export function OrtuPicker({ relation, linked, onLink, onUnlink, disabled }: Pro
       setNewName('')
       setNewPhone('')
       setNewRegion('ID')
+      const user: LinkedUser = {
+        id: ortu.id,
+        name: ortu.name,
+        noHp: ortu.noHp,
+        phoneRegion: ortu.phoneRegion as PhoneRegion | undefined,
+        email: ortu.email,
+        active: ortu.active,
+      }
+      setLocalLinked(user)
       onLink(ortu.id)
     },
   })
 
   const label = relation === 'ayah' ? t('users.ortu.ayah') : t('users.ortu.ibu')
 
-  if (linked) {
+  if (localLinked) {
     return (
       <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-900 truncate">{linked.name}</p>
-          {linked.noHp && (
+          <p className="text-sm font-medium text-slate-900 truncate">{localLinked.name}</p>
+          {localLinked.noHp && (
             <p className="text-xs text-slate-500">
-              {linked.noHp} ({linked.phoneRegion ?? 'ID'})
+              {localLinked.noHp} ({localLinked.phoneRegion ?? 'ID'})
             </p>
           )}
         </div>
         <button
           type="button"
-          onClick={onUnlink}
+          onClick={() => {
+            setLocalLinked(undefined)
+            onUnlink()
+          }}
           disabled={disabled}
           className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:opacity-40"
           title={t('users.ortu.unlinkTitle', { label })}
@@ -101,6 +125,15 @@ export function OrtuPicker({ relation, linked, onLink, onUnlink, disabled }: Pro
                   className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100"
                   onClick={() => {
                     setQuery('')
+                    const user: LinkedUser = {
+                      id: u.id,
+                      name: u.name,
+                      noHp: u.noHp,
+                      phoneRegion: u.phoneRegion as PhoneRegion | undefined,
+                      email: u.email,
+                      active: u.active,
+                    }
+                    setLocalLinked(user)
                     onLink(u.id)
                   }}
                 >

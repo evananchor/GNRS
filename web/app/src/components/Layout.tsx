@@ -12,6 +12,7 @@ import {
   Settings,
   Trophy,
   User as UserIcon,
+  BookOpen,
 } from 'lucide-react'
 
 import { useQuery } from '@tanstack/react-query'
@@ -109,6 +110,7 @@ export function Layout() {
     // Students + Teachers nav entries removed — the unified-user mechanism
     // routes both through Pengaturan → Pengguna, filtered by role.
     { to: '/kelas', icon: <School size={16} />, label: t('nav.kelas') },
+    { to: '/sesi', icon: <BookOpen size={16} />, label: t('nav.sesi') },
     { to: '/kehadiran', icon: <CalendarCheck size={16} />, label: t('nav.kehadiran') },
     { to: '/bacaan', icon: <BookOpenCheck size={16} />, label: t('nav.bacaan') },
     { to: '/pustaka', icon: <BookMarked size={16} />, label: t('nav.pustaka') },

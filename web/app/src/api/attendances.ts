@@ -1,6 +1,7 @@
 import { apiFetch } from './client'
 
-export type AttendanceStatus = 'hadir' | 'izin_murid' | 'izin_guru' | 'by_vn' | 'alfa'
+export const ATTENDANCE_STATUSES = ['hadir', 'izin_murid', 'izin_guru', 'by_vn', 'alfa'] as const
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number]
 
 export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
   hadir: 'Hadir',
@@ -9,6 +10,9 @@ export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
   by_vn: 'Via Voice Note',
   alfa: 'Alfa',
 }
+
+// Alias used by components that import the plural form.
+export const ATTENDANCE_STATUS_LABELS = ATTENDANCE_STATUS_LABEL
 
 export type Attendance = {
   id: string

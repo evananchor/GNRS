@@ -20,6 +20,7 @@ import { PustakaKitabDetailPage } from '@/pages/PustakaKitabDetail'
 import { PustakaDoaPage } from '@/pages/PustakaDoa'
 import { PustakaTilawatiPage } from '@/pages/PustakaTilawati'
 import { AchievementPage } from '@/pages/Achievement'
+import { SesiListPage } from '@/pages/SesiList'
 import { UsersPage } from '@/pages/Users'
 import { UserNewPage } from '@/pages/UserNew'
 import { SettingsLayout } from '@/pages/Pengaturan'
@@ -63,6 +64,7 @@ export function App() {
         </Route>
         {/* Back-compat: old /attendance URL redirects to /kelas/calendar. */}
         <Route path="/attendance" element={<Navigate to="/kelas/calendar" replace />} />
+        <Route path="/sesi" element={<SesiListPage />} />
         <Route path="/pustaka" element={<PustakaPage />} />
         <Route path="/bacaan" element={<KontrolBacaanPage />} />
         <Route path="/kehadiran" element={<KehadiranPage />} />

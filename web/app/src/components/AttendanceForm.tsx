@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
-import { ATTENDANCE_STATUSES, ATTENDANCE_STATUS_LABELS, type Attendance, type AttendanceInput } from '@/api/types'
+import { ATTENDANCE_STATUSES, ATTENDANCE_STATUS_LABELS, type Attendance, type AttendanceInput } from '@/api/attendances'
 import { listStudents } from '@/api/students'
 import { listTeachers } from '@/api/teachers'
 import { ApiError } from '@/api/client'
